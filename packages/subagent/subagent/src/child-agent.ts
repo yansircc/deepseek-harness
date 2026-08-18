@@ -27,6 +27,16 @@ import type {} from '@deepseek-ai/dsh-user-approval'
 import type {} from '@deepseek-ai/dsh-agent-presets'
 import { delegationDepthOf } from './depth.ts'
 
+/**
+ * Minimal shape of the `agentDefaultModel` service's `currentSelection()` return.
+ * Declared locally to avoid adding a peerDependency on `@deepseek-ai/dsh-agent-default-model`:
+ * the service is read opportunistically via `ctx.get()` and may be absent.
+ */
+interface DefaultModelSelection {
+  provider: string
+  model: string
+}
+
 /** Thrown when starting a child would exceed the requested depth cap. */
 export class SubagentDepthError extends Error {
   constructor(public readonly attemptedDepth: number, public readonly maxDepth: number) {
@@ -59,7 +69,9 @@ export function resolveChildDepth(parent: Agent, maxDepth: number | undefined): 
 /**
  * Resolve the child's `AgentOptions`: the parent's provider/model/maxTokens
  * route unless the request overrides it, stamped with the child's own
- * delegation depth.
+ * delegation depth. When the parent carries no explicit model, the live
+ * `agentDefaultModel` selection is read so the child inherits the current
+ * default rather than falling through to the deployment fallback.
  * @param parent - the delegating parent whose route the child inherits.
  * @param requested - per-child overrides, if any.
  * @param childDepth - the resolved delegation depth to stamp.
@@ -73,9 +85,21 @@ export function resolveChildAgentOptions(
   const parentProvider = parent.options.provider
   const parentModel = parent.options.model
   const parentMaxTokens = parent.options.maxTokens
+  // When the parent has no explicit model, read the live default selection so
+  // the child inherits the current default model (e.g. qwen) rather than
+  // falling through to the deployment fallback (e.g. deepseek).
+  const defaultSelection = parentModel === undefined
+    ? (parent.ctx.get('agentDefaultModel') as { currentSelection(): DefaultModelSelection } | undefined)?.currentSelection()
+    : undefined
   return {
     ...parentProvider !== undefined ? { provider: parentProvider } : {},
+    ...defaultSelection?.provider !== undefined && parentProvider === undefined
+      ? { provider: defaultSelection.provider }
+      : {},
     ...parentModel !== undefined ? { model: parentModel } : {},
+    ...parentModel === undefined && defaultSelection?.model !== undefined
+      ? { model: defaultSelection.model }
+      : {},
     ...parentMaxTokens !== undefined ? { maxTokens: parentMaxTokens } : {},
     ...requested,
     subagentDepth: childDepth,
