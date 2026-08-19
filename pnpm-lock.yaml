@@ -1151,6 +1151,9 @@ importers:
       '@deepseek-ai/dsh-tool-call-timeout-policy':
         specifier: workspace:^
         version: link:../../guard/timeout-policy
+      '@deepseek-ai/dsh-tool-chrome':
+        specifier: workspace:^
+        version: link:../../extensions/tool-chrome
       '@deepseek-ai/dsh-tool-fs':
         specifier: workspace:^
         version: link:../../fs/tool-fs
@@ -1193,6 +1196,9 @@ importers:
       '@deepseek-ai/dsh-tool-workflow':
         specifier: workspace:^
         version: link:../../workflow/tool-workflow
+      '@deepseek-ai/dsh-tool-zeroy':
+        specifier: workspace:^
+        version: link:../../extensions/tool-zeroy
       '@deepseek-ai/dsh-tools':
         specifier: workspace:^
         version: link:../../core/tools

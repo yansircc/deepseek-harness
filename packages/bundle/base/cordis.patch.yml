@@ -417,6 +417,18 @@
         fetch: false
         searchTimeoutMs: 60000
 
+    # WordPress site management (zeroY): inspect/checkout/push sites. The
+    # plugin exposes its settings namespace so the WebUI shows a card only
+    # when the user has bound sites.
+    - id: tool-zeroy
+      name: '@deepseek-ai/dsh-tool-zeroy'
+
+    # Real Chrome control: 25 chrome_* tools through a local bridge. The
+    # bridge starts with the plugin; the credential (PI_CHROME_OWNER_CREDENTIAL)
+    # and extension install are user-facing, shown in the WebUI card.
+    - id: tool-chrome
+      name: '@deepseek-ai/dsh-tool-chrome'
+
     # ── rows every mode mounts, whose values each overlay may state ──────────────
 
     # The tool registry. Presentation mode is a deployment choice; omitting it here
