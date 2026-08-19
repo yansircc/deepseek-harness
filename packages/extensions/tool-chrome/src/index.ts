@@ -20,6 +20,7 @@ import {
 import { ATOMIC_TOOL_DESCRIPTORS } from './protocol/operations.ts'
 import { BRIDGE_HOST, BRIDGE_PORT } from './protocol/bridge-contract.ts'
 import { protocolFingerprint } from './protocol/fingerprint.ts'
+import { registerChromeSettings, getChromeSettings } from './settings.ts'
 import type { Config as ConfigType } from './config.ts'
 import type { BridgeOwnerIdentity } from './protocol/auth.ts'
 import type { SessionContext, WireDomainRequest } from './protocol/schema.ts'
@@ -51,8 +52,13 @@ function sessionContextFor(ctx: Context): SessionContext {
  * when this plugin is mounted.
  */
 export function apply(ctx: Context, config: ConfigType): void {
+  // Register the settings section for bridge configuration (port, credential ref).
+  registerChromeSettings(ctx)
+  const chromeSettings = getChromeSettings()
+
   const host = config.host ?? BRIDGE_HOST
-  const port = config.port ?? BRIDGE_PORT
+  const port = config.port ?? chromeSettings.port ?? BRIDGE_PORT
+  const ownerCredentialRef = config.ownerCredentialRef ?? chromeSettings.ownerCredentialRef
 
   const server = new BridgeServer({
     host,
@@ -65,13 +71,13 @@ export function apply(ctx: Context, config: ConfigType): void {
   const loadCredential = async (): Promise<string | undefined> => {
     if (credentials !== undefined) {
       try {
-        const resolved = await credentials.resolve(credentialRef(OWNER_CREDENTIAL_REF))
+        const resolved = await credentials.resolve(credentialRef(ownerCredentialRef))
         if (resolved !== undefined) return resolved.value
       } catch {
         // fall through to env
       }
     }
-    return process.env[OWNER_CREDENTIAL_REF]
+    return process.env[ownerCredentialRef]
   }
 
   const getIdentity = async (): Promise<BridgeOwnerIdentity | undefined> => {
@@ -113,7 +119,7 @@ export function apply(ctx: Context, config: ConfigType): void {
       if (identity === undefined) {
         return {
           state: 'error',
-          message: `Owner credential "${OWNER_CREDENTIAL_REF}" is not configured. Set it in .credentials.yaml or the environment.`,
+          message: `Owner credential "${ownerCredentialRef}" is not configured. Set it in .credentials.yaml or the environment.`,
         }
       }
       try {
@@ -152,7 +158,7 @@ export function apply(ctx: Context, config: ConfigType): void {
         const identity = await getIdentity()
         if (identity === undefined) {
           throw new Error(
-            `Owner credential "${OWNER_CREDENTIAL_REF}" is not configured. Set it in .credentials.yaml or the environment.`,
+            `Owner credential "${ownerCredentialRef}" is not configured. Set it in .credentials.yaml or the environment.`,
           )
         }
         const input = descriptor.projectInput(args)

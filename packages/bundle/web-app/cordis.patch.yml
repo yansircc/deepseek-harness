@@ -263,6 +263,14 @@
     - id: ui-settings-plugins
       name: '@deepseek-ai/dsh-client-ui-settings-plugins'
 
+    # zeroY sites card: manage WordPress sites in the Plugins configuration tab.
+    - id: ui-zeroy
+      name: '@deepseek-ai/dsh-client-ui-zeroy'
+
+    # Chrome control card: setup status, install guide, and bridge settings.
+    - id: ui-chrome
+      name: '@deepseek-ai/dsh-client-ui-chrome'
+
     # Plan control: the composer plan seat over the plan projection + /plan channel.
     - id: ui-plan
       name: '@deepseek-ai/dsh-client-ui-plan'
