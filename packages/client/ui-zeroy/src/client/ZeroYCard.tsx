@@ -104,14 +104,6 @@ export function ZeroYCard(props: ZeroYCardProps) {
               <p className={css.guideLine}>{t('bindGuide')}</p>
               <div className={css.fields}>
                 <Field
-                  id="zeroy-site-label"
-                  label={t('labelLabel')}
-                  hint={t('labelHint')}
-                  text={state.draft.label}
-                  disabled={!state.writable || state.binding}
-                  onEdit={(text) => { actions.editDraft('label', text) }}
-                />
-                <Field
                   id="zeroy-site-endpoint"
                   label={t('endpointLabel')}
                   hint={t('endpointHint')}
@@ -129,7 +121,6 @@ export function ZeroYCard(props: ZeroYCardProps) {
                   type="button"
                   className={css.add}
                   disabled={!state.writable || state.binding
-                    || state.draft.label.trim() === ''
                     || state.draft.endpoint.trim() === ''}
                   onClick={actions.beginBind}
                 >

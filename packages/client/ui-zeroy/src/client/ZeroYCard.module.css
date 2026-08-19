@@ -242,15 +242,24 @@
 
 .add {
   appearance: none;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  padding: 5px 14px;
+  border: none;
+  border-radius: 18px;
+  padding: 0 16px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font: inherit;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
   cursor: pointer;
-  background: var(--dsw-alias-label-primary);
-  color: var(--dsw-alias-bg-layer-3);
+  background: var(--dsw-alias-button-primary-fill);
+  color: var(--dsw-alias-label-primary-foreground);
+}
+
+.add:hover:not(:disabled) {
+  background: var(--dsw-alias-button-primary-hover);
 }
 
 .add:disabled {

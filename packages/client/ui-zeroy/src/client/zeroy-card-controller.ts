@@ -35,7 +35,7 @@ export interface ZeroYCardState {
   /** The configured sites. */
   sites: readonly ZeroYSite[]
   /** The bind-site draft. */
-  draft: { label: string; endpoint: string }
+  draft: { endpoint: string }
   /** Whether a binding window is open and awaiting approval. */
   binding: boolean
   /** Whether the last bind attempt failed. */
@@ -46,8 +46,8 @@ export interface ZeroYCardState {
 
 /** Actions the card dispatches. */
 export interface ZeroYCardActions {
-  /** Update one bind-site draft field. */
-  editDraft: (field: 'label' | 'endpoint', text: string) => void
+  /** Update the bind-site URL field. */
+  editDraft: (field: 'endpoint', text: string) => void
   /** Open the browser binding flow for the drafted site. */
   beginBind: () => void
   /** Remove one site by its id. */
@@ -68,11 +68,9 @@ const BIND_SIGNAL_PREFIX = '__dshZeroYBinding:'
 
 const normalizeEndpoint = (value: string): string => value.trim().replace(/\/+$/, '')
 
-const normalizeLabel = (value: string): string => value.trim()
-
 export class ZeroYCardController {
   private readonly store: SnapshotStore<ZeroYCardState>
-  private draft: { label: string; endpoint: string } = { label: '', endpoint: '' }
+  private draft: { endpoint: string } = { endpoint: '' }
   private binding = false
   private bindFailed = false
   private bindError = ''
@@ -111,10 +109,9 @@ export class ZeroYCardController {
         this.publish()
       },
       beginBind: () => {
-        const label = normalizeLabel(this.draft.label)
         const endpoint = normalizeEndpoint(this.draft.endpoint)
-        if (label === '' || endpoint === '') return
-        const params = new URLSearchParams({ endpoint, label })
+        if (endpoint === '') return
+        const params = new URLSearchParams({ endpoint })
         const url = `/zeroy/connect/start?${params.toString()}`
         this.binding = true
         this.bindFailed = false
@@ -143,7 +140,7 @@ export class ZeroYCardController {
       handleBindSignal: (signal) => {
         this.binding = false
         if (signal === 'paired') {
-          this.draft = { label: '', endpoint: '' }
+          this.draft = { endpoint: '' }
         } else {
           this.bindFailed = true
           this.bindError = 'The binding was not completed.'

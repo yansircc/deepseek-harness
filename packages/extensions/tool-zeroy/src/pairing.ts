@@ -5,8 +5,8 @@
  * host route that completes the exchange and stores the grant.
  *
  * Flow:
- *   1. `/zeroy/connect/start?endpoint=X&label=Y` → create a PKCE intent on
- *      the WordPress side, redirect to the WP admin approval page.
+ *   1. `/zeroy/connect/start?endpoint=X` → create a PKCE intent on the
+ *      WordPress side, redirect to the WP admin approval page.
  *   2. User (logged into WP) clicks Approve.
  *   3. WP redirects to `/zeroy/connect/callback?intent_id=..&code=..&state=..`.
  *   4. Callback verifies state, exchanges code+verifier for a grant, stores
@@ -87,6 +87,15 @@ function deriveSiteId(endpoint: string): string {
   }
 }
 
+/** Derive a human-readable label from a site URL (hostname). */
+function deriveLabel(endpoint: string): string {
+  try {
+    return new URL(endpoint).hostname.replace(/^www\./, '') || 'site'
+  } catch {
+    return 'site'
+  }
+}
+
 /** Derive a credential ref from a label. */
 function deriveCredentialRef(label: string): string {
   const slug = label
@@ -161,7 +170,7 @@ export function registerPairingRoutes(ctx: Context): void {
     return
   }
 
-  // ---- GET /zeroy/connect/start?endpoint=&label= ----
+  // ---- GET /zeroy/connect/start?endpoint= ----
   // Create the PKCE intent on the WP side, then redirect to the WP admin
   // approval page. The user approves there; WP redirects to the callback.
   webServer.register({
@@ -171,15 +180,18 @@ export function registerPairingRoutes(ctx: Context): void {
       try {
         const query = parseQuery(req.url ?? '')
         const endpoint = (query.endpoint ?? '').replace(/\/+$/, '')
-        const label = query.label ?? ''
-        if (endpoint === '' || label === '') {
-          writeHtml(res, 'Missing parameters', '<p class="err">Binding needs both a site URL and a label.</p>', 'failed')
+        if (endpoint === '') {
+          writeHtml(res, 'Missing parameters', '<p class="err">Binding needs a site URL.</p>', 'failed')
           return
         }
         if (!/^https?:\/\//.test(endpoint) || !URL.canParse(endpoint)) {
           writeHtml(res, 'Invalid site URL', `<p class="err">${endpoint} is not a valid URL.</p>`, 'failed')
           return
         }
+
+        // The label is derived from the URL so the user only has to paste the
+        // site address; WordPress still gets a readable connection name.
+        const label = deriveLabel(endpoint)
 
         const redirectUri = `${webServerBase(webServer)}${ZEROY_CONNECT_PREFIX}/callback`
         const verifier = randomToken(32)

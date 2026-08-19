@@ -9,7 +9,7 @@ export type ZeroYLocaleKey =
   | 'title' | 'description' | 'expand' | 'collapse' | 'readOnly'
   | 'guideTitle' | 'guideLine1' | 'guideLine2'
   | 'sitesTitle' | 'noSites' | 'remove' | 'removeConfirm'
-  | 'addTitle' | 'labelLabel' | 'labelHint' | 'endpointLabel' | 'endpointHint'
+  | 'addTitle' | 'endpointLabel' | 'endpointHint'
   | 'bind' | 'binding' | 'bindFailed' | 'bindGuide'
   | 'pluginTitle' | 'pluginLine1' | 'pluginLine2' | 'downloadPlugin'
   | 'overridden' | 'reset' | 'save' | 'saving' | 'discard' | 'unsaved' | 'saveFailed'
@@ -29,8 +29,6 @@ export const en: Record<ZeroYLocaleKey, string> = {
   remove: 'Remove',
   removeConfirm: 'Remove this site?',
   addTitle: 'Bind a site',
-  labelLabel: 'Name',
-  labelHint: 'A short label for this site, e.g. "My Company".',
   endpointLabel: 'Site URL',
   endpointHint: 'The WordPress site address, e.g. https://example.com',
   bind: 'Bind site',
@@ -65,8 +63,6 @@ export const zh: Record<ZeroYLocaleKey, string> = {
   remove: '移除',
   removeConfirm: '确定移除这个站点？',
   addTitle: '绑定站点',
-  labelLabel: '名称',
-  labelHint: '该站点的简短名称，例如“我的公司”。',
   endpointLabel: '站点地址',
   endpointHint: 'WordPress 站点地址，例如 https://example.com',
   bind: '绑定站点',
