@@ -24,12 +24,14 @@
   "files": [
     "lib/index.js",
     "lib/types/**/*.js",
-    "lib/types/**/*.d.ts"
+    "lib/types/**/*.d.ts",
+    "assets/wordpress-plugin"
   ],
   "license": "MIT",
   "dependencies": {
     "@sinclair/typebox": "0.34.41",
-    "ajv": "8.20.0"
+    "ajv": "8.20.0",
+    "fflate": "*"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^",

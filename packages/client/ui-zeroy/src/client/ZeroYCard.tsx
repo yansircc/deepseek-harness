@@ -85,6 +85,21 @@ export function ZeroYCard(props: ZeroYCardProps) {
             </section>
 
             <section className={css.section}>
+              <h4 className={css.sectionTitle}>{t('pluginTitle')}</h4>
+              <p className={css.guideLine}>{t('pluginLine1')}</p>
+              <p className={css.guideLine}>{t('pluginLine2')}</p>
+              <div className={css.footer}>
+                <a
+                  className={css.downloadLink}
+                  href="/api/zeroy/plugin.zip"
+                  download="zeroy-runtime-connector.zip"
+                >
+                  {t('downloadPlugin')}
+                </a>
+              </div>
+            </section>
+
+            <section className={css.section}>
               <h4 className={css.sectionTitle}>{t('addTitle')}</h4>
               <p className={css.guideLine}>{t('bindGuide')}</p>
               <div className={css.fields}>

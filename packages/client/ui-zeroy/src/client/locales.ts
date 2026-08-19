@@ -11,6 +11,7 @@ export type ZeroYLocaleKey =
   | 'sitesTitle' | 'noSites' | 'remove' | 'removeConfirm'
   | 'addTitle' | 'labelLabel' | 'labelHint' | 'endpointLabel' | 'endpointHint'
   | 'bind' | 'binding' | 'bindFailed' | 'bindGuide'
+  | 'pluginTitle' | 'pluginLine1' | 'pluginLine2' | 'downloadPlugin'
   | 'overridden' | 'reset' | 'save' | 'saving' | 'discard' | 'unsaved' | 'saveFailed'
 
 /** English copy. */
@@ -36,6 +37,10 @@ export const en: Record<ZeroYLocaleKey, string> = {
   binding: 'Waiting for approval in the new window…',
   bindFailed: 'The binding was not completed.',
   bindGuide: 'Click "Bind site" — a new window opens your WordPress admin. Log in if needed, approve the connection, and the site is bound automatically.',
+  pluginTitle: 'Install the zeroY plugin',
+  pluginLine1: 'The site needs the zeroY Runtime Connector plugin installed. Download it, then in WordPress go to Plugins → Add New → Upload Plugin and select the ZIP.',
+  pluginLine2: 'After activating the plugin, come back here and bind your site.',
+  downloadPlugin: 'Download plugin ZIP',
   overridden: 'Overridden',
   reset: 'Reset to default',
   save: 'Save',
@@ -68,6 +73,10 @@ export const zh: Record<ZeroYLocaleKey, string> = {
   binding: '已在新窗口等待批准…',
   bindFailed: '绑定未完成。',
   bindGuide: '点击“绑定站点”后，新窗口会打开你的 WordPress 后台。如需登录请先登录，然后点击“批准”，站点即自动完成绑定。',
+  pluginTitle: '安装 zeroY 插件',
+  pluginLine1: '网站需要安装 zeroY Runtime Connector 插件。下载后，在 WordPress 后台进入“插件 → 安装插件 → 上传插件”，选择 ZIP 文件即可。',
+  pluginLine2: '激活插件后，回到这里绑定你的站点。',
+  downloadPlugin: '下载插件 ZIP',
   overridden: '已覆盖',
   reset: '恢复默认',
   save: '保存',

@@ -20,6 +20,7 @@ import { registerCheckoutTool } from './tools/checkout.ts'
 import { registerPushTool } from './tools/push.ts'
 import { registerPairTool, registerUnpairTool } from './tools/pair.ts'
 import { registerPairingRoutes } from './pairing.ts'
+import { registerPluginDownload } from './plugin-download.ts'
 
 export { Config } from './config.ts'
 export type { Config as ConfigType } from './config.ts'
@@ -59,5 +60,8 @@ export function apply(ctx: Context, config: ConfigType): void {
     // opens /zeroy/connect/start, the user approves in WordPress, and the
     // callback route completes the exchange. Requires the host webserver.
     registerPairingRoutes(ctx)
+    // WordPress plugin download: the card links users to the zeroY Runtime
+    // Connector ZIP for installation in WordPress.
+    registerPluginDownload(ctx)
   }
 }
