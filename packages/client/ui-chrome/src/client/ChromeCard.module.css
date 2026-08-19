@@ -338,24 +338,58 @@
 }
 
 .download {
-  display: inline-block;
-  border-radius: 8px;
-  padding: 7px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 18px;
+  padding: 0 16px;
+  height: 36px;
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 22px;
   text-decoration: none;
   cursor: pointer;
-  background: var(--dsw-alias-brand-primary, var(--dsw-alias-label-primary));
-  color: var(--dsw-alias-bg-layer-3, #fff);
+  background: var(--dsw-alias-button-primary-fill);
+  color: var(--dsw-alias-label-primary-foreground);
 }
 
 .download:hover {
-  opacity: 0.9;
+  background: var(--dsw-alias-button-primary-hover);
 }
 
 .download:focus-visible {
   outline: 2px solid var(--dsw-alias-brand-primary);
-  outline-offset: 1px;
+  outline-offset: 2px;
+}
+
+/* Advanced settings toggle (default collapsed). */
+.advancedToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  appearance: none;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.advancedToggle:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.advancedBody {
+  padding-top: 8px;
 }

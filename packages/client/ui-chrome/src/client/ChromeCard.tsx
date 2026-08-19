@@ -29,6 +29,7 @@ export function ChromeCard(props: ChromeCardProps) {
   const { t } = props
   const state = props.useChromeCard(snapshot => snapshot)
   const [open, setOpen] = useState(false)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   if (!state.available) return null
 
   const disabled = !state.writable || state.saving
@@ -87,37 +88,51 @@ export function ChromeCard(props: ChromeCardProps) {
             </section>
 
             <section className={css.section}>
-              <h4 className={css.sectionTitle}>{t('settingsTitle')}</h4>
-              <Field
-                id="chrome-port"
-                label={t('portLabel')}
-                hint={t('portHint')}
-                text={state.port.text}
-                overridden={state.port.overridden}
-                invalid={state.port.invalid}
-                disabled={disabled}
-                onEdit={(text) => { props.edit('port', text) }}
-                onReset={() => { props.resetField('port') }}
-              />
-              {state.failed ? <p className={css.failed} role="status">{t('saveFailed')}</p> : null}
-              <div className={css.footer}>
-                <button
-                  type="button"
-                  className={css.discard}
-                  disabled={!state.dirty || state.saving}
-                  onClick={props.discard}
-                >
-                  {t('discard')}
-                </button>
-                <button
-                  type="button"
-                  className={css.save}
-                  disabled={!state.dirty || state.invalid || state.saving}
-                  onClick={props.save}
-                >
-                  {t(state.saving ? 'saving' : 'save')}
-                </button>
-              </div>
+              <button
+                type="button"
+                className={css.advancedToggle}
+                aria-expanded={advancedOpen}
+                onClick={() => { setAdvancedOpen(!advancedOpen) }}
+              >
+                <span>{t('settingsTitle')}</span>
+                <IconChevronDownOutline14 className={clsx(css.chevron, advancedOpen && css.chevronOpen)} />
+              </button>
+              {advancedOpen
+                ? (
+                  <div className={css.advancedBody}>
+                    <Field
+                      id="chrome-port"
+                      label={t('portLabel')}
+                      hint={t('portHint')}
+                      text={state.port.text}
+                      overridden={state.port.overridden}
+                      invalid={state.port.invalid}
+                      disabled={disabled}
+                      onEdit={(text) => { props.edit('port', text) }}
+                      onReset={() => { props.resetField('port') }}
+                    />
+                    {state.failed ? <p className={css.failed} role="status">{t('saveFailed')}</p> : null}
+                    <div className={css.footer}>
+                      <button
+                        type="button"
+                        className={css.discard}
+                        disabled={!state.dirty || state.saving}
+                        onClick={props.discard}
+                      >
+                        {t('discard')}
+                      </button>
+                      <button
+                        type="button"
+                        className={css.save}
+                        disabled={!state.dirty || state.invalid || state.saving}
+                        onClick={props.save}
+                      >
+                        {t(state.saving ? 'saving' : 'save')}
+                      </button>
+                    </div>
+                  </div>
+                )
+                : null}
             </section>
           </div>
         )
