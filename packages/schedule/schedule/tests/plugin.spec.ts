@@ -6,6 +6,7 @@ import AgentLoop from '@deepseek-ai/dsh-agent-loop'
 import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-testkit'
 import { CallId } from '@deepseek-ai/dsh-llm'
 import { SessionId } from '@deepseek-ai/dsh-session'
+import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import * as toolSchedule from '../src/index.ts'
 
 class PersistenceProbe extends Service {
@@ -98,6 +99,40 @@ describe('Schedule plugin composition', () => {
     expect(flushes).toBe(0)
 
     stopFlush()
+    await root.dispose()
+    await plugin.dispose()
+    await ctx.fiber.dispose()
+  })
+})
+
+describe('Schedule projection composition', () => {
+  it('registers the schedule projection unit and folds committed reminders', async () => {
+    const ctx = await harness()
+    await ctx.plugin(SessionProjectionRegistry)
+    const plugin = await ctx.plugin(toolSchedule)
+    const root = await ctx.agents.create({ sessionId: SessionId('schedule-projection-root') })
+
+    // The unit child activates because the registry service is composed.
+    const snapshot = ctx.sessionProjections.snapshot(root.agent.session)
+    expect(Object.keys(snapshot.values)).toContain('schedule')
+    expect(snapshot.values['schedule']).toEqual({ active: [], pausedIds: [] })
+
+    const created = await ctx.agents.withInitiator(root.agent, () => ctx.tools.execute({
+      signal: new AbortController().signal,
+      callId: CallId('schedule-projection-create'),
+      name: 'schedule_create',
+      arguments: { prompt: 'projected reminder', after_seconds: 3_600 },
+      agent: root.agent,
+    }))
+    expect(created.isError).toBe(false)
+
+    const after = ctx.sessionProjections.snapshot(root.agent.session)
+    const value = after.values['schedule']
+    expect(value).toMatchObject({
+      active: [expect.objectContaining({ id: 'schedule-1', prompt: 'projected reminder' })],
+      pausedIds: [],
+    })
+
     await root.dispose()
     await plugin.dispose()
     await ctx.fiber.dispose()

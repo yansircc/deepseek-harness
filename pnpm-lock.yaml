@@ -1426,6 +1426,9 @@ importers:
       '@deepseek-ai/dsh-message-feedback':
         specifier: workspace:^
         version: link:../../feedback/message-feedback
+      '@deepseek-ai/dsh-schedule':
+        specifier: workspace:^
+        version: link:../../schedule/schedule
       '@deepseek-ai/dsh-session-log-export':
         specifier: workspace:^
         version: link:../../session-query/session-log-export
@@ -1444,6 +1447,9 @@ importers:
       '@deepseek-ai/dsh-storage-json':
         specifier: workspace:^
         version: link:../../storage/storage-json
+      '@deepseek-ai/dsh-time-context':
+        specifier: workspace:^
+        version: link:../../context/time-context
       '@deepseek-ai/dsh-web-frontend':
         specifier: workspace:^
         version: link:../../../apps/web

@@ -84,6 +84,16 @@
     - id: session-stats
       name: '@deepseek-ai/dsh-session-stats'
 
+    # Session-local Schedule reminders (after/at/every/cron) plus the browser
+    # time-zone context the model uses to interpret unqualified dates; the
+    # ui-schedule client row below renders the status bar from the schedule
+    # session projection this host plugin computes.
+    - id: time-context
+      name: '@deepseek-ai/dsh-time-context'
+
+    - id: schedule
+      name: '@deepseek-ai/dsh-schedule'
+
     # Resolve bind host, SSH launch, and display once at boot, then mount the
     # matching dual-face directory picker. Mount -native or -browse directly in
     # an overlay to pin the interaction.
