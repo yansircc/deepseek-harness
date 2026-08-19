@@ -178,6 +178,18 @@ export type ScheduleView = ScheduleRecord & {
   readonly paused: boolean
 }
 
+/**
+ * Host-computed whole value of the `schedule` session projection: the active
+ * records and paused ids exactly as folded from `schedule/change` events.
+ * The client derives overdue state and countdowns from its own clock.
+ */
+export interface ScheduleProjectionView {
+  /** Active records in their original create order. */
+  readonly active: readonly ScheduleRecord[]
+  /** Active ids currently paused, in pause order. */
+  readonly pausedIds: readonly string[]
+}
+
 /** Management operations whose persistence barrier may be uncertain. */
 export type SchedulePersistenceOperation =
   | 'create'
@@ -323,5 +335,16 @@ declare module '@deepseek-ai/dsh-session/types' {
      * session-local transition stream before accepting a candidate event.
      */
     'schedule/change': ScheduleChange
+  }
+}
+
+declare module '@deepseek-ai/dsh-session-projection/types' {
+  interface SessionProjectionMap {
+    /**
+     * The session's active Schedule records and paused ids, folded from the
+     * `schedule/change` stream. Absent while no `schedule/change` event has
+     * been committed (the client renders nothing for an empty active list).
+     */
+    schedule: ScheduleProjectionView
   }
 }

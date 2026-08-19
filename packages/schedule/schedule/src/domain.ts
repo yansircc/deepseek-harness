@@ -890,7 +890,7 @@ export function resolveRunNow(record: ScheduleRecord, at: number): RunNowOutcome
 }
 
 /** Apply one decoded dispatch to its exact active record. */
-function dispatchedRecord(record: ScheduleRecord, change: DecodedDispatch): ScheduleRecord | undefined {
+export function dispatchedRecord(record: ScheduleRecord, change: DecodedDispatch): ScheduleRecord | undefined {
   const hasAcceptedAt = 'acceptedAt' in change
   if (record.kind !== 'every' && record.kind !== 'cron') {
     if (hasAcceptedAt) throw new ScheduleLogError('one-shot dispatch must not contain acceptedAt')

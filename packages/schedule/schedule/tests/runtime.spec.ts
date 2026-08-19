@@ -143,16 +143,16 @@ function appendCron(
   test.agent.session.append('schedule/change', {
     version: 1,
     operation: 'create',
-    schedule: { id, kind: 'cron', prompt, expression, timeZone, scheduledAt },
+    schedule: { id: ScheduleId(id), kind: 'cron', prompt, expression, timeZone, scheduledAt },
   })
 }
 
 function appendPause(test: RuntimeHarness, id: string): void {
-  test.agent.session.append('schedule/change', { version: 1, operation: 'pause', id })
+  test.agent.session.append('schedule/change', { version: 1, operation: 'pause', id: ScheduleId(id) })
 }
 
 function appendResume(test: RuntimeHarness, id: string): void {
-  test.agent.session.append('schedule/change', { version: 1, operation: 'resume', id })
+  test.agent.session.append('schedule/change', { version: 1, operation: 'resume', id: ScheduleId(id) })
 }
 
 async function settle(): Promise<void> {

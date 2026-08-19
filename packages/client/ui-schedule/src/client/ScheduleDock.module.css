@@ -1,0 +1,140 @@
+/* Schedule dock: the standalone reminder card in the composer context stack.
+   The dock column (card cap minus four insets) matches GoalBar, Todo, and the
+   Queue panel so the composer-stack cards read as one family. */
+
+.dock {
+  box-sizing: border-box;
+  width: calc(
+    100% -
+    var(--dsh-composer-side-clearance) -
+    var(--dsh-composer-side-clearance) -
+    var(--dsh-composer-dock-inset) -
+    var(--dsh-composer-dock-inset) -
+    var(--dsh-composer-dock-inset) -
+    var(--dsh-composer-dock-inset)
+  );
+  margin: 0 auto;
+}
+
+.bar {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: calc(var(--dsh-composer-card-max-width) - 4 * var(--dsh-composer-dock-inset));
+  height: 36px;
+  margin: 0 auto;
+  padding: 4px 12px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  background: var(--dsw-specific-tip);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.bar:hover {
+  background: var(--dsw-specific-tip-hover, var(--dsw-specific-tip));
+}
+
+.glyph {
+  display: inline-flex;
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* Matches the Todo/Queue panel titles (13/24 medium, primary). */
+.label {
+  flex: none;
+  font-size: 13px;
+  line-height: 24px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+}
+
+.count {
+  flex: none;
+  font-size: 11px;
+  line-height: 18px;
+  font-weight: 500;
+  padding: 0 6px;
+  border-radius: 999px;
+  color: var(--dsw-alias-label-caption);
+  background: var(--dsw-alias-bg-elevated, transparent);
+}
+
+.paused {
+  flex: none;
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--dsw-alias-state-warning-primary, var(--dsw-alias-label-caption));
+}
+
+.next {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--dsw-alias-label-caption);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.menu {
+  box-sizing: border-box;
+  list-style: none;
+  margin: 4px auto 0;
+  padding: 4px 0;
+  width: 100%;
+  max-width: calc(var(--dsh-composer-card-max-width) - 4 * var(--dsh-composer-dock-inset));
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  background: var(--dsw-specific-tip);
+  overflow: hidden;
+  font-family: system-ui;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 12px;
+}
+
+.rowPaused {
+  opacity: 0.55;
+}
+
+.rule {
+  flex: none;
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-caption);
+  white-space: nowrap;
+}
+
+.prompt {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--dsw-alias-label-primary-dimmed);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.target {
+  flex: none;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--dsw-alias-label-caption);
+  white-space: nowrap;
+}

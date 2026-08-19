@@ -6,8 +6,15 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-session-persistence'
+import type {} from '@deepseek-ai/dsh-session-projection'
 import { ScheduleRuntime } from './runtime.ts'
 import { registerScheduleTools } from './tools.ts'
+import {
+  applyScheduleProjection,
+  initialScheduleProjectionState,
+  scheduleProjectionSchema,
+} from './projection.ts'
+import type { ScheduleProjectionView } from './types.ts'
 
 export type * from './types.ts'
 export {
@@ -28,6 +35,11 @@ export {
   scheduleView,
 } from './domain.ts'
 export { registerScheduleTools } from './tools.ts'
+export {
+  applyScheduleProjection,
+  initialScheduleProjectionState,
+  scheduleProjectionSchema,
+} from './projection.ts'
 
 /** Cordis function-plugin name. */
 export const name = 'schedule'
@@ -38,6 +50,21 @@ type OwnerCleanup = () => void | Promise<void>
 
 /** Install Schedule only for root agents published after this plugin loads. */
 export function apply(ctx: Context): void {
+  // The `schedule` session projection: incremental fold of the durable
+  // `schedule/change` stream (see projection.ts). The unit child activates
+  // only when a projection registry is composed (headless assemblies stay
+  // unaffected); the client status bar reads it through useProjection.
+  ctx.inject(['sessionProjections'], (projectionCtx) => {
+    projectionCtx.sessionProjections.register<'schedule', ScheduleProjectionView>({
+      key: 'schedule',
+      schema: scheduleProjectionSchema,
+      init: initialScheduleProjectionState,
+      apply: applyScheduleProjection,
+      view: state => state,
+      stateVersion: 1,
+    })
+  })
+
   const runtimes = new Map<Agent, OwnerCleanup>()
   let stopping = false
 
