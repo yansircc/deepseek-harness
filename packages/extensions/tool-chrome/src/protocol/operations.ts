@@ -1,0 +1,669 @@
+/**
+ * Operation contracts for the 25 atomic chrome_* tools plus the system
+ * operations, and the `operationResultProtocolContract` used by the protocol
+ * fingerprint. Ported from the pi-chrome extension
+ * (`src/protocol/operation-contract.ts` + `operation-schemas.ts`) as pure data
+ * — no Effect Schema runtime.
+ *
+ * @module @deepseek-ai/dsh-tool-chrome/protocol/operations
+ */
+
+// ---------------------------------------------------------------------------
+// Parameter schema node (DSH JSON Schema subset)
+// ---------------------------------------------------------------------------
+
+export type JsonSchemaProperty = {
+  type?: string
+  required?: true
+  description?: string
+  enum?: readonly unknown[]
+  items?: JsonSchemaProperty
+  properties?: Record<string, JsonSchemaProperty>
+  additionalProperties?: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Tool descriptors
+// ---------------------------------------------------------------------------
+
+export type ActionVerb = 'click' | 'fill' | 'press' | 'upload'
+
+export type AtomicToolDescriptor = {
+  readonly name: `chrome_${string}`
+  readonly label: string
+  readonly domain: 'tab' | 'page' | 'input'
+  readonly operation: string
+  readonly description: string
+  readonly promptSnippet: string
+  readonly actionVerb?: ActionVerb
+  readonly parameters: Record<string, JsonSchemaProperty>
+  readonly projectInput: (input: Record<string, unknown>) => Record<string, unknown> & { op: string }
+}
+
+const optionalString = (description: string): JsonSchemaProperty => ({
+  type: 'string',
+  description,
+})
+const optionalBool = (description: string): JsonSchemaProperty => ({
+  type: 'boolean',
+  description,
+})
+const optionalInt = (description: string): JsonSchemaProperty => ({
+  type: 'integer',
+  description,
+})
+const requiredString = (description: string): JsonSchemaProperty => ({
+  type: 'string',
+  required: true,
+  description,
+})
+
+/** Target selector (id/url/title). */
+const targetParam: JsonSchemaProperty = {
+  type: 'object',
+  additionalProperties: true,
+  description: 'Exactly one Chrome tab selector.',
+  properties: {
+    by: { type: 'string', enum: ['id', 'url', 'title'] },
+    value: { type: 'string' },
+  },
+}
+
+/** Element target (uid/selector). */
+const elementParam: JsonSchemaProperty = {
+  type: 'object',
+  additionalProperties: true,
+  description: 'A fresh Action Graph ref (uid) or CSS selector.',
+  properties: {
+    by: { type: 'string', enum: ['uid', 'selector'] },
+    value: { type: 'string' },
+  },
+}
+
+/** Pointer target (element or coordinate). */
+const pointerParam: JsonSchemaProperty = {
+  type: 'object',
+  additionalProperties: true,
+  description: 'An element (uid/selector) or viewport coordinate.',
+  properties: {
+    by: { type: 'string', enum: ['uid', 'selector', 'coordinate'] },
+    value: { type: 'string' },
+    x: { type: 'number' },
+    y: { type: 'number' },
+  },
+}
+
+const snapshotVerification: Record<string, JsonSchemaProperty> = {
+  includeSnapshot: optionalBool(
+    'Include a fresh Action Graph snapshot after the operation completes.',
+  ),
+  maxElements: optionalInt('Cap the included snapshot element count (1-80).'),
+}
+
+// ---------------------------------------------------------------------------
+// The 25 atomic tool descriptors
+// ---------------------------------------------------------------------------
+
+type ToolDef = {
+  name: `chrome_${string}`
+  operation: string
+  description: string
+  promptSnippet: string
+  actionVerb?: ActionVerb
+  parameters?: Record<string, JsonSchemaProperty>
+}
+
+const TAB: ToolDef[] = [
+  {
+    name: 'chrome_tab_list',
+    operation: 'list',
+    description: 'List Chrome tabs visible to this Pi session.',
+    promptSnippet: 'List Chrome tabs and their exact ids.',
+    parameters: {},
+  },
+  {
+    name: 'chrome_tab_new',
+    operation: 'new',
+    description: 'Create another session-owned Chrome tab.',
+    promptSnippet: 'Create a session-owned Chrome tab.',
+    parameters: {
+      url: optionalString('Optional URL to open in the new tab.'),
+      groupColor: {
+        type: 'string',
+        enum: ['grey', 'blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange'],
+        description: 'Optional tab-group color.',
+      },
+    },
+  },
+  {
+    name: 'chrome_tab_activate',
+    operation: 'activate',
+    description: 'Activate one exact Chrome tab.',
+    promptSnippet: 'Activate an exact Chrome tab.',
+    parameters: { target: targetParam },
+  },
+  {
+    name: 'chrome_tab_close',
+    operation: 'close',
+    description: 'Close one exact Chrome tab.',
+    promptSnippet: 'Close an exact Chrome tab.',
+    parameters: { target: targetParam },
+  },
+  {
+    name: 'chrome_tab_group',
+    operation: 'group',
+    description: 'Place one exact Chrome tab in the Pi session group.',
+    promptSnippet: 'Group an exact Chrome tab under the Pi session.',
+    parameters: {
+      target: targetParam,
+      groupColor: {
+        type: 'string',
+        enum: ['grey', 'blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange'],
+        description: 'Optional tab-group color.',
+      },
+    },
+  },
+  {
+    name: 'chrome_tab_ungroup',
+    operation: 'ungroup',
+    description: 'Remove one exact Chrome tab from its group.',
+    promptSnippet: 'Ungroup an exact Chrome tab.',
+    parameters: { target: targetParam },
+  },
+]
+
+const PAGE: ToolDef[] = [
+  {
+    name: 'chrome_snapshot',
+    operation: 'snapshot',
+    description:
+      'Observe the page and return a compact Action Graph. Use its refs for actions.',
+    promptSnippet: 'Observe a page and obtain fresh action refs.',
+    parameters: {
+      ref: optionalString('A fresh context or frontier ref returned by page observation.'),
+      mode: {
+        type: 'string',
+        enum: ['auto', 'interactive', 'forms', 'pageMap', 'text', 'changes', 'full'],
+        description: 'Snapshot mode.',
+      },
+      query: optionalString('CSS query to scope the snapshot.'),
+      maxElements: optionalInt('Cap element count (1-80).'),
+      maxTextChars: optionalInt('Cap text characters (1-100000).'),
+      containingText: optionalString('Only include elements containing this text.'),
+      role: optionalString('Only include elements with this ARIA role.'),
+      nearUid: optionalString('Only include elements near this element uid.'),
+    },
+  },
+  {
+    name: 'chrome_read',
+    operation: 'read',
+    description:
+      'Read bounded rendered content from the current page without loading the Action Graph.',
+    promptSnippet: 'Read current rendered page content or expand a content frontier.',
+    parameters: {
+      ref: optionalString('A fresh context or frontier ref returned by page observation.'),
+      view: { type: 'string', enum: ['content', 'outline'], description: 'Read view.' },
+      query: optionalString('CSS query to scope the read.'),
+      maxChars: optionalInt('Cap characters (1-24000).'),
+    },
+  },
+  {
+    name: 'chrome_inspect',
+    operation: 'inspect',
+    description: 'Inspect one page element and its local context.',
+    promptSnippet: 'Inspect one page element in detail.',
+    parameters: {
+      element: elementParam,
+      scrollIntoView: optionalBool('Scroll the element into view first.'),
+    },
+  },
+  {
+    name: 'chrome_navigate',
+    operation: 'navigate',
+    description: 'Navigate the session-owned page or one explicitly selected tab.',
+    promptSnippet: 'Navigate a Chrome page.',
+    parameters: {
+      url: requiredString('The URL to navigate to.'),
+      waitUntilLoad: optionalBool('Wait for the load event before returning.'),
+      timeoutMs: optionalInt('Navigation timeout (1-120000ms).'),
+      initScript: optionalString('Optional script to run before navigation.'),
+      snapshot: {
+        type: 'object',
+        additionalProperties: true,
+        description: 'Optional snapshot options to run after navigation.',
+        properties: {
+          ref: optionalString('Snapshot ref.'),
+          mode: optionalString('Snapshot mode.'),
+          query: optionalString('Snapshot query.'),
+          maxElements: optionalInt('Snapshot max elements.'),
+          maxTextChars: optionalInt('Snapshot max text chars.'),
+        },
+      },
+    },
+  },
+  {
+    name: 'chrome_evaluate',
+    operation: 'evaluate',
+    description: 'Evaluate one JavaScript expression in the page and return bounded JSON.',
+    promptSnippet: 'Evaluate a bounded page expression.',
+    parameters: {
+      expression: requiredString('The JavaScript expression to evaluate.'),
+      awaitPromise: optionalBool('Await the promise result.'),
+    },
+  },
+  {
+    name: 'chrome_wait',
+    operation: 'wait',
+    description: 'Wait for one typed page condition.',
+    promptSnippet: 'Wait for a page condition.',
+    parameters: {
+      condition: {
+        type: 'object',
+        additionalProperties: true,
+        required: true,
+        description: 'The condition to wait for.',
+        properties: {
+          by: {
+            type: 'string',
+            enum: ['selector', 'urlIncludes', 'textContains', 'expression'],
+          },
+          value: { type: 'string' },
+        },
+      },
+      timeoutMs: optionalInt('Wait timeout (1-120000ms).'),
+      intervalMs: optionalInt('Poll interval (1-10000ms).'),
+    },
+  },
+  {
+    name: 'chrome_console',
+    operation: 'console',
+    description: 'Read captured page console entries.',
+    promptSnippet: 'Read or clear captured console entries.',
+    parameters: { clear: optionalBool('Clear captured entries after reading.') },
+  },
+  {
+    name: 'chrome_network_list',
+    operation: 'network-list',
+    description: 'List captured page network requests.',
+    promptSnippet: 'List or clear captured network requests.',
+    parameters: {
+      includePreserved: optionalBool('Include preserved entries from earlier navigations.'),
+      clear: optionalBool('Clear captured entries after listing.'),
+    },
+  },
+  {
+    name: 'chrome_network_get',
+    operation: 'network-get',
+    description: 'Read one captured network request and response body.',
+    promptSnippet: 'Read one captured network record.',
+    parameters: { requestId: requiredString('The captured request id.') },
+  },
+  {
+    name: 'chrome_screenshot',
+    operation: 'screenshot',
+    description:
+      'Capture the viewport or a bounded full-page tile set. '
+      + 'The image is saved into the workspace; use capture.path (viewport) or capture.directory (full-page) '
+      + 'to choose the destination, otherwise a timestamped path under .chrome-screenshots/ is used.',
+    promptSnippet: 'Capture a Chrome screenshot.',
+    parameters: {
+      capture: {
+        type: 'object',
+        additionalProperties: true,
+        required: true,
+        description: 'Capture mode: viewport or full-page-tiles.',
+        properties: {
+          kind: { type: 'string', enum: ['viewport', 'full-page-tiles'] },
+          path: optionalString('Workspace-relative path for a viewport capture.'),
+          directory: optionalString('Workspace-relative directory for full-page tiles.'),
+        },
+      },
+      format: { type: 'string', enum: ['png', 'jpeg'], description: 'Output format.' },
+      quality: optionalInt('JPEG quality (0-100).'),
+    },
+  },
+]
+
+const INPUT: ToolDef[] = [
+  {
+    name: 'chrome_click',
+    operation: 'click',
+    actionVerb: 'click',
+    description:
+      'Click a fresh Action Graph ref, selector, or viewport coordinate with real Chrome input.',
+    promptSnippet: 'Click a fresh action ref with real Chrome input.',
+    parameters: {
+      at: pointerParam,
+      ...snapshotVerification,
+    },
+  },
+  {
+    name: 'chrome_type',
+    operation: 'type',
+    description: 'Type text with real Chrome keyboard input, optionally into an element.',
+    promptSnippet: 'Type text with real Chrome keyboard input.',
+    parameters: {
+      text: { type: 'string', required: true, description: 'Text to type (max 500 chars).' },
+      into: elementParam,
+      pressEnter: optionalBool('Press Enter after typing.'),
+      ...snapshotVerification,
+    },
+  },
+  {
+    name: 'chrome_fill',
+    operation: 'fill',
+    actionVerb: 'fill',
+    description:
+      'Replace the value of a fresh Action Graph ref or selector with real Chrome input.',
+    promptSnippet: 'Fill a fresh editable action ref.',
+    parameters: {
+      text: { type: 'string', required: true, description: 'Text to fill (max 500 chars).' },
+      into: elementParam,
+      submit: optionalBool('Submit the surrounding form after filling.'),
+      ...snapshotVerification,
+    },
+  },
+  {
+    name: 'chrome_press',
+    operation: 'key',
+    actionVerb: 'press',
+    description:
+      'Press one key with real Chrome input, optionally after focusing a fresh Action Graph ref.',
+    promptSnippet: 'Press a key, optionally on a fresh action ref.',
+    parameters: {
+      key: requiredString('The key to press (e.g. Enter, Escape, Tab).'),
+      at: elementParam,
+      modifiers: {
+        type: 'object',
+        additionalProperties: true,
+        description: 'Modifier keys.',
+        properties: {
+          shift: { type: 'boolean' },
+          control: { type: 'boolean' },
+          alt: { type: 'boolean' },
+          meta: { type: 'boolean' },
+        },
+      },
+      ...snapshotVerification,
+    },
+  },
+  {
+    name: 'chrome_hover',
+    operation: 'hover',
+    description: 'Move the real Chrome pointer over an element or coordinate.',
+    promptSnippet: 'Hover with the real Chrome pointer.',
+    parameters: { at: pointerParam },
+  },
+  {
+    name: 'chrome_drag',
+    operation: 'drag',
+    description: 'Drag between two elements or coordinates with real Chrome input.',
+    promptSnippet: 'Drag with real Chrome pointer input.',
+    parameters: {
+      from: pointerParam,
+      to: pointerParam,
+      steps: optionalInt('Drag steps (3-40).'),
+    },
+  },
+  {
+    name: 'chrome_tap',
+    operation: 'tap',
+    description: 'Send a real Chrome touch tap to an element or coordinate.',
+    promptSnippet: 'Tap with real Chrome touch input.',
+    parameters: { at: pointerParam },
+  },
+  {
+    name: 'chrome_scroll',
+    operation: 'scroll',
+    description: 'Scroll the page or one element with real Chrome wheel input.',
+    promptSnippet: 'Scroll with real Chrome wheel input.',
+    parameters: {
+      within: elementParam,
+      deltaY: { type: 'number', description: 'Vertical scroll delta.' },
+      deltaX: { type: 'number', description: 'Horizontal scroll delta.' },
+      steps: optionalInt('Scroll steps (3-40).'),
+    },
+  },
+  {
+    name: 'chrome_upload',
+    operation: 'upload',
+    actionVerb: 'upload',
+    description:
+      'Upload workspace files through a fresh file-input Action Graph ref or selector.',
+    promptSnippet: 'Upload workspace files through a file input.',
+    parameters: {
+      into: elementParam,
+      paths: {
+        type: 'array',
+        required: true,
+        description: 'Workspace-relative file paths to upload (max 32).',
+        items: { type: 'string' },
+      },
+    },
+  },
+]
+
+/** The 25 atomic tools in registration order: tab, page, input. */
+const domainOf = (name: string): AtomicToolDescriptor['domain'] => {
+  if (name.startsWith('chrome_tab')) return 'tab'
+  if (INPUT.some(t => t.name === name)) return 'input'
+  return 'page'
+}
+
+const labelOf = (name: string): string =>
+  name
+    .slice('chrome_'.length)
+    .split('_')
+    .map(part => (part[0] ? part[0].toUpperCase() + part.slice(1) : part))
+    .join(' ')
+
+export const ATOMIC_TOOL_DESCRIPTORS: ReadonlyArray<AtomicToolDescriptor> = [
+  ...TAB,
+  ...PAGE,
+  ...INPUT,
+].map(({ parameters = {}, ...descriptor }) => ({
+  ...descriptor,
+  label: labelOf(descriptor.name),
+  domain: domainOf(descriptor.name),
+  parameters,
+  projectInput: (input: Record<string, unknown>) => ({
+    ...input,
+    op: descriptor.operation,
+  }) as Record<string, unknown> & { op: string },
+}))
+
+export const ACTION_TOOL_NAME_BY_VERB: Readonly<Record<ActionVerb, string>> = Object.fromEntries(
+  ATOMIC_TOOL_DESCRIPTORS.flatMap(({ actionVerb, name }) =>
+    actionVerb === undefined ? [] : [[actionVerb, name]],
+  ),
+) as Readonly<Record<ActionVerb, string>>
+
+export const atomicToolDescriptor = (name: string): AtomicToolDescriptor | undefined =>
+  ATOMIC_TOOL_DESCRIPTORS.find(descriptor => descriptor.name === name)
+
+// ---------------------------------------------------------------------------
+// Operation contracts (for the fingerprint)
+// ---------------------------------------------------------------------------
+
+export type OperationDeadlineKind =
+  | 'default'
+  | 'navigate'
+  | 'wait'
+  | 'screenshot'
+  | 'text-input'
+
+export type OperationResultContract =
+  | { mode: 'opaque' }
+  | { mode: 'schema'; schema: unknown }
+  | {
+    mode: 'by-call-fields'
+    selectors: readonly string[]
+    variants: Readonly<Record<string, Readonly<Record<string, unknown>>>>
+  }
+
+export type OperationContract = {
+  readonly operation: string
+  readonly domain: 'tab' | 'page' | 'input' | 'system'
+  readonly deadline: OperationDeadlineKind
+  readonly result: OperationResultContract
+}
+
+const opaque = (): OperationResultContract => ({ mode: 'opaque' })
+const schema = (value: unknown): OperationResultContract => ({ mode: 'schema', schema: value })
+
+const screenshotVariants: OperationResultContract = {
+  mode: 'by-call-fields',
+  selectors: ['call.operation.capture.kind', 'call.operation.format'],
+  variants: {
+    viewport: {
+      png: {
+        type: 'object',
+        properties: { kind: { const: 'image' }, format: { const: 'png' } },
+      },
+      jpeg: {
+        type: 'object',
+        properties: { kind: { const: 'image' }, format: { const: 'jpeg' } },
+      },
+    },
+    'full-page-tiles': {
+      png: {
+        type: 'object',
+        properties: { kind: { const: 'tile-set' }, format: { const: 'png' } },
+      },
+      jpeg: {
+        type: 'object',
+        properties: { kind: { const: 'tile-set' }, format: { const: 'jpeg' } },
+      },
+    },
+  },
+}
+
+const formattedTabSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'integer' },
+    windowId: { type: 'integer' },
+    active: { type: 'boolean' },
+    highlighted: { type: 'boolean' },
+    title: { type: 'string' },
+    url: { type: 'string' },
+    groupId: { type: 'integer' },
+    group: { type: ['object', 'null'] },
+  },
+}
+
+const resultDocuments: Record<string, Record<string, OperationResultContract>> = {
+  tab: {
+    list: schema({ type: 'array', items: formattedTabSchema }),
+    new: schema(formattedTabSchema),
+    activate: schema(formattedTabSchema),
+    close: schema({ type: 'object', properties: { closed: { type: 'integer' } } }),
+    group: schema(formattedTabSchema),
+    ungroup: schema(formattedTabSchema),
+  },
+  page: {
+    snapshot: opaque(),
+    read: opaque(),
+    inspect: opaque(),
+    navigate: schema({
+      type: 'object',
+      properties: { tab: formattedTabSchema, url: { type: 'string' } },
+    }),
+    evaluate: opaque(),
+    wait: schema({
+      type: 'object',
+      properties: {
+        satisfied: { type: 'boolean' },
+        elapsedMs: { type: 'integer' },
+        observation: { type: 'object' },
+      },
+    }),
+    console: opaque(),
+    'network-list': opaque(),
+    'network-get': opaque(),
+    screenshot: screenshotVariants,
+  },
+  input: {
+    click: opaque(),
+    type: opaque(),
+    fill: opaque(),
+    key: opaque(),
+    hover: opaque(),
+    drag: opaque(),
+    tap: opaque(),
+    scroll: opaque(),
+    upload: opaque(),
+  },
+  system: {
+    version: schema({
+      type: 'object',
+      properties: {
+        extensionId: { type: 'string' },
+        extensionDisplayVersion: { type: 'string' },
+        userAgent: { type: 'string' },
+      },
+    }),
+    'automation-status': schema({ type: 'object', properties: { targets: { type: 'array' } } }),
+    cleanup: schema({
+      type: 'object',
+      properties: { closedTabIds: { type: 'array' } },
+    }),
+    'cleanup-all': schema({
+      type: 'object',
+      properties: { closedTabIds: { type: 'array' } },
+    }),
+    probe: opaque(),
+  },
+}
+
+const deadlines: Record<string, Record<string, OperationDeadlineKind>> = {
+  tab: { list: 'default', new: 'default', activate: 'default', close: 'default', group: 'default', ungroup: 'default' },
+  page: {
+    snapshot: 'default', read: 'default', inspect: 'default', navigate: 'navigate',
+    evaluate: 'default', wait: 'wait', console: 'default',
+    'network-list': 'default', 'network-get': 'default', screenshot: 'screenshot',
+  },
+  input: {
+    click: 'default', type: 'text-input', fill: 'text-input', key: 'default',
+    hover: 'default', drag: 'default', tap: 'default', scroll: 'default', upload: 'default',
+  },
+  system: { version: 'default', 'automation-status': 'default', cleanup: 'default', 'cleanup-all': 'default', probe: 'default' },
+}
+
+export const OPERATION_CONTRACTS: Record<string, Record<string, OperationContract>> = Object.fromEntries(
+  (['tab', 'page', 'input', 'system'] as const).map(domain => [
+    domain,
+    Object.fromEntries(
+      Object.entries(resultDocuments[domain] ?? {}).map(([operation, result]) => [
+        operation,
+        {
+          operation,
+          domain,
+          deadline: deadlines[domain]?.[operation] ?? 'default',
+          result,
+        },
+      ]),
+    ),
+  ]),
+)
+
+export const operationResultProtocolContract = Object.fromEntries(
+  Object.entries(OPERATION_CONTRACTS).map(([domain, contracts]) => [
+    domain,
+    Object.fromEntries(
+      Object.entries(contracts).map(([operation, contract]) => [
+        operation,
+        { ...contract.result, deadline: contract.deadline },
+      ]),
+    ),
+  ]),
+)
+
+// ---------------------------------------------------------------------------
+// Wire call types
+// ---------------------------------------------------------------------------
+
+export type TabCall = { op: string; [key: string]: unknown }
+export type PageCall = { op: string; [key: string]: unknown }
+export type InputCall = { op: string; [key: string]: unknown }
+export type SystemCall = { op: string; [key: string]: unknown }
