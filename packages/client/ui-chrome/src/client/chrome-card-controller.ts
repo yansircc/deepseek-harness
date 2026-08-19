@@ -1,7 +1,10 @@
 /**
  * The Chrome card's controller: binds the `tool-chrome` settings scope and
- * exposes the port / credential-ref form. Reads are reactive through the scope
- * snapshot; writes go through the scope's durable set()/unset().
+ * exposes the port field. Reads are reactive through the scope snapshot;
+ * writes go through the scope's durable set()/unset().
+ *
+ * The owner credential is generated and stored automatically by the host
+ * plugin — this card has no credential control.
  */
 
 import type { SettingsScope, SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
@@ -14,7 +17,6 @@ export const CHROME_NS = 'tool-chrome'
 /** The `tool-chrome` section value. */
 export interface ChromeSettings {
   port?: number
-  ownerCredentialRef?: string
 }
 
 /** One form field as the card renders it. */
@@ -43,16 +45,14 @@ export interface ChromeCardState {
   failed: boolean
   /** Port field. */
   port: ChromeFieldState
-  /** Credential reference field. */
-  ownerCredentialRef: ChromeFieldState
 }
 
 /** Actions the card dispatches. */
 export interface ChromeCardActions {
-  /** Stage draft text for one field. */
-  edit: (field: 'port' | 'ownerCredentialRef', text: string) => void
-  /** Stage a clear for one field. */
-  resetField: (field: 'port' | 'ownerCredentialRef') => void
+  /** Stage draft text for the port field. */
+  edit: (field: 'port', text: string) => void
+  /** Stage a clear for the port field. */
+  resetField: (field: 'port') => void
   /** Write every staged edit. */
   save: () => void
   /** Drop every staged edit. */
@@ -102,35 +102,29 @@ export class ChromeCardController {
   private projection(): ChromeCardState {
     const snapshot = this.scope.getSnapshot()
     const stagedPort = this.staged.get('port')
-    const stagedRef = this.staged.get('ownerCredentialRef')
+    const plan = this.plan()
     return {
       available: snapshot.status === 'ready',
       writable: snapshot.writable,
       dirty: this.staged.size > 0 && !this.saving,
-      invalid: this.plan().some(item => item.run === undefined),
+      invalid: plan.some(item => item.run === undefined),
       saving: this.saving,
       failed: this.failed,
-      port: this.field('port', stagedPort, this.value().port),
-      ownerCredentialRef: this.field('ownerCredentialRef', stagedRef, this.value().ownerCredentialRef),
+      port: this.portField(stagedPort),
     }
   }
 
-  private field(
-    name: 'port' | 'ownerCredentialRef',
-    staged: StagedEdit | undefined,
-    stored: number | string | undefined,
-  ): ChromeFieldState {
+  private portField(staged: StagedEdit | undefined): ChromeFieldState {
     if (staged === undefined) {
+      const stored = this.value().port
       return {
-        text: name === 'port'
-          ? (typeof stored === 'number' ? String(stored) : '')
-          : (typeof stored === 'string' ? stored : ''),
-        overridden: this.userLayer()?.[name] !== undefined,
+        text: typeof stored === 'number' ? String(stored) : '',
+        overridden: this.userLayer()?.port !== undefined,
         invalid: false,
       }
     }
     if (staged.clear) return { text: staged.text, overridden: false, invalid: false }
-    const parsed = name === 'port' ? parsePort(staged.text) : (staged.text.trim() === '' ? undefined : staged.text.trim())
+    const parsed = parsePort(staged.text)
     return {
       text: staged.text,
       overridden: parsed !== undefined,
@@ -146,15 +140,9 @@ export class ChromeCardController {
         plan.push({ field, run: () => this.clear(field) })
         continue
       }
-      if (field === 'port') {
-        const parsed = parsePort(staged.text)
-        if (parsed === undefined) plan.push({ field, run: undefined })
-        else plan.push({ field, run: () => this.storePort(parsed) })
-      } else {
-        const trimmed = staged.text.trim()
-        if (trimmed === '') plan.push({ field, run: () => this.clear(field) })
-        else plan.push({ field, run: () => this.storeRef(trimmed) })
-      }
+      const parsed = parsePort(staged.text)
+      if (parsed === undefined) plan.push({ field, run: undefined })
+      else plan.push({ field, run: () => this.storePort(parsed) })
     }
     return plan
   }
@@ -167,14 +155,7 @@ export class ChromeCardController {
 
   private async storePort(port: number): Promise<boolean> {
     await this.scope.set('port', port)
-    const v = this.value().port
-    return v === port
-  }
-
-  private async storeRef(ref: string): Promise<boolean> {
-    await this.scope.set('ownerCredentialRef', ref)
-    const v = this.value().ownerCredentialRef
-    return v === ref
+    return this.value().port === port
   }
 
   private publish(): void {

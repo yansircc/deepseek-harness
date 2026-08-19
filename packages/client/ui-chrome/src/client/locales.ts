@@ -8,9 +8,9 @@ export type ChromeLocaleKey =
   | 'title' | 'description' | 'expand' | 'collapse' | 'readOnly'
   | 'statusTitle' | 'statusReady' | 'statusNotConfigured'
   | 'guideTitle' | 'guideLine1' | 'guideLine2' | 'guideLine3'
-  | 'installTitle' | 'installStep1' | 'installStep2' | 'installStep3'
-  | 'settingsTitle' | 'portLabel' | 'portHint' | 'credentialLabel' | 'credentialHint'
-  | 'overridden' | 'reset' | 'save' | 'saving' | 'discard' | 'unsaved' | 'saveFailed'
+  | 'installTitle' | 'downloadButton' | 'downloadHint' | 'installStep1' | 'installStep2' | 'installStep3'
+  | 'credentialAuto' | 'settingsTitle' | 'portLabel' | 'portHint'
+  | 'save' | 'saving' | 'discard' | 'unsaved' | 'saveFailed'
 
 /** English copy. */
 export const en: Record<ChromeLocaleKey, string> = {
@@ -26,17 +26,16 @@ export const en: Record<ChromeLocaleKey, string> = {
   guideLine1: 'The agent can open, switch, and close your Chrome tabs, click and type on pages, fill forms, take screenshots, and more — using your logged-in sessions, so sites that need sign-in just work.',
   guideLine2: 'The agent works in its own browser space, so your own browsing is not disturbed.',
   guideLine3: 'You stay in control: the agent only acts on what you ask it to do.',
-  installTitle: 'To enable Chrome control',
-  installStep1: 'Open the extension page: type chrome://extensions in your Chrome address bar and press Enter.',
-  installStep2: 'Turn on "Developer mode" (top right).',
-  installStep3: 'Click "Load unpacked" and select the folder containing the Chrome extension files.',
-  settingsTitle: 'Settings',
+  installTitle: 'Enable Chrome control in 3 steps',
+  downloadButton: 'Download the extension',
+  downloadHint: 'Download the extension package, then follow the steps below.',
+  installStep1: 'Download the extension (button above).',
+  installStep2: 'Open chrome://extensions and turn on "Developer mode" (top right).',
+  installStep3: 'Drag the downloaded ZIP directly onto the page, or extract it and use "Load unpacked".',
+  credentialAuto: 'Connection is automatic: the secret is generated and stored for you — nothing to configure.',
+  settingsTitle: 'Advanced',
   portLabel: 'Local service port',
   portHint: 'The local service Chrome connects to. Leave the default unless it conflicts with another program.',
-  credentialLabel: 'Credential name',
-  credentialHint: 'The stored connection secret name. Ask the agent for the exact value.',
-  overridden: 'Overridden',
-  reset: 'Reset to default',
   save: 'Save',
   saving: 'Saving…',
   discard: 'Discard',
@@ -58,17 +57,16 @@ export const zh: Record<ChromeLocaleKey, string> = {
   guideLine1: 'agent 可以打开、切换和关闭你的 Chrome 标签页，在页面上点击、输入、填写表单、截图等——使用你已登录的会话，需要登录的网站也能直接操作。',
   guideLine2: 'agent 在独立的浏览器空间工作，不会打扰你自己的浏览。',
   guideLine3: '你始终掌握控制权：agent 只做你要求的事。',
-  installTitle: '如何启用 Chrome 自动化',
-  installStep1: '打开扩展页面：在 Chrome 地址栏输入 chrome://extensions 并回车。',
-  installStep2: '打开右上角的“开发者模式”。',
-  installStep3: '点击“加载已解压的扩展程序”，选择包含 Chrome 扩展文件的文件夹。',
-  settingsTitle: '设置',
+  installTitle: '三步启用 Chrome 自动化',
+  downloadButton: '下载扩展',
+  downloadHint: '先下载扩展包，再按下面的步骤安装。',
+  installStep1: '下载扩展（点击上方按钮）。',
+  installStep2: '打开 chrome://extensions 并开启右上角的“开发者模式”。',
+  installStep3: '把下载的 ZIP 直接拖到页面，或解压后用“加载已解压的扩展程序”。',
+  credentialAuto: '连接是自动的：密钥已为你生成并安全存储，无需任何配置。',
+  settingsTitle: '高级',
   portLabel: '本地服务端口',
   portHint: 'Chrome 连接的本地服务端口。除非与其它程序冲突，否则保持默认即可。',
-  credentialLabel: '凭证名称',
-  credentialHint: '存储的连接密钥名称。请向 agent 询问确切值。',
-  overridden: '已覆盖',
-  reset: '恢复默认',
   save: '保存',
   saving: '保存中…',
   discard: '放弃',

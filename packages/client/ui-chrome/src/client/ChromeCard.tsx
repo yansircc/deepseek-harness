@@ -1,6 +1,7 @@
 /**
- * The Chrome control card: shows setup status, an install guide when not
- * configured, and the port / credential settings form.
+ * The Chrome control card: shows setup status, a direct extension download
+ * link with install steps, and an advanced port setting. The connection
+ * secret is generated automatically — nothing for the user to configure.
  */
 
 import { useState } from 'react'
@@ -15,6 +16,9 @@ export type ChromeCardProps =
   PropsRuntime<'settings.plugin.item'>
   & PropsLocale<'settings.chrome'>
   & InjectFace<ChromeCardFace>
+
+/** Download endpoint served by the tool-chrome host plugin. */
+const EXTENSION_DOWNLOAD_URL = '/api/chrome/extension.zip'
 
 /**
  * Render the Chrome control card.
@@ -51,9 +55,7 @@ export function ChromeCard(props: ChromeCardProps) {
 
             <section className={css.section}>
               <h4 className={css.sectionTitle}>{t('statusTitle')}</h4>
-              <p className={state.port.text === '' ? css.statusNotConfigured : css.statusReady}>
-                {state.port.text === '' ? t('statusNotConfigured') : t('statusReady')}
-              </p>
+              <p className={css.statusReady}>{t('statusReady')}</p>
             </section>
 
             <section className={css.section}>
@@ -65,11 +67,23 @@ export function ChromeCard(props: ChromeCardProps) {
 
             <section className={css.section}>
               <h4 className={css.sectionTitle}>{t('installTitle')}</h4>
+              <a
+                className={css.download}
+                href={EXTENSION_DOWNLOAD_URL}
+                download="chrome-extension.zip"
+              >
+                {t('downloadButton')}
+              </a>
+              <p className={css.hint}>{t('downloadHint')}</p>
               <ol className={css.steps}>
                 <li>{t('installStep1')}</li>
                 <li>{t('installStep2')}</li>
                 <li>{t('installStep3')}</li>
               </ol>
+            </section>
+
+            <section className={css.section}>
+              <h4 className={css.sectionTitle}>{t('credentialAuto')}</h4>
             </section>
 
             <section className={css.section}>
@@ -84,17 +98,6 @@ export function ChromeCard(props: ChromeCardProps) {
                 disabled={disabled}
                 onEdit={(text) => { props.edit('port', text) }}
                 onReset={() => { props.resetField('port') }}
-              />
-              <Field
-                id="chrome-credential"
-                label={t('credentialLabel')}
-                hint={t('credentialHint')}
-                text={state.ownerCredentialRef.text}
-                overridden={state.ownerCredentialRef.overridden}
-                invalid={state.ownerCredentialRef.invalid}
-                disabled={disabled}
-                onEdit={(text) => { props.edit('ownerCredentialRef', text) }}
-                onReset={() => { props.resetField('ownerCredentialRef') }}
               />
               {state.failed ? <p className={css.failed} role="status">{t('saveFailed')}</p> : null}
               <div className={css.footer}>

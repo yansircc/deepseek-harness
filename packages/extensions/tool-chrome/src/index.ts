@@ -12,7 +12,9 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
+import { randomBytes } from 'node:crypto'
 import { BridgeServer } from './bridge/server.ts'
+import { registerExtensionDownload } from './bridge/extension-download.ts'
 import {
   forwardCommandToOwner,
   statusFromOwner,
@@ -66,7 +68,9 @@ export function apply(ctx: Context, config: ConfigType): void {
     displayVersion: () => config.displayVersion ?? '0.1.0-rc.7',
   })
 
-  // Resolve the owner credential from ctx.credentials (or env fallback).
+  // Resolve the owner credential from ctx.credentials (or env fallback). If
+  // none is configured, generate one automatically and store it — the user
+  // never has to set a secret by hand (pi-chrome does the same).
   const credentials = ctx.get('credentials')
   const loadCredential = async (): Promise<string | undefined> => {
     if (credentials !== undefined) {
@@ -80,11 +84,34 @@ export function apply(ctx: Context, config: ConfigType): void {
     return process.env[ownerCredentialRef]
   }
 
+  const ensureCredential = async (): Promise<string> => {
+    const existing = await loadCredential()
+    if (existing !== undefined) return existing
+    const generated = randomBytes(32).toString('hex')
+    if (credentials !== undefined) {
+      try {
+        await credentials.set(credentialRef(ownerCredentialRef), generated)
+        ctx.logger.info('tool-chrome: generated and stored owner credential %s', ownerCredentialRef)
+        return generated
+      } catch {
+        // storage unavailable; fall back to in-memory for this process
+      }
+    }
+    return generated
+  }
+
   const getIdentity = async (): Promise<BridgeOwnerIdentity | undefined> => {
-    const credential = await loadCredential()
-    if (credential === undefined || credential.length === 0) return undefined
+    const credential = await ensureCredential()
+    if (credential.length === 0) return undefined
     return { credential, protocolFingerprint: protocolFingerprint() }
   }
+
+  // Serve the extension ZIP through the web server (if composed) so the
+  // WebUI card can offer a direct download.
+  const disposeDownload = registerExtensionDownload(ctx, port)
+  ctx.effect(() => () => {
+    disposeDownload?.()
+  }, 'tool-chrome.extension-download')
 
   // Start the bridge on plugin activation.
   void (async () => {
