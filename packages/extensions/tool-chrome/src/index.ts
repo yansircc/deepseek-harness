@@ -107,9 +107,30 @@ export function apply(ctx: Context, config: ConfigType): void {
   }
 
   // Serve the extension ZIP through the web server (if composed) so the
-  // WebUI card can offer a direct download.
-  const disposeDownload = registerExtensionDownload(ctx, port)
+  // WebUI card can offer a direct download. The web server may activate after
+  // this plugin, so poll briefly for it (headless profiles never compose it,
+  // in which case the route stays unregistered and the download link 404s
+  // with a plain hint).
+  let disposeDownload: (() => void) | undefined
+  const attemptDownloadRegistration = (): void => {
+    if (disposeDownload !== undefined) return
+    disposeDownload = registerExtensionDownload(ctx, port)
+    if (disposeDownload !== undefined) {
+      ctx.logger.info('tool-chrome: extension download served at %s', '/api/chrome/extension.zip')
+    }
+  }
+  attemptDownloadRegistration()
+  let downloadTries = 0
+  const downloadTimer = setInterval(() => {
+    downloadTries += 1
+    if (disposeDownload !== undefined || downloadTries >= 25) {
+      clearInterval(downloadTimer)
+      return
+    }
+    attemptDownloadRegistration()
+  }, 200)
   ctx.effect(() => () => {
+    clearInterval(downloadTimer)
     disposeDownload?.()
   }, 'tool-chrome.extension-download')
 
