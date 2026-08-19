@@ -7,8 +7,13 @@ export const NS = 'settings.chrome'
 export type ChromeLocaleKey =
   | 'title' | 'description' | 'expand' | 'collapse' | 'readOnly'
   | 'statusTitle' | 'statusReady' | 'statusNotConfigured'
+  | 'statusChecking' | 'statusConnected' | 'statusConnectedHint'
+  | 'statusWaiting' | 'statusWaitingHint'
+  | 'statusOffline' | 'statusOfflineHint'
+  | 'statusUnknown' | 'statusUnknownHint'
   | 'guideTitle' | 'guideLine1' | 'guideLine2' | 'guideLine3'
   | 'installTitle' | 'downloadButton' | 'downloadHint' | 'installStep1' | 'installStep2' | 'installStep3'
+  | 'openExtensions' | 'openExtensionsHint'
   | 'credentialAuto' | 'settingsTitle' | 'portLabel' | 'portHint'
   | 'save' | 'saving' | 'discard' | 'unsaved' | 'saveFailed'
 
@@ -22,6 +27,15 @@ export const en: Record<ChromeLocaleKey, string> = {
   statusTitle: 'Status',
   statusReady: 'Chrome control is set up.',
   statusNotConfigured: 'Chrome control is not set up yet.',
+  statusChecking: 'Checking connection…',
+  statusConnected: 'Connected',
+  statusConnectedHint: 'The extension is connected — the agent can drive your Chrome now.',
+  statusWaiting: 'Not connected',
+  statusWaitingHint: 'Download and load the extension below; it connects automatically.',
+  statusOffline: 'Local service is not running',
+  statusOfflineHint: 'Restart the dsh service and try again.',
+  statusUnknown: 'Status unavailable',
+  statusUnknownHint: 'This service version is outdated — restart it and try again.',
   guideTitle: 'What can the agent do?',
   guideLine1: 'The agent can open, switch, and close your Chrome tabs, click and type on pages, fill forms, take screenshots, and more — using your logged-in sessions, so sites that need sign-in just work.',
   guideLine2: 'The agent works in its own browser space, so your own browsing is not disturbed.',
@@ -32,6 +46,8 @@ export const en: Record<ChromeLocaleKey, string> = {
   installStep1: 'Download the extension (button above).',
   installStep2: 'Open chrome://extensions and turn on "Developer mode" (top right).',
   installStep3: 'Drag the downloaded ZIP directly onto the page, or extract it and use "Load unpacked".',
+  openExtensions: 'Open chrome://extensions',
+  openExtensionsHint: 'Opens in a new tab so you can check the extension is loaded.',
   credentialAuto: 'Connection is automatic: the secret is generated and stored for you — nothing to configure.',
   settingsTitle: 'Advanced',
   portLabel: 'Local service port',
@@ -53,6 +69,15 @@ export const zh: Record<ChromeLocaleKey, string> = {
   statusTitle: '状态',
   statusReady: 'Chrome 自动化已就绪。',
   statusNotConfigured: 'Chrome 自动化尚未配置。',
+  statusChecking: '检测连接中…',
+  statusConnected: '已连接',
+  statusConnectedHint: '扩展已连接，agent 可以直接操作你的 Chrome。',
+  statusWaiting: '未连接',
+  statusWaitingHint: '下载并加载下方扩展后会自动连接。',
+  statusOffline: '本地服务未运行',
+  statusOfflineHint: '重启 dsh 服务后重试。',
+  statusUnknown: '无法获取状态',
+  statusUnknownHint: '当前服务版本较旧，重启 dsh 服务后重试。',
   guideTitle: 'agent 能做什么？',
   guideLine1: 'agent 可以打开、切换和关闭你的 Chrome 标签页，在页面上点击、输入、填写表单、截图等——使用你已登录的会话，需要登录的网站也能直接操作。',
   guideLine2: 'agent 在独立的浏览器空间工作，不会打扰你自己的浏览。',
@@ -63,6 +88,8 @@ export const zh: Record<ChromeLocaleKey, string> = {
   installStep1: '下载扩展（点击上方按钮）。',
   installStep2: '打开 chrome://extensions 并开启右上角的“开发者模式”。',
   installStep3: '把下载的 ZIP 直接拖到页面，或解压后用“加载已解压的扩展程序”。',
+  openExtensions: '打开 chrome://extensions',
+  openExtensionsHint: '在新标签页中打开，检查扩展是否已加载。',
   credentialAuto: '连接是自动的：密钥已为你生成并安全存储，无需任何配置。',
   settingsTitle: '高级',
   portLabel: '本地服务端口',

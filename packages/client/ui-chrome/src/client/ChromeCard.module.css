@@ -439,3 +439,96 @@
 .advancedBody {
   padding-top: 8px;
 }
+
+/* Connection status dot (pi-chrome style indicator). */
+.statusRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 2px 0 6px;
+}
+
+.statusDot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--dsw-alias-label-tertiary);
+}
+
+.dotChecking {
+  background: var(--dsw-alias-label-tertiary);
+  animation: dotPulse 1.4s ease-in-out infinite;
+}
+
+.dotReady {
+  background: var(--dsw-alias-label-success, #2fb344);
+}
+
+.dotWaiting {
+  background: var(--dsw-alias-label-warning, #d97706);
+}
+
+.dotOffline {
+  background: var(--dsw-alias-label-error);
+}
+
+@keyframes dotPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.statusTexts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.statusText {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-primary);
+}
+
+.statusHint {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* Secondary action link that opens chrome://extensions in a new tab. */
+.openExtensions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 18px;
+  padding: 0 16px;
+  height: 36px;
+  margin-top: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+  text-decoration: none;
+  cursor: pointer;
+  background: none;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.openExtensions:hover {
+  color: var(--dsw-alias-label-primary);
+  border-color: var(--dsw-alias-label-dimmed);
+}
+
+.openExtensions:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 2px;
+}

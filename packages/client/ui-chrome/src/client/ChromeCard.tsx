@@ -4,7 +4,7 @@
  * secret is generated automatically — nothing for the user to configure.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import clsx from 'clsx'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { IconChevronDownOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -20,6 +20,49 @@ export type ChromeCardProps =
 /** Download endpoint served by the tool-chrome host plugin. */
 const EXTENSION_DOWNLOAD_URL = '/api/chrome/extension.zip'
 
+/** Bridge status endpoint served by the tool-chrome host plugin. */
+const STATUS_URL = '/api/chrome/status'
+
+/** How often the card re-checks the bridge status. */
+const STATUS_POLL_MS = 3000
+
+/** Bridge status payload the host status route returns. */
+interface BridgeStatusPayload {
+  state: 'ready' | 'waiting-for-extension' | 'offline' | 'unconfigured'
+  url: string
+  connector: { connected?: boolean; label?: string } | null
+  error: string | null
+}
+
+/** Poll the host status endpoint until the component unmounts. */
+function useBridgeStatus(): { status: BridgeStatusPayload | null; unknown: boolean } {
+  const [status, setStatus] = useState<BridgeStatusPayload | null>(null)
+  const [unknown, setUnknown] = useState(false)
+  useEffect(() => {
+    let alive = true
+    const poll = async (): Promise<void> => {
+      try {
+        const response = await fetch(STATUS_URL, { cache: 'no-store' })
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        const data = (await response.json()) as BridgeStatusPayload
+        if (alive) {
+          setStatus(data)
+          setUnknown(false)
+        }
+      } catch {
+        if (alive) setUnknown(true)
+      }
+    }
+    void poll()
+    const timer = setInterval(() => { void poll() }, STATUS_POLL_MS)
+    return () => {
+      alive = false
+      clearInterval(timer)
+    }
+  }, [])
+  return { status, unknown }
+}
+
 /**
  * Render the Chrome control card.
  * @param props - locale copy, the card snapshot, and its actions.
@@ -30,9 +73,24 @@ export function ChromeCard(props: ChromeCardProps) {
   const state = props.useChromeCard(snapshot => snapshot)
   const [open, setOpen] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  const { status, unknown } = useBridgeStatus()
   if (!state.available) return null
 
   const disabled = !state.writable || state.saving
+
+  // The status dot: green when the extension is connected, amber while
+  // waiting for it, red when the local bridge is down, gray while checking.
+  const view = status === null
+    ? unknown
+      ? { dot: css.dotChecking, text: t('statusUnknown'), hint: t('statusUnknownHint') }
+      : { dot: css.dotChecking, text: t('statusChecking') }
+    : status.state === 'ready'
+      ? { dot: css.dotReady, text: t('statusConnected'), hint: t('statusConnectedHint') }
+      : status.state === 'waiting-for-extension'
+        ? { dot: css.dotWaiting, text: t('statusWaiting'), hint: t('statusWaitingHint') }
+        : status.state === 'offline'
+          ? { dot: css.dotOffline, text: t('statusOffline'), hint: t('statusOfflineHint') }
+          : { dot: css.dotOffline, text: t('statusNotConfigured') }
 
   return (
     <li className={clsx(css.card, open && css.cardOpen)}>
@@ -56,7 +114,13 @@ export function ChromeCard(props: ChromeCardProps) {
 
             <section className={css.section}>
               <h4 className={css.sectionTitle}>{t('statusTitle')}</h4>
-              <p className={css.statusReady}>{t('statusReady')}</p>
+              <div className={css.statusRow}>
+                <span className={clsx(css.statusDot, view.dot)} aria-hidden="true" />
+                <div className={css.statusTexts}>
+                  <span className={css.statusText}>{view.text}</span>
+                  {view.hint ? <span className={css.statusHint}>{view.hint}</span> : null}
+                </div>
+              </div>
             </section>
 
             <section className={css.section}>
@@ -81,6 +145,15 @@ export function ChromeCard(props: ChromeCardProps) {
                 <li>{t('installStep2')}</li>
                 <li>{t('installStep3')}</li>
               </ol>
+              <a
+                className={css.openExtensions}
+                href="chrome://extensions"
+                target="_blank"
+                rel="noreferrer"
+              >
+                {t('openExtensions')}
+              </a>
+              <p className={css.hint}>{t('openExtensionsHint')}</p>
             </section>
 
             <section className={css.section}>
