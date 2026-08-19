@@ -58,18 +58,18 @@ export interface Config {
    * tool kinds in {@link Config.allowEditsKinds}), or `allow` (approve via the
    * first `allow_once`/`allow_always` option). No prompt is surfaced to a human.
    */
-  permission: PermissionPolicy
+  permission?: PermissionPolicy
   /** Tool kinds approved under `permission: allowEdits`; every other kind is cancelled. */
-  allowEditsKinds: ToolKind[]
+  allowEditsKinds?: ToolKind[]
   /**
    * Maximum concurrent pooled connections (and therefore concurrent Cursor
    * runs) per model. At most one active ACP session per connection.
    */
-  poolSize: number
+  poolSize?: number
   /** Idle time before a released connection is closed and reaped. */
-  idleTtlMs: number
+  idleTtlMs?: number
   /** Bound on the per-connection ACP `initialize` handshake. */
-  initTimeoutMs: number
+  initTimeoutMs?: number
   /**
    * Working-directory override used for BOTH the pooled process and its
    * sessions. Must be non-empty; a relative path resolves against the harness
@@ -83,7 +83,7 @@ export interface Config {
    * credential-scrubbed copy of the parent env, so an explicit key here
    * reaches the child while ambient secrets do not leak implicitly.
    */
-  env: Record<string, string>
+  env?: Record<string, string>
   /** Grace period (ms) for the child's EOF-driven quiesce on close. */
   disposeEofGraceMs?: number
   /** Termination-escalation grace (ms); must not exceed `MAX_TIMER_DELAY_MS`. */

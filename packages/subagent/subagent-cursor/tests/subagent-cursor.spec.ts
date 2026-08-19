@@ -66,7 +66,7 @@ function text(blocks: { type: string; text?: string }[]): string {
 }
 
 /** Run one delegation to completion and dispose it, returning the result text. */
-async function runOnce(ctx: Context, env: SetupEnv = {}, parent?: Agent): Promise<{ stopReason: string; output: string }> {
+async function runOnce(ctx: Context, parent?: Agent): Promise<{ stopReason: string; output: string }> {
   const run = await ctx.subagents.start('cursor', {
     label: 'p', prompt: [{ type: 'text' as const, text: 'p' }], parent: parent ?? fakeParent(), signal: new AbortController().signal,
   })
@@ -249,15 +249,15 @@ describe('pool reuse and lifecycle', () => {
       label: 'p', prompt: [{ type: 'text' as const, text: 'p' }], parent, signal: new AbortController().signal,
     })
     const [runA, runB] = [start(), start()]
-    const settle = async (runPromise: ReturnType<typeof start>): Promise<{ stopReason: string; output: unknown[] }> => {
+    const settle = async (runPromise: ReturnType<typeof start>): Promise<{ stopReason: string; output: string }> => {
       const run = await runPromise
       const result = await run.result
       await run.dispose()
-      return { stopReason: result.stopReason, output: result.output }
+      return { stopReason: result.stopReason, output: text(result.output) }
     }
     const results = await Promise.all([settle(runA), settle(runB)])
     expect(results.map(r => r.stopReason)).toEqual(['completed', 'completed'])
-    expect(text(results[0].output)).toBe(text(results[1].output))
+    expect(results[0].output).toBe(results[1].output)
   })
 
   it('evicts a crashed connection and respawns for the next run', async () => {
@@ -333,7 +333,7 @@ describe('workspace and env handling', () => {
     // cwd. MOCK_ECHO_CWD streams "<process cwd>\n<session cwd>".
     const sessionCwd = mkdtempSync(join(tmpdir(), 'cursor-session-'))
     const ctx = await setup({ MOCK_ECHO_CWD: '1' })
-    const { output } = await runOnce(ctx, {}, fakeParent(sessionCwd))
+    const { output } = await runOnce(ctx, fakeParent(sessionCwd))
     const [processCwd, announced] = output.split('\n')
     expect(processCwd).toBe(process.cwd())
     expect(announced).toBe(sessionCwd)
