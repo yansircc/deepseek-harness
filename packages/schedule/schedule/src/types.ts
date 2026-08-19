@@ -101,6 +101,38 @@ export interface ScheduleDeleteChange {
   readonly id: ScheduleId
 }
 
+/** Pauses one currently active reminder without deleting it. */
+export interface SchedulePauseChange {
+  readonly version: 1
+  readonly operation: 'pause'
+  readonly id: ScheduleId
+}
+
+/** Resumes one currently paused reminder. */
+export interface ScheduleResumeChange {
+  readonly version: 1
+  readonly operation: 'resume'
+  readonly id: ScheduleId
+}
+
+/** Replaces one active reminder in place, keeping its identity and pause state. */
+export interface ScheduleUpdateChange {
+  readonly version: 1
+  readonly operation: 'update'
+  readonly id: ScheduleId
+  /** Full replacement record that must carry the same id. */
+  readonly schedule: ScheduleRecord
+}
+
+/** Manually dispatches one reminder immediately at an explicit wall-clock instant. */
+export interface ScheduleRunNowChange {
+  readonly version: 1
+  readonly operation: 'run_now'
+  readonly id: ScheduleId
+  /** Canonical four-digit-year UTC instant at which the reminder fires. */
+  readonly at: string
+}
+
 /** Records that one active one-shot reminder entered the durable dispatch history. */
 export interface OneShotScheduleDispatchChange {
   readonly version: 1
@@ -121,7 +153,14 @@ export interface EveryScheduleDispatchChange {
 export type ScheduleDispatchChange = OneShotScheduleDispatchChange | EveryScheduleDispatchChange
 
 /** Strict version-1 durable Schedule mutation union. */
-export type ScheduleChange = ScheduleCreateChange | ScheduleDeleteChange | ScheduleDispatchChange
+export type ScheduleChange =
+  | ScheduleCreateChange
+  | ScheduleDeleteChange
+  | SchedulePauseChange
+  | ScheduleResumeChange
+  | ScheduleUpdateChange
+  | ScheduleRunNowChange
+  | ScheduleDispatchChange
 
 /** Current delivery timing derived from the durable record and wall clock. */
 export type ScheduleState = 'scheduled' | 'overdue'
@@ -135,10 +174,19 @@ export type ScheduleView = ScheduleRecord & {
   readonly state: ScheduleState
   /** Reminder delivery never leaves the owning session. */
   readonly deliveryMode: ScheduleDeliveryMode
+  /** Whether the reminder is paused and skipped by the live timer. */
+  readonly paused: boolean
 }
 
 /** Management operations whose persistence barrier may be uncertain. */
-export type SchedulePersistenceOperation = 'create' | 'list' | 'delete'
+export type SchedulePersistenceOperation =
+  | 'create'
+  | 'list'
+  | 'delete'
+  | 'pause'
+  | 'resume'
+  | 'update'
+  | 'run_now'
 
 /** Stable error returned for an empty reminder prompt. */
 export interface InvalidPromptError {
@@ -228,6 +276,45 @@ export type ScheduleDeleteResult =
 
 /** Canonical `schedule_delete` value. */
 export type ScheduleDeleteValue = ScheduleDeleteResult | ScheduleToolError
+
+/** Successful `schedule_update` value, including the non-mutating not-found result. */
+export type ScheduleUpdateResult =
+  | { readonly id: ScheduleId; readonly updated: true; readonly schedule: ScheduleView }
+  | { readonly id: ScheduleId; readonly updated: false; readonly code: 'schedule_not_found' }
+
+/** Canonical `schedule_update` value. */
+export type ScheduleUpdateValue = ScheduleUpdateResult | ScheduleToolError
+
+/** Successful `schedule_pause` value, including idempotent and not-found results. */
+export type SchedulePauseResult =
+  | { readonly id: ScheduleId; readonly paused: true }
+  | { readonly id: ScheduleId; readonly paused: false; readonly code: 'already_paused' }
+  | { readonly id: ScheduleId; readonly paused: false; readonly code: 'schedule_not_found' }
+
+/** Canonical `schedule_pause` value. */
+export type SchedulePauseValue = SchedulePauseResult | ScheduleToolError
+
+/** Successful `schedule_resume` value, including idempotent and not-found results. */
+export type ScheduleResumeResult =
+  | { readonly id: ScheduleId; readonly resumed: true }
+  | { readonly id: ScheduleId; readonly resumed: false; readonly code: 'not_paused' }
+  | { readonly id: ScheduleId; readonly resumed: false; readonly code: 'schedule_not_found' }
+
+/** Canonical `schedule_resume` value. */
+export type ScheduleResumeValue = ScheduleResumeResult | ScheduleToolError
+
+/** Successful `schedule_run_now` value, including the not-found result. */
+export type ScheduleRunNowResult =
+  | {
+    readonly id: ScheduleId
+    readonly dispatched: true
+    readonly occurrenceAt: string
+    readonly nextScheduledAt?: string
+  }
+  | { readonly id: ScheduleId; readonly dispatched: false; readonly code: 'schedule_not_found' }
+
+/** Canonical `schedule_run_now` value. */
+export type ScheduleRunNowValue = ScheduleRunNowResult | ScheduleToolError
 
 declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {

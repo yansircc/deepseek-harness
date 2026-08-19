@@ -85,7 +85,7 @@ describe('version-1 Schedule decoding and folding', () => {
   it.each([
     null,
     { version: 2, operation: 'delete', id: 'schedule-1' },
-    { version: 1, operation: 'pause', id: 'schedule-1' },
+    { version: 1, operation: 'later', id: 'schedule-1' },
     { version: 1, operation: 'delete', id: 'schedule-1', extra: true },
     { version: 1, operation: 'dispatch', id: '' },
     { version: 1, operation: 'dispatch', id: ' schedule-1' },
@@ -121,6 +121,7 @@ describe('version-1 Schedule decoding and folding', () => {
     expect(foldScheduleEvents([first, second, removed])).toEqual({
       active: [expect.objectContaining({ id: 'second' })],
       seenIds: ['first', 'second'],
+      pausedIds: [],
     })
     expect(() => foldScheduleEvents([
       first,
@@ -140,6 +141,7 @@ describe('version-1 Schedule decoding and folding', () => {
     expect(foldScheduleEvents([parentCreate, childCreate], 1)).toEqual({
       active: [expect.objectContaining({ id: 'child' })],
       seenIds: ['child'],
+      pausedIds: [],
     })
     expect(() => foldScheduleEvents([], -1)).toThrow(/seedLength/)
     expect(() => foldScheduleEvents([], 1)).toThrow(/seedLength/)
@@ -285,6 +287,7 @@ describe('fixed-rate records and durable progression', () => {
         scheduledAt: '2026-08-05T12:20:00.000Z',
       }],
       seenIds: ['schedule-every'],
+      pausedIds: [],
     })
     expect(() => foldScheduleEvents([
       create,
@@ -317,7 +320,7 @@ describe('fixed-rate records and durable progression', () => {
         id: final.id,
         acceptedAt: final.scheduledAt,
       }, 1),
-    ])).toEqual({ active: [], seenIds: [final.id] })
+    ])).toEqual({ active: [], seenIds: [final.id], pausedIds: [] })
 
     const first = createEveryScheduleRecord(ScheduleId('schedule-one'), 'line\n"quoted"', 300, start)
     const second = createEveryScheduleRecord(ScheduleId('schedule-two'), 'check metrics', 600, start)
@@ -472,6 +475,7 @@ describe('absolute record and time-zone resolution', () => {
       ...record,
       state: 'scheduled',
       deliveryMode: 'session-local',
+      paused: false,
     })
     expect(renderReminderFraming(record)).toContain('occurrence_at: 2026-08-06T01:00:00.000Z')
   })

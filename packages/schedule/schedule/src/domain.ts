@@ -93,6 +93,8 @@ export interface FoldedSchedules {
   readonly active: readonly ScheduleRecord[]
   /** Every id ever created in this session-local suffix. */
   readonly seenIds: readonly ScheduleIdType[]
+  /** Active ids paused by the current replay, in pause order. */
+  readonly pausedIds: readonly ScheduleIdType[]
 }
 
 /** One latest-only fixed-rate decision derived without enumerating a backlog. */
@@ -100,6 +102,14 @@ export interface EveryOccurrence {
   /** Latest anchor-aligned occurrence due at the decision time. */
   readonly occurrenceAt: string
   /** First anchor-aligned target after the decision, or exhaustion. */
+  readonly nextScheduledAt?: string
+}
+
+/** One immediate manual dispatch derived from an explicit wall-clock instant. */
+export interface RunNowOutcome {
+  /** The canonical instant at which the reminder fires. */
+  readonly occurrenceAt: string
+  /** Next target for a recurring reminder, or exhaustion. */
   readonly nextScheduledAt?: string
 }
 
@@ -527,6 +537,53 @@ export function decodeScheduleChange(value: unknown): ScheduleChange {
         id: decodeId(value['id']),
       })
     }
+    case 'pause': {
+      if (!hasExactKeys(value, ['version', 'operation', 'id'])) {
+        throw new ScheduleLogError('schedule pause must contain exactly version, operation, and id')
+      }
+      return Object.freeze({
+        version: SCHEDULE_CHANGE_VERSION,
+        operation: 'pause',
+        id: decodeId(value['id']),
+      })
+    }
+    case 'resume': {
+      if (!hasExactKeys(value, ['version', 'operation', 'id'])) {
+        throw new ScheduleLogError('schedule resume must contain exactly version, operation, and id')
+      }
+      return Object.freeze({
+        version: SCHEDULE_CHANGE_VERSION,
+        operation: 'resume',
+        id: decodeId(value['id']),
+      })
+    }
+    case 'update': {
+      if (!hasExactKeys(value, ['version', 'operation', 'id', 'schedule'])) {
+        throw new ScheduleLogError('schedule update must contain exactly version, operation, id, and schedule')
+      }
+      const schedule = decodeScheduleRecord(value['schedule'])
+      const id = decodeId(value['id'])
+      if (schedule.id !== id) {
+        throw new ScheduleLogError('schedule update replacement must carry the targeted id')
+      }
+      return Object.freeze({
+        version: SCHEDULE_CHANGE_VERSION,
+        operation: 'update',
+        id,
+        schedule,
+      })
+    }
+    case 'run_now': {
+      if (!hasExactKeys(value, ['version', 'operation', 'id', 'at'])) {
+        throw new ScheduleLogError('schedule run_now must contain exactly version, operation, id, and at')
+      }
+      return Object.freeze({
+        version: SCHEDULE_CHANGE_VERSION,
+        operation: 'run_now',
+        id: decodeId(value['id']),
+        at: decodeInstant(value['at']),
+      })
+    }
     case 'dispatch': {
       if (hasExactKeys(value, ['version', 'operation', 'id'])) {
         return Object.freeze({
@@ -546,7 +603,7 @@ export function decodeScheduleChange(value: unknown): ScheduleChange {
       throw new ScheduleLogError('schedule dispatch must contain id and optional acceptedAt only')
     }
     default:
-      throw new ScheduleLogError('schedule/change operation must be create, delete, or dispatch')
+      throw new ScheduleLogError('schedule/change operation must be create, delete, pause, resume, update, run_now, or dispatch')
   }
 }
 
@@ -702,6 +759,19 @@ function cronLocalParts(instant: number, formatter: Intl.DateTimeFormat): CronLo
   return { minute, hour, dayOfMonth, month, dayOfWeek }
 }
 
+/** Build one fixed en-US formatter that projects minute-granular calendar parts in a zone. */
+function cronFormatter(timeZone: string): Intl.DateTimeFormat {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    minute: '2-digit',
+    hour: '2-digit',
+    hourCycle: 'h23',
+    day: '2-digit',
+    month: '2-digit',
+    weekday: 'short',
+  })
+}
+
 /** Whether one local projection satisfies the parsed cron day rule (dom/dow OR per POSIX). */
 function cronDayMatches(cron: ParsedCron, parts: CronLocalParts): boolean {
   const dayOfMonthMatches = cron.dayOfMonth.values.has(parts.dayOfMonth)
@@ -741,15 +811,7 @@ export function resolveCronOccurrence(
   if (parsed === undefined) {
     throw new ScheduleLogError('cron record expression is invalid')
   }
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: record.timeZone,
-    minute: '2-digit',
-    hour: '2-digit',
-    hourCycle: 'h23',
-    day: '2-digit',
-    month: '2-digit',
-    weekday: 'short',
-  })
+  const formatter = cronFormatter(record.timeZone)
   // The occurrence is the latest whole minute at or before the decision time
   // that matches (and is not before the record's scheduled target). The next
   // target is the first strictly-future match.
@@ -770,21 +832,60 @@ export function resolveCronOccurrence(
     occurrenceAt = record.scheduledAt
   }
   const occurrenceMs = Date.parse(occurrenceAt)
-  // Forward scan for the next match strictly after the occurrence.
-  const limit = occurrenceMs + 366 * 24 * 60 * 60 * 1_000
-  let nextScheduledAt: string | undefined
-  for (let candidate = occurrenceMs + 60_000; candidate < limit; candidate += 60_000) {
-    const parts = cronLocalParts(candidate, formatter)
-    if (parts !== undefined && cronMatches(parsed, parts)) {
-      nextScheduledAt = new Date(candidate).toISOString()
-      break
-    }
-  }
+  const nextScheduledAt = nextCronMatchAfter(record, occurrenceMs)
   if (nextScheduledAt === undefined) {
     // No next match in the window: this occurrence is the last representable one.
     return Object.freeze({ occurrenceAt })
   }
   return Object.freeze({ occurrenceAt, nextScheduledAt })
+}
+
+/** First cron match strictly after one instant, or exhaustion within one year. */
+function nextCronMatchAfter(record: CronScheduleRecord, afterMs: number): string | undefined {
+  const parsed = parseCronExpression(record.expression)
+  if (parsed === undefined) {
+    throw new ScheduleLogError('cron record expression is invalid')
+  }
+  const formatter = cronFormatter(record.timeZone)
+  const start = Math.floor(afterMs / 60_000) * 60_000 + 60_000
+  const limit = start + 366 * 24 * 60 * 60 * 1_000
+  for (let candidate = start; candidate < limit; candidate += 60_000) {
+    const parts = cronLocalParts(candidate, formatter)
+    if (parts !== undefined && cronMatches(parsed, parts)) {
+      return new Date(candidate).toISOString()
+    }
+  }
+  return undefined
+}
+
+/**
+ * Resolve one immediate manual dispatch at an explicit wall-clock instant.
+ * @param record - Active record being dispatched.
+ * @param at - Wall-clock instant in epoch milliseconds.
+ * @returns The fired occurrence and next recurring target, if representable.
+ */
+export function resolveRunNow(record: ScheduleRecord, at: number): RunNowOutcome {
+  if (!Number.isSafeInteger(at)
+    || at < MIN_FOUR_DIGIT_YEAR_MS
+    || at > MAX_FOUR_DIGIT_YEAR_MS) {
+    throw new ScheduleLogError('run_now at must be a representable four-digit-year instant')
+  }
+  const occurrenceAt = new Date(at).toISOString()
+  if (record.kind === 'after' || record.kind === 'at') {
+    return Object.freeze({ occurrenceAt })
+  }
+  if (record.kind === 'every') {
+    const next = at + record.everySeconds * 1_000
+    if (!Number.isSafeInteger(next) || next > MAX_FOUR_DIGIT_YEAR_MS) {
+      return Object.freeze({ occurrenceAt })
+    }
+    return Object.freeze({ occurrenceAt, nextScheduledAt: new Date(next).toISOString() })
+  }
+  const nextScheduledAt = nextCronMatchAfter(record, at)
+  return Object.freeze({
+    occurrenceAt,
+    ...(nextScheduledAt === undefined ? {} : { nextScheduledAt }),
+  })
 }
 
 /** Apply one decoded dispatch to its exact active record. */
@@ -822,6 +923,7 @@ export function foldScheduleEvents(
   }
   const active = new Map<ScheduleIdType, ScheduleRecord>()
   const seen = new Set<ScheduleIdType>()
+  const paused = new Set<ScheduleIdType>()
   for (const event of events.slice(seedLength)) {
     if (event.type !== 'schedule/change') continue
     const change = decodeScheduleChange(event.data)
@@ -837,15 +939,53 @@ export function foldScheduleEvents(
         if (!active.delete(change.id)) {
           throw new ScheduleLogError(`schedule delete targets inactive id ${JSON.stringify(change.id)}`)
         }
+        paused.delete(change.id)
         break
+      case 'pause':
+        if (!active.has(change.id)) {
+          throw new ScheduleLogError(`schedule pause targets inactive id ${JSON.stringify(change.id)}`)
+        }
+        paused.add(change.id)
+        break
+      case 'resume':
+        if (!active.has(change.id)) {
+          throw new ScheduleLogError(`schedule resume targets inactive id ${JSON.stringify(change.id)}`)
+        }
+        paused.delete(change.id)
+        break
+      case 'update': {
+        if (!active.has(change.id)) {
+          throw new ScheduleLogError(`schedule update targets inactive id ${JSON.stringify(change.id)}`)
+        }
+        active.set(change.id, change.schedule)
+        break
+      }
+      case 'run_now': {
+        const record = active.get(change.id)
+        if (record === undefined) {
+          throw new ScheduleLogError(`schedule run_now targets inactive id ${JSON.stringify(change.id)}`)
+        }
+        const outcome = resolveRunNow(record, Date.parse(change.at))
+        if (outcome.nextScheduledAt === undefined) {
+          active.delete(change.id)
+          paused.delete(change.id)
+        } else {
+          active.set(change.id, Object.freeze({ ...record, scheduledAt: outcome.nextScheduledAt }))
+        }
+        break
+      }
       case 'dispatch': {
         const record = active.get(change.id)
         if (record === undefined) {
           throw new ScheduleLogError(`schedule dispatch targets inactive id ${JSON.stringify(change.id)}`)
         }
         const next = dispatchedRecord(record, change)
-        if (next === undefined) active.delete(change.id)
-        else active.set(change.id, next)
+        if (next === undefined) {
+          active.delete(change.id)
+          paused.delete(change.id)
+        } else {
+          active.set(change.id, next)
+        }
         break
       }
       /* v8 ignore next 3 -- decodeScheduleChange returns a closed operation union. */
@@ -858,6 +998,7 @@ export function foldScheduleEvents(
   return Object.freeze({
     active: Object.freeze([...active.values()]),
     seenIds: Object.freeze([...seen]),
+    pausedIds: Object.freeze([...paused]),
   })
 }
 
@@ -1048,15 +1189,7 @@ function resolveCronOccurrenceForCreate(
   timeZone: string,
   now: number,
 ): string {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    minute: '2-digit',
-    hour: '2-digit',
-    hourCycle: 'h23',
-    day: '2-digit',
-    month: '2-digit',
-    weekday: 'short',
-  })
+  const formatter = cronFormatter(timeZone)
   const start = Math.floor(now / 60_000) * 60_000 + 60_000
   const limit = start + 366 * 24 * 60 * 60 * 1_000
   for (let candidate = start; candidate < limit; candidate += 60_000) {
@@ -1075,13 +1208,15 @@ function resolveCronOccurrenceForCreate(
  * Derive one execution-local management view.
  * @param record - Active durable record.
  * @param now - Wall-clock sample used for its timing state.
+ * @param paused - Whether the record is currently paused.
  * @returns Complete session-local view.
  */
-export function scheduleView(record: ScheduleRecord, now: number): ScheduleView {
+export function scheduleView(record: ScheduleRecord, now: number, paused = false): ScheduleView {
   return Object.freeze({
     ...record,
     state: now >= Date.parse(record.scheduledAt) ? 'overdue' : 'scheduled',
     deliveryMode: 'session-local',
+    paused,
   })
 }
 

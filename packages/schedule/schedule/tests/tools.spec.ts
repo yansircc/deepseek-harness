@@ -109,7 +109,8 @@ describe('Schedule tool protocol', () => {
     }
     const persistenceError = outputSchema.oneOf?.find(schema =>
       schema.properties?.code?.const === 'persistence_uncertain')
-    expect(persistenceError?.properties?.operation?.enum).toEqual(['create', 'list', 'delete'])
+    expect(persistenceError?.properties?.operation?.enum)
+      .toEqual(['create', 'list', 'delete', 'pause', 'resume', 'update', 'run_now'])
     for (const name of ['schedule_create', 'schedule_list', 'schedule_delete']) {
       expect(test.ctx.tools.executionMode({ signal, callId: CallId(name), name, arguments: {}, agent: test.agent }))
         .toEqual({ kind: 'exclusive' })
@@ -152,7 +153,7 @@ describe('Schedule tool protocol', () => {
     expect(value(await execute(test, 'schedule_create', { prompt: 'x', after_seconds: 1, at: 'later' })))
       .toEqual({
         code: 'invalid_selector',
-        message: 'schedule_create accepts exactly one of after_seconds, at, or every_seconds.',
+        message: 'schedule_create accepts exactly one of after_seconds, at, every_seconds, or cron.',
       })
     expect(value(await execute(test, 'schedule_create', { prompt: 'x', every_seconds: 1.5 })))
       .toEqual({ code: 'invalid_rule', message: 'every_seconds must be a safe integer.' })
@@ -174,6 +175,7 @@ describe('Schedule tool protocol', () => {
       scheduledAt: '2026-08-05T12:00:30.000Z',
       state: 'scheduled',
       deliveryMode: 'session-local',
+      paused: false,
     })
     expect(test.flushes.count).toBe(2)
     expect(test.changes.count).toBe(2)
@@ -219,6 +221,7 @@ describe('Schedule tool protocol', () => {
       scheduledAt: '2026-08-06T01:00:00.000Z',
       state: 'scheduled',
       deliveryMode: 'session-local',
+      paused: false,
     })
     expect(value(await execute(test, 'schedule_create', {
       prompt: 'local meeting',
@@ -267,6 +270,7 @@ describe('Schedule tool protocol', () => {
       scheduledAt: '2026-08-05T12:05:00.000Z',
       state: 'scheduled',
       deliveryMode: 'session-local',
+      paused: false,
     })
     vi.setSystemTime(new Date('2026-08-05T12:06:00.000Z'))
     expect(value(await execute(test, 'schedule_list', {}))).toEqual([
@@ -569,5 +573,199 @@ describe('Schedule persistence failure boundaries', () => {
     expect(value(await execute(test, 'schedule_delete', { id: 'schedule-1' })))
       .toEqual({ code: 'internal_error', message: 'The schedule operation failed.' })
     stop()
+  })
+})
+
+describe('Schedule management tools', () => {
+  it('creates cron reminders with a default UTC zone and explicit zones', async () => {
+    const test = await harness()
+    expect(value(await execute(test, 'schedule_create', {
+      prompt: 'daily standup', cron: { expression: '0 9 * * *' },
+    }))).toEqual({
+      id: 'schedule-1',
+      kind: 'cron',
+      prompt: 'daily standup',
+      expression: '0 9 * * *',
+      timeZone: 'UTC',
+      scheduledAt: '2026-08-06T09:00:00.000Z',
+      state: 'scheduled',
+      deliveryMode: 'session-local',
+      paused: false,
+    })
+    // 2026-08-05 is a Wednesday; next Monday 08:30 Asia/Shanghai is 2026-08-10T00:30Z.
+    expect(value(await execute(test, 'schedule_create', {
+      prompt: 'weekly sync',
+      cron: { expression: '30 8 * * 1', time_zone: 'Asia/Shanghai' },
+    }))).toEqual(expect.objectContaining({
+      id: 'schedule-2',
+      timeZone: 'Asia/Shanghai',
+      scheduledAt: '2026-08-10T00:30:00.000Z',
+    }))
+    expect(value(await execute(test, 'schedule_create', {
+      prompt: 'bad cron', cron: { expression: '0 9 *' },
+    }))).toEqual({
+      code: 'invalid_rule',
+      message: 'cron must be a 5-field expression (minute hour day-of-month month day-of-week).',
+    })
+    expect(value(await execute(test, 'schedule_create', {
+      prompt: 'bad zone', cron: { expression: '0 9 * * *', time_zone: 'Mars/Olympus' },
+    }))).toEqual(expect.objectContaining({ code: 'invalid_time_zone' }))
+  })
+
+  it('updates a prompt without touching timing and rebuilds rules with a selector', async () => {
+    const test = await harness()
+    await execute(test, 'schedule_create', { prompt: 'a', after_seconds: 300 })
+    expect(value(await execute(test, 'schedule_update', { id: 'schedule-1', prompt: 'b' }))).toEqual({
+      id: 'schedule-1',
+      updated: true,
+      schedule: {
+        id: 'schedule-1',
+        kind: 'after',
+        prompt: 'b',
+        afterSeconds: 300,
+        scheduledAt: '2026-08-05T12:05:00.000Z',
+        state: 'scheduled',
+        deliveryMode: 'session-local',
+        paused: false,
+      },
+    })
+    expect(value(await execute(test, 'schedule_update', { id: 'schedule-1', every_seconds: 600 })))
+      .toEqual(expect.objectContaining({
+        id: 'schedule-1',
+        updated: true,
+        schedule: expect.objectContaining({
+          id: 'schedule-1',
+          kind: 'every',
+          prompt: 'b',
+          everySeconds: 600,
+          scheduledAt: '2026-08-05T12:10:00.000Z',
+        }),
+      }))
+    expect(value(await execute(test, 'schedule_update', { id: 'schedule-9', prompt: 'x' })))
+      .toEqual({ id: 'schedule-9', updated: false, code: 'schedule_not_found' })
+    const changes = test.agent.session.events
+      .filter(event => event.type === 'schedule/change')
+      .map(event => event.data)
+    expect(changes.map(change => change.operation)).toEqual(['create', 'update', 'update'])
+    expect(changes[1]).toEqual({
+      version: 1,
+      operation: 'update',
+      id: 'schedule-1',
+      schedule: {
+        id: 'schedule-1',
+        kind: 'after',
+        prompt: 'b',
+        afterSeconds: 300,
+        scheduledAt: '2026-08-05T12:05:00.000Z',
+      },
+    })
+  })
+
+  it('rejects invalid update arguments before persistence', async () => {
+    const test = await harness()
+    expect(value(await execute(test, 'schedule_update', { id: 'schedule-1' }))).toEqual({
+      code: 'invalid_selector',
+      message: 'schedule_update requires a new prompt or one timing selector.',
+    })
+    expect(value(await execute(test, 'schedule_update', {
+      id: 'schedule-1', prompt: 'x', after_seconds: 1, every_seconds: 300,
+    }))).toEqual({
+      code: 'invalid_selector',
+      message: 'schedule_update accepts at most one of after_seconds, at, every_seconds, or cron.',
+    })
+    expect(value(await execute(test, 'schedule_update', { id: ' schedule-1', prompt: 'x' }))).toEqual({
+      code: 'invalid_rule',
+      message: 'schedule_update id must be non-empty without surrounding whitespace.',
+    })
+    expect(value(await execute(test, 'schedule_update', { id: 'schedule-1', prompt: ' ' }))).toEqual({
+      code: 'invalid_prompt',
+      message: 'prompt must be non-empty after trimming.',
+    })
+    expect(test.flushes.count).toBe(0)
+  })
+
+  it('pauses, reports idempotent states, resumes, and lists the paused flag', async () => {
+    const test = await harness()
+    await execute(test, 'schedule_create', { prompt: 'x', every_seconds: 300 })
+    expect(value(await execute(test, 'schedule_pause', { id: 'schedule-1' })))
+      .toEqual({ id: 'schedule-1', paused: true })
+    expect(value(await execute(test, 'schedule_pause', { id: 'schedule-1' })))
+      .toEqual({ id: 'schedule-1', paused: false, code: 'already_paused' })
+    expect(value(await execute(test, 'schedule_list', {}))).toEqual([
+      expect.objectContaining({ id: 'schedule-1', paused: true }),
+    ])
+    expect(value(await execute(test, 'schedule_resume', { id: 'schedule-1' })))
+      .toEqual({ id: 'schedule-1', resumed: true })
+    expect(value(await execute(test, 'schedule_resume', { id: 'schedule-1' })))
+      .toEqual({ id: 'schedule-1', resumed: false, code: 'not_paused' })
+    expect(value(await execute(test, 'schedule_pause', { id: 'missing' })))
+      .toEqual({ id: 'missing', paused: false, code: 'schedule_not_found' })
+    expect(value(await execute(test, 'schedule_resume', { id: 'missing' })))
+      .toEqual({ id: 'missing', resumed: false, code: 'schedule_not_found' })
+  })
+
+  it('runs a one-shot now and advances a recurring reminder', async () => {
+    const test = await harness()
+    await execute(test, 'schedule_create', { prompt: 'one', after_seconds: 3600 })
+    await execute(test, 'schedule_create', { prompt: 'every', every_seconds: 300 })
+    expect(value(await execute(test, 'schedule_run_now', { id: 'schedule-1' })))
+      .toEqual(expect.objectContaining({
+        id: 'schedule-1',
+        dispatched: true,
+        occurrenceAt: '2026-08-05T12:00:00.000Z',
+      }))
+    expect(value(await execute(test, 'schedule_run_now', { id: 'schedule-2' })))
+      .toEqual(expect.objectContaining({
+        id: 'schedule-2',
+        dispatched: true,
+        occurrenceAt: '2026-08-05T12:00:00.000Z',
+        nextScheduledAt: '2026-08-05T12:05:00.000Z',
+      }))
+    expect(value(await execute(test, 'schedule_list', {}))).toEqual([
+      expect.objectContaining({ id: 'schedule-2', scheduledAt: '2026-08-05T12:05:00.000Z' }),
+    ])
+    expect(value(await execute(test, 'schedule_run_now', { id: 'schedule-9' })))
+      .toEqual({ id: 'schedule-9', dispatched: false, code: 'schedule_not_found' })
+  })
+
+  it('rejects empty or padded management ids before persistence', async () => {
+    const test = await harness()
+    for (const name of ['schedule_update', 'schedule_pause', 'schedule_resume', 'schedule_run_now']) {
+      expect(value(await execute(test, name, { id: '' }))).toEqual({
+        code: 'invalid_rule',
+        message: `${name} id must be non-empty without surrounding whitespace.`,
+      })
+    }
+    expect(test.flushes.count).toBe(0)
+  })
+
+  it('returns uncertainty for update when its preflight rejects', async () => {
+    const test = await harness()
+    await execute(test, 'schedule_create', { prompt: 'x', after_seconds: 300 })
+    test.flushes.outcomes.push('reject')
+    expect(value(await execute(test, 'schedule_update', { id: 'schedule-1', prompt: 'y' }))).toEqual({
+      code: 'persistence_uncertain',
+      message: 'Schedule persistence is uncertain; retry with schedule_list before relying on this result.',
+      operation: 'update',
+      id: 'schedule-1',
+    })
+  })
+
+  it('contains append failures for update and run_now after a successful preflight', async () => {
+    const test = await harness()
+    await execute(test, 'schedule_create', { prompt: 'x', after_seconds: 1 })
+    for (const [name, args] of [
+      ['schedule_update', { id: 'schedule-1', prompt: 'y' }],
+      ['schedule_run_now', { id: 'schedule-1' }],
+    ] as const) {
+      const stop = test.ctx.on('internal/dispatch', (_mode, eventName, callArgs) => {
+        if (eventName !== 'session/event') return
+        const event = (callArgs as unknown[])[1] as { type?: string; data?: { operation?: string } } | undefined
+        if (event?.type === 'schedule/change') throw new Error('append denied')
+      }, { global: true, prepend: true })
+      expect(value(await execute(test, name, args)))
+        .toEqual({ code: 'internal_error', message: 'The schedule operation failed.' })
+      stop()
+    }
   })
 })

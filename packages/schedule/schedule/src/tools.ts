@@ -12,9 +12,11 @@ import {
   allocateScheduleId,
   createAfterScheduleRecord,
   createAtScheduleRecord,
+  createCronScheduleRecord,
   createEveryScheduleRecord,
   foldScheduleEvents,
   MIN_EVERY_INTERVAL_SECONDS,
+  resolveRunNow,
   ScheduleId,
   ScheduleInputError,
   ScheduleLogError,
@@ -30,9 +32,13 @@ import type {
   ScheduleId as ScheduleIdType,
   InternalScheduleError,
   ScheduleListValue,
+  SchedulePauseValue,
   SchedulePersistenceOperation,
   ScheduleRecord,
+  ScheduleResumeValue,
+  ScheduleRunNowValue,
   ScheduleToolError,
+  ScheduleUpdateValue,
 } from './types.ts'
 
 const SHARED_VIEW_PROPERTIES = {
@@ -41,6 +47,7 @@ const SHARED_VIEW_PROPERTIES = {
   scheduledAt: { type: 'string', required: true },
   state: { type: 'string', required: true, enum: ['scheduled', 'overdue'] },
   deliveryMode: { type: 'string', required: true, const: 'session-local' },
+  paused: { type: 'boolean', required: true },
 } as const
 
 const AFTER_VIEW_SCHEMA = {
@@ -115,7 +122,11 @@ const PERSISTENCE_ERROR_SCHEMA = {
   properties: {
     code: { type: 'string', required: true, const: 'persistence_uncertain' },
     message: { type: 'string', required: true },
-    operation: { type: 'string', required: true, enum: ['create', 'list', 'delete'] },
+    operation: {
+      type: 'string',
+      required: true,
+      enum: ['create', 'list', 'delete', 'pause', 'resume', 'update', 'run_now'],
+    },
     id: { type: 'string' },
   },
 } as const
@@ -155,22 +166,138 @@ const DELETE_OUTPUT_SCHEMA = {
   ],
 } as const
 
+const UPDATE_OUTPUT_SCHEMA = {
+  oneOf: [
+    {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        id: { type: 'string', required: true },
+        updated: { type: 'boolean', required: true, const: true },
+        schedule: VIEW_SCHEMA,
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        id: { type: 'string', required: true },
+        updated: { type: 'boolean', required: true, const: false },
+        code: { type: 'string', required: true, const: 'schedule_not_found' },
+      },
+    },
+    ...ERROR_SCHEMAS,
+  ],
+} as const
+
+const PAUSE_OUTPUT_SCHEMA = {
+  oneOf: [
+    {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        id: { type: 'string', required: true },
+        paused: { type: 'boolean', required: true, const: true },
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        id: { type: 'string', required: true },
+        paused: { type: 'boolean', required: true, const: false },
+        code: { type: 'string', required: true, enum: ['already_paused', 'schedule_not_found'] },
+      },
+    },
+    ...ERROR_SCHEMAS,
+  ],
+} as const
+
+const RESUME_OUTPUT_SCHEMA = {
+  oneOf: [
+    {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        id: { type: 'string', required: true },
+        resumed: { type: 'boolean', required: true, const: true },
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        id: { type: 'string', required: true },
+        resumed: { type: 'boolean', required: true, const: false },
+        code: { type: 'string', required: true, enum: ['not_paused', 'schedule_not_found'] },
+      },
+    },
+    ...ERROR_SCHEMAS,
+  ],
+} as const
+
+const RUN_NOW_OUTPUT_SCHEMA = {
+  oneOf: [
+    {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        id: { type: 'string', required: true },
+        dispatched: { type: 'boolean', required: true, const: true },
+        occurrenceAt: { type: 'string', required: true },
+        nextScheduledAt: { type: 'string' },
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        id: { type: 'string', required: true },
+        dispatched: { type: 'boolean', required: true, const: false },
+        code: { type: 'string', required: true, const: 'schedule_not_found' },
+      },
+    },
+    ...ERROR_SCHEMAS,
+  ],
+} as const
+
 const CREATE_DESCRIPTION =
   'Create one reminder in the current session. Supply a non-empty prompt and exactly one selector: '
   + 'a positive safe-integer after_seconds delay, at as a strict offset date-time or local '
-  + `date/time object, or safe-integer every_seconds of at least ${MIN_EVERY_INTERVAL_SECONDS}. `
-  + 'Fixed-rate reminders stay creation-aligned, skip missed occurrences, and batch one latest '
-  + 'occurrence per overdue rule. '
+  + `date/time object, safe-integer every_seconds of at least ${MIN_EVERY_INTERVAL_SECONDS}, `
+  + 'or cron as a 5-field expression (minute hour day-of-month month day-of-week) with an '
+  + 'optional IANA time_zone defaulting to UTC. '
+  + 'Fixed-rate and cron reminders skip missed occurrences and dispatch one latest occurrence '
+  + 'per overdue rule. '
   + 'Delivery is session-local: the reminder runs on time only while this session '
   + 'is live and otherwise becomes overdue until the session is resumed.'
 
 const LIST_DESCRIPTION =
   'List every active reminder in the current session in creation order, including its exact id, '
-  + 'UTC target, scheduled or overdue state, and session-local delivery mode.'
+  + 'UTC target, scheduled or overdue state, paused flag, and session-local delivery mode.'
 
 const DELETE_DESCRIPTION =
   'Delete one active reminder in the current session by the exact id returned by schedule_create '
   + 'or schedule_list. Unknown or already-finished ids return deleted false.'
+
+const UPDATE_DESCRIPTION =
+  'Update one active reminder in the current session by its exact id. Supply a new prompt, at most '
+  + 'one timing selector (after_seconds, at, every_seconds, or cron), or both. Without a selector '
+  + 'the current timing is kept; with a selector the rule is rebuilt and the next target is '
+  + 'recomputed from now. One-shot targets must remain strictly in the future.'
+
+const PAUSE_DESCRIPTION =
+  'Pause one active reminder in the current session by its exact id. A paused reminder keeps its '
+  + 'target but is skipped by the live timer until schedule_resume is called.'
+
+const RESUME_DESCRIPTION =
+  'Resume one paused reminder in the current session by its exact id. If its target already passed '
+  + 'while paused, it dispatches on the next live timer decision as overdue.'
+
+const RUN_NOW_DESCRIPTION =
+  'Dispatch one active reminder immediately at the current time, regardless of its target. '
+  + 'One-shot reminders are removed after firing; recurring reminders advance to their next '
+  + 'target from now.'
 
 /** Deterministic model content for every canonical Schedule value. */
 function renderValue(_args: unknown, value: unknown): ContentBlock[] {
@@ -260,24 +387,50 @@ async function preflight(
   }
 }
 
+/** Structured cron selector accepted by `schedule_create` and `schedule_update`. */
+interface CronSelectorInput {
+  readonly expression: string
+  readonly time_zone?: string
+}
+
+/** Whether one raw cron selector has a structurally usable shape. */
+function invalidCronSelector(selector: unknown): ScheduleToolError | undefined {
+  if (typeof selector !== 'object' || selector === null || Array.isArray(selector)) {
+    return { code: 'invalid_rule', message: 'cron must be an object with an expression.' }
+  }
+  const record = selector as Record<string, unknown>
+  const expression = record['expression']
+  const timeZone = record['time_zone']
+  if (typeof expression !== 'string' || expression.trim().length === 0) {
+    return { code: 'invalid_rule', message: 'cron.expression must be a non-empty string.' }
+  }
+  if (timeZone !== undefined && (typeof timeZone !== 'string' || timeZone.length === 0)) {
+    return { code: 'invalid_time_zone', message: 'cron.time_zone must be a non-empty string.' }
+  }
+  return undefined
+}
+
 /** Validate the v1 selector constraints that the open parameter root cannot express. */
 function validateCreateArgs(args: {
   prompt: string
   after_seconds?: number
   at?: AtInput
   every_seconds?: number
+  cron?: CronSelectorInput
 }): ScheduleToolError | undefined {
   const keys = Object.keys(args as unknown as Record<string, unknown>)
   if (keys.some(key => key !== 'prompt'
     && key !== 'after_seconds'
     && key !== 'at'
-    && key !== 'every_seconds')
+    && key !== 'every_seconds'
+    && key !== 'cron')
     || Number(args.after_seconds !== undefined)
     + Number(args.at !== undefined)
-    + Number(args.every_seconds !== undefined) !== 1) {
+    + Number(args.every_seconds !== undefined)
+    + Number(args.cron !== undefined) !== 1) {
     return {
       code: 'invalid_selector',
-      message: 'schedule_create accepts exactly one of after_seconds, at, or every_seconds.',
+      message: 'schedule_create accepts exactly one of after_seconds, at, every_seconds, or cron.',
     }
   }
   if (args.prompt.trim().length === 0) {
@@ -296,16 +449,83 @@ function validateCreateArgs(args: {
       message: `every_seconds must be at least ${MIN_EVERY_INTERVAL_SECONDS}.`,
     }
   }
+  if (args.cron !== undefined) {
+    const invalid = invalidCronSelector(args.cron)
+    if (invalid !== undefined) return invalid
+  }
+  return undefined
+}
+
+/** Validate the v1 update constraints that the open parameter root cannot express. */
+function validateUpdateArgs(args: {
+  id: string
+  prompt?: string
+  after_seconds?: number
+  at?: AtInput
+  every_seconds?: number
+  cron?: CronSelectorInput
+}): ScheduleToolError | undefined {
+  if (args.id.length === 0 || args.id.trim() !== args.id) {
+    return { code: 'invalid_rule', message: 'schedule_update id must be non-empty without surrounding whitespace.' }
+  }
+  const keys = Object.keys(args as unknown as Record<string, unknown>)
+  if (keys.some(key => key !== 'id'
+    && key !== 'prompt'
+    && key !== 'after_seconds'
+    && key !== 'at'
+    && key !== 'every_seconds'
+    && key !== 'cron')) {
+    return {
+      code: 'invalid_selector',
+      message: 'schedule_update accepts only id, prompt, and at most one timing selector.',
+    }
+  }
+  if (args.prompt !== undefined && args.prompt.trim().length === 0) {
+    return { code: 'invalid_prompt', message: 'prompt must be non-empty after trimming.' }
+  }
+  const selectors = Number(args.after_seconds !== undefined)
+    + Number(args.at !== undefined)
+    + Number(args.every_seconds !== undefined)
+    + Number(args.cron !== undefined)
+  if (selectors > 1) {
+    return {
+      code: 'invalid_selector',
+      message: 'schedule_update accepts at most one of after_seconds, at, every_seconds, or cron.',
+    }
+  }
+  if (args.prompt === undefined && selectors === 0) {
+    return {
+      code: 'invalid_selector',
+      message: 'schedule_update requires a new prompt or one timing selector.',
+    }
+  }
+  if (args.after_seconds !== undefined
+    && (!Number.isSafeInteger(args.after_seconds) || args.after_seconds <= 0)) {
+    return { code: 'invalid_rule', message: 'after_seconds must be a positive safe integer.' }
+  }
+  if (args.every_seconds !== undefined && !Number.isSafeInteger(args.every_seconds)) {
+    return { code: 'invalid_rule', message: 'every_seconds must be a safe integer.' }
+  }
+  if (args.every_seconds !== undefined && args.every_seconds < MIN_EVERY_INTERVAL_SECONDS) {
+    return {
+      code: 'frequency_too_high',
+      message: `every_seconds must be at least ${MIN_EVERY_INTERVAL_SECONDS}.`,
+    }
+  }
+  if (args.cron !== undefined) {
+    const invalid = invalidCronSelector(args.cron)
+    if (invalid !== undefined) return invalid
+  }
   return undefined
 }
 
 /**
- * Register all three Schedule tools in one exact agent scope.
+ * Register all seven Schedule tools in one exact agent scope.
  * @param rootCtx - Global service context owning sessions and durability.
  * @param toolCtx - Exact agent-scoped context receiving the definitions.
  * @param agent - Exact live owner whose session the tools mutate.
  * @param onDurableChange - Called after every successful preflight and again after a create or actual delete barrier succeeds.
- * @returns Idempotent aggregate disposer for the three registrations.
+ * @returns Idempotent aggregate disposer for the seven registrations.
  */
 export function registerScheduleTools(
   rootCtx: Context,
@@ -357,6 +577,15 @@ export function registerScheduleTools(
             },
           ],
         },
+        cron: {
+          description: 'Recurring cron selector: a 5-field expression (minute hour day-of-month month day-of-week) with an optional IANA time_zone defaulting to UTC.',
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            expression: { type: 'string', required: true },
+            time_zone: { type: 'string' },
+          },
+        },
       },
       output: { schema: CREATE_OUTPUT_SCHEMA, render: renderValue },
       async execute(args, exec): Promise<ScheduleCreateValue> {
@@ -376,6 +605,14 @@ export function registerScheduleTools(
               record = createAtScheduleRecord(id, args.prompt, args.at, Date.now())
             } else if (args.after_seconds !== undefined) {
               record = createAfterScheduleRecord(id, args.prompt, args.after_seconds, Date.now())
+            } else if (args.cron !== undefined) {
+              record = createCronScheduleRecord(
+                id,
+                args.prompt,
+                args.cron.expression,
+                args.cron.time_zone ?? 'UTC',
+                Date.now(),
+              )
             } else {
               record = createEveryScheduleRecord(
                 id,
@@ -421,7 +658,8 @@ export function registerScheduleTools(
           const folded = foldForTool(agent)
           if (isToolError(folded)) return folded
           const now = Date.now()
-          return folded.active.map(record => scheduleView(record, now))
+          return folded.active.map(record =>
+            scheduleView(record, now, folded.pausedIds.includes(record.id)))
         })
       },
       presentCall: () => present('List reminders', 'read'),
@@ -463,6 +701,241 @@ export function registerScheduleTools(
         })
       },
       presentCall: args => present('Delete reminder', 'other', args.id),
+    })))
+
+    disposers.push(toolCtx.tools.register(defineTool({
+      name: 'schedule_update',
+      description: UPDATE_DESCRIPTION,
+      parameters: {
+        id: { type: 'string', required: true, description: 'Exact session-local schedule id.' },
+        prompt: {
+          type: 'string',
+          description: 'Replacement reminder content; when omitted the current prompt is kept.',
+        },
+        after_seconds: {
+          type: 'number',
+          description: 'Replacement positive safe-integer delay in seconds.',
+        },
+        every_seconds: {
+          type: 'number',
+          description: `Replacement fixed-rate safe-integer interval in seconds, at least ${MIN_EVERY_INTERVAL_SECONDS}.`,
+        },
+        at: {
+          description: 'Replacement absolute target as strict offset RFC 3339 or local date/time with an explicit IANA zone.',
+          oneOf: [
+            { type: 'string' },
+            {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                date: { type: 'string', required: true },
+                time: { type: 'string', required: true },
+                time_zone: { type: 'string', required: true },
+              },
+            },
+          ],
+        },
+        cron: {
+          description: 'Replacement recurring cron selector: a 5-field expression (minute hour day-of-month month day-of-week) with an optional IANA time_zone defaulting to UTC.',
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            expression: { type: 'string', required: true },
+            time_zone: { type: 'string' },
+          },
+        },
+      },
+      output: { schema: UPDATE_OUTPUT_SCHEMA, render: renderValue },
+      async execute(args, exec): Promise<ScheduleUpdateValue> {
+        if (exec.agent !== agent) return internalError()
+        const invalid = validateUpdateArgs(args)
+        if (invalid !== undefined) return invalid
+        const id = ScheduleId(args.id)
+        return runCancellableScheduleTransaction(agent, exec.signal, async () => {
+          const uncertain = await preflight(rootCtx, agent, 'update', id)
+          if (uncertain !== undefined) return uncertain
+          notifyDurableChange()
+          const folded = foldForTool(agent)
+          if (isToolError(folded)) return folded
+          const existing = folded.active.find(record => record.id === id)
+          if (existing === undefined) return { id, updated: false, code: 'schedule_not_found' }
+          const prompt = args.prompt === undefined ? existing.prompt : args.prompt.trim()
+          let record: ScheduleRecord
+          try {
+            if (args.cron !== undefined) {
+              record = createCronScheduleRecord(
+                id,
+                prompt,
+                args.cron.expression,
+                args.cron.time_zone ?? 'UTC',
+                Date.now(),
+              )
+            } else if (args.at !== undefined) {
+              record = createAtScheduleRecord(id, prompt, args.at, Date.now())
+            } else if (args.after_seconds !== undefined) {
+              record = createAfterScheduleRecord(id, prompt, args.after_seconds, Date.now())
+            } else if (args.every_seconds !== undefined) {
+              record = createEveryScheduleRecord(id, prompt, args.every_seconds, Date.now())
+            } else {
+              record = Object.freeze({ ...existing, prompt })
+            }
+          } catch (error: unknown) {
+            return error instanceof ScheduleInputError ? inputError(error) : internalError()
+          }
+          const cancelledBeforeAppend = cancellationPlaceholder(exec.signal)
+          if (cancelledBeforeAppend !== undefined) return cancelledBeforeAppend
+          try {
+            agent.session.append('schedule/change', {
+              version: 1,
+              operation: 'update',
+              id,
+              schedule: record,
+            })
+          } catch {
+            return internalError()
+          }
+          const barrier = await preflight(rootCtx, agent, 'update', id)
+          if (barrier !== undefined) return barrier
+          notifyDurableChange()
+          return {
+            id,
+            updated: true,
+            schedule: scheduleView(record, Date.now(), folded.pausedIds.includes(id)),
+          }
+        })
+      },
+      presentCall: args => present('Update reminder', 'other', args.id),
+    })))
+
+    disposers.push(toolCtx.tools.register(defineTool({
+      name: 'schedule_pause',
+      description: PAUSE_DESCRIPTION,
+      parameters: {
+        id: { type: 'string', required: true, description: 'Exact session-local schedule id.' },
+      },
+      output: { schema: PAUSE_OUTPUT_SCHEMA, render: renderValue },
+      async execute(args, exec): Promise<SchedulePauseValue> {
+        if (args.id.length === 0 || args.id.trim() !== args.id) {
+          return { code: 'invalid_rule', message: 'schedule_pause id must be non-empty without surrounding whitespace.' }
+        }
+        const id = ScheduleId(args.id)
+        if (exec.agent !== agent) return internalError()
+        return runCancellableScheduleTransaction(agent, exec.signal, async () => {
+          const uncertain = await preflight(rootCtx, agent, 'pause', id)
+          if (uncertain !== undefined) return uncertain
+          notifyDurableChange()
+          const folded = foldForTool(agent)
+          if (isToolError(folded)) return folded
+          if (!folded.active.some(record => record.id === id)) {
+            return { id, paused: false, code: 'schedule_not_found' }
+          }
+          if (folded.pausedIds.includes(id)) {
+            return { id, paused: false, code: 'already_paused' }
+          }
+          const cancelledBeforeAppend = cancellationPlaceholder(exec.signal)
+          if (cancelledBeforeAppend !== undefined) return cancelledBeforeAppend
+          try {
+            agent.session.append('schedule/change', { version: 1, operation: 'pause', id })
+          } catch {
+            return internalError()
+          }
+          const barrier = await preflight(rootCtx, agent, 'pause', id)
+          if (barrier !== undefined) return barrier
+          notifyDurableChange()
+          return { id, paused: true }
+        })
+      },
+      presentCall: args => present('Pause reminder', 'other', args.id),
+    })))
+
+    disposers.push(toolCtx.tools.register(defineTool({
+      name: 'schedule_resume',
+      description: RESUME_DESCRIPTION,
+      parameters: {
+        id: { type: 'string', required: true, description: 'Exact session-local schedule id.' },
+      },
+      output: { schema: RESUME_OUTPUT_SCHEMA, render: renderValue },
+      async execute(args, exec): Promise<ScheduleResumeValue> {
+        if (args.id.length === 0 || args.id.trim() !== args.id) {
+          return { code: 'invalid_rule', message: 'schedule_resume id must be non-empty without surrounding whitespace.' }
+        }
+        const id = ScheduleId(args.id)
+        if (exec.agent !== agent) return internalError()
+        return runCancellableScheduleTransaction(agent, exec.signal, async () => {
+          const uncertain = await preflight(rootCtx, agent, 'resume', id)
+          if (uncertain !== undefined) return uncertain
+          notifyDurableChange()
+          const folded = foldForTool(agent)
+          if (isToolError(folded)) return folded
+          if (!folded.active.some(record => record.id === id)) {
+            return { id, resumed: false, code: 'schedule_not_found' }
+          }
+          if (!folded.pausedIds.includes(id)) {
+            return { id, resumed: false, code: 'not_paused' }
+          }
+          const cancelledBeforeAppend = cancellationPlaceholder(exec.signal)
+          if (cancelledBeforeAppend !== undefined) return cancelledBeforeAppend
+          try {
+            agent.session.append('schedule/change', { version: 1, operation: 'resume', id })
+          } catch {
+            return internalError()
+          }
+          const barrier = await preflight(rootCtx, agent, 'resume', id)
+          if (barrier !== undefined) return barrier
+          notifyDurableChange()
+          return { id, resumed: true }
+        })
+      },
+      presentCall: args => present('Resume reminder', 'other', args.id),
+    })))
+
+    disposers.push(toolCtx.tools.register(defineTool({
+      name: 'schedule_run_now',
+      description: RUN_NOW_DESCRIPTION,
+      parameters: {
+        id: { type: 'string', required: true, description: 'Exact session-local schedule id.' },
+      },
+      output: { schema: RUN_NOW_OUTPUT_SCHEMA, render: renderValue },
+      async execute(args, exec): Promise<ScheduleRunNowValue> {
+        if (args.id.length === 0 || args.id.trim() !== args.id) {
+          return { code: 'invalid_rule', message: 'schedule_run_now id must be non-empty without surrounding whitespace.' }
+        }
+        const id = ScheduleId(args.id)
+        if (exec.agent !== agent) return internalError()
+        return runCancellableScheduleTransaction(agent, exec.signal, async () => {
+          const uncertain = await preflight(rootCtx, agent, 'run_now', id)
+          if (uncertain !== undefined) return uncertain
+          notifyDurableChange()
+          const folded = foldForTool(agent)
+          if (isToolError(folded)) return folded
+          const record = folded.active.find(item => item.id === id)
+          if (record === undefined) return { id, dispatched: false, code: 'schedule_not_found' }
+          const at = Date.now()
+          const outcome = resolveRunNow(record, at)
+          const cancelledBeforeAppend = cancellationPlaceholder(exec.signal)
+          if (cancelledBeforeAppend !== undefined) return cancelledBeforeAppend
+          try {
+            agent.session.append('schedule/change', {
+              version: 1,
+              operation: 'run_now',
+              id,
+              at: outcome.occurrenceAt,
+            })
+          } catch {
+            return internalError()
+          }
+          const barrier = await preflight(rootCtx, agent, 'run_now', id)
+          if (barrier !== undefined) return barrier
+          notifyDurableChange()
+          return {
+            id,
+            dispatched: true,
+            occurrenceAt: outcome.occurrenceAt,
+            ...(outcome.nextScheduledAt === undefined ? {} : { nextScheduledAt: outcome.nextScheduledAt }),
+          }
+        })
+      },
+      presentCall: args => present('Run reminder now', 'other', args.id),
     })))
   } catch (error) {
     for (const dispose of disposers.reverse()) dispose()
