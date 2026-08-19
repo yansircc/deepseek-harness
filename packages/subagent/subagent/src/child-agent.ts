@@ -69,13 +69,13 @@ export function resolveChildDepth(parent: Agent, maxDepth: number | undefined): 
 /**
  * Resolve the child's `AgentOptions`: the parent's provider/model/maxTokens
  * route unless the request overrides it, stamped with the child's own
- * delegation depth. When the parent carries no explicit model, the parent's
- * ACTIVE session route (its latest logged request header — what the parent is
- * really running on, e.g. a model picked per-session in the UI) is inherited
- * first; only when the parent has neither an explicit option nor any logged
- * request does the live `agentDefaultModel` selection apply. This keeps a
- * delegated child on the same provider/model the parent actually uses instead
- * of silently switching to the deployment default.
+ * delegation depth. The parent's ACTIVE session route — its latest logged
+ * request header, the provider/model the parent is really running — wins
+ * over create-time `AgentOptions`. Host entry points seed those options from
+ * the deployment default and leave a per-session UI pick in the log only; a
+ * child that preferred options would inherit a key the parent is not using.
+ * Only when the parent has neither a logged route nor an option does the
+ * live `agentDefaultModel` selection apply.
  * @param parent - the delegating parent whose route the child inherits.
  * @param requested - per-child overrides, if any.
  * @param childDepth - the resolved delegation depth to stamp.
@@ -89,14 +89,9 @@ export function resolveChildAgentOptions(
   const parentProvider = parent.options.provider
   const parentModel = parent.options.model
   const parentMaxTokens = parent.options.maxTokens
-  // The parent's active session route: explicit agent options first, then the
-  // provider/model the parent's own requests actually used (its latest logged
-  // request header). A per-session UI model pick lives there, not in options.
   const headerConfig = parent.session.requestHeader()?.config
-  const activeProvider = parentProvider ?? headerConfig?.provider
-  const activeModel = parentModel ?? headerConfig?.model
-  // Fall back to the live default selection only when the parent has neither an
-  // explicit model nor a logged request route.
+  const activeProvider = headerConfig?.provider ?? parentProvider
+  const activeModel = headerConfig?.model ?? parentModel
   const defaultSelection = activeModel === undefined
     ? (parent.ctx.get('agentDefaultModel') as { currentSelection(): DefaultModelSelection } | undefined)?.currentSelection()
     : undefined

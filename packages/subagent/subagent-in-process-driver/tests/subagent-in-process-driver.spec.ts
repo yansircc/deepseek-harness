@@ -98,6 +98,21 @@ describe('startInProcessRun', () => {
       .toMatchObject({ provider: 'mock', model: 'active-route-model', subagentDepth: 1 })
   })
 
+  it('prefers the logged ACTIVE route over create-time AgentOptions', () => {
+    // Web create/resume seeds options from the deployment default and records
+    // a later UI pick only in request/header. Preferring options here would
+    // send the child to a provider whose key the parent is not using.
+    const parent = {
+      options: { provider: 'stale-default', model: 'stale-default-model' },
+      session: {
+        requestHeader: () => ({ config: { provider: 'active-provider', model: 'active-model' } }),
+      },
+      ctx: { get: () => ({ currentSelection: () => ({ provider: 'unused-default', model: 'unused' }) }) },
+    } as unknown as Agent
+    expect(resolveChildAgentOptions(parent, undefined, 1))
+      .toMatchObject({ provider: 'active-provider', model: 'active-model', subagentDepth: 1 })
+  })
+
   it('falls back to agentDefaultModel only when the parent has neither an explicit model nor a logged route', () => {
     const parent = {
       options: {},
