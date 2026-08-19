@@ -14,14 +14,24 @@ import { defineTool } from '@deepseek-ai/dsh-tools'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import { randomBytes } from 'node:crypto'
 import { BridgeServer } from './bridge/server.ts'
-import { registerExtensionDownload } from './bridge/extension-download.ts'
+import {
+  EXTENSION_DOWNLOAD_PATH,
+  registerExtensionDownload,
+} from './bridge/extension-download.ts'
+import {
+  CHROME_STATUS_PATH,
+  registerChromeStatus,
+} from './bridge/status-endpoint.ts'
+import {
+  EXTENSION_PROTOCOL_FINGERPRINT,
+  extensionDisplayVersion,
+} from './bridge/extension-package.ts'
 import {
   forwardCommandToOwner,
   statusFromOwner,
 } from './bridge/owner-client.ts'
 import { ATOMIC_TOOL_DESCRIPTORS } from './protocol/operations.ts'
 import { BRIDGE_HOST, BRIDGE_PORT } from './protocol/bridge-contract.ts'
-import { protocolFingerprint } from './protocol/fingerprint.ts'
 import { registerChromeSettings, getChromeSettings } from './settings.ts'
 import type { Config as ConfigType } from './config.ts'
 import type { BridgeOwnerIdentity } from './protocol/auth.ts'
@@ -65,7 +75,10 @@ export function apply(ctx: Context, config: ConfigType): void {
   const server = new BridgeServer({
     host,
     port,
-    displayVersion: () => config.displayVersion ?? '0.1.0-rc.7',
+    displayVersion: extensionDisplayVersion,
+    // The shipped extension speaks the pipee v1 protocol fingerprint; the
+    // bridge declares the same value so the handshake accepts it.
+    protocolFingerprint: EXTENSION_PROTOCOL_FINGERPRINT,
   })
 
   // Resolve the owner credential from ctx.credentials (or env fallback). If
@@ -103,40 +116,52 @@ export function apply(ctx: Context, config: ConfigType): void {
   const getIdentity = async (): Promise<BridgeOwnerIdentity | undefined> => {
     const credential = await ensureCredential()
     if (credential.length === 0) return undefined
-    return { credential, protocolFingerprint: protocolFingerprint() }
+    return { credential, protocolFingerprint: EXTENSION_PROTOCOL_FINGERPRINT }
   }
 
-  // Serve the extension ZIP through the web server (if composed) so the
-  // WebUI card can offer a direct download. The web server may activate after
-  // this plugin, so poll briefly for it (headless profiles never compose it,
-  // in which case the route stays unregistered and the download link 404s
-  // with a plain hint).
+  // Serve the extension ZIP and bridge status through the web server (if
+  // composed) so the WebUI card can offer a direct download and render the
+  // connection dot. The web server may activate after this plugin, so poll
+  // briefly for it (headless profiles never compose it, in which case the
+  // routes stay unregistered and the card falls back to its hints).
   let disposeDownload: (() => void) | undefined
-  const attemptDownloadRegistration = (): void => {
-    if (disposeDownload !== undefined) return
-    disposeDownload = registerExtensionDownload(ctx, port)
-    if (disposeDownload !== undefined) {
-      ctx.logger.info('tool-chrome: extension download served at %s', '/api/chrome/extension.zip')
+  let disposeStatus: (() => void) | undefined
+  const attemptRouteRegistrations = (): void => {
+    if (disposeDownload === undefined) {
+      disposeDownload = registerExtensionDownload(ctx, port)
+      if (disposeDownload !== undefined) {
+        ctx.logger.info('tool-chrome: extension download served at %s', EXTENSION_DOWNLOAD_PATH)
+      }
+    }
+    if (disposeStatus === undefined) {
+      disposeStatus = registerChromeStatus(ctx, server.url, getIdentity)
+      if (disposeStatus !== undefined) {
+        ctx.logger.info('tool-chrome: bridge status served at %s', CHROME_STATUS_PATH)
+      }
     }
   }
-  attemptDownloadRegistration()
-  let downloadTries = 0
-  const downloadTimer = setInterval(() => {
-    downloadTries += 1
-    if (disposeDownload !== undefined || downloadTries >= 25) {
-      clearInterval(downloadTimer)
+  attemptRouteRegistrations()
+  let routeTries = 0
+  const routeTimer = setInterval(() => {
+    routeTries += 1
+    if ((disposeDownload !== undefined && disposeStatus !== undefined) || routeTries >= 25) {
+      clearInterval(routeTimer)
       return
     }
-    attemptDownloadRegistration()
+    attemptRouteRegistrations()
   }, 200)
   ctx.effect(() => () => {
-    clearInterval(downloadTimer)
+    clearInterval(routeTimer)
     disposeDownload?.()
-  }, 'tool-chrome.extension-download')
+    disposeStatus?.()
+  }, 'tool-chrome.web-routes')
 
-  // Start the bridge on plugin activation.
+  // Start the bridge on plugin activation. The owner credential must be
+  // loaded first: every owner route (status, command) is gated on it.
   void (async () => {
     try {
+      const identity = await getIdentity()
+      if (identity !== undefined) server.setOwnerCredential(identity.credential)
       await server.start()
       ctx.logger.info('tool-chrome: bridge listening on %s', server.url)
     } catch (error) {

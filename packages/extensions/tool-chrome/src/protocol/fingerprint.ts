@@ -176,9 +176,7 @@ export const canonicalProtocolContractFor = (contract: unknown): string =>
   JSON.stringify(canonicalize(semanticProtocolProjection(contract)))
 
 /** The browser-companion contract placeholder. Kept minimal and stable. */
-export const BROWSER_COMPANION_CONTRACT = {
-  kind: 'pipee/browser-companion@2',
-}
+export const BROWSER_COMPANION_CONTRACT = 'pipee/browser-companion@2'
 
 export const canonicalProtocolContract: () => string = () =>
   canonicalProtocolContractFor({

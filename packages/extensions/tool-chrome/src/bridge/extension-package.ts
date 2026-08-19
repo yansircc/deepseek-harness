@@ -7,6 +7,9 @@
  */
 
 import { createHash, createPublicKey } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { EXTENSION_PUBLIC_KEY } from '../protocol/connector-auth.ts'
 
 class ExtensionPublicKeyInvalid extends Error {
@@ -39,6 +42,37 @@ export const extensionPackageIdFromPublicKey = (encodedKey: string): string =>
   deriveExtensionPackageId(encodedKey)
 
 export const EXTENSION_PACKAGE_ID = extensionPackageIdFromPublicKey(EXTENSION_PUBLIC_KEY)
+
+/**
+ * The protocol fingerprint the SHIPPED (prebuilt) Chrome extension speaks:
+ * the pipee v1 fingerprint baked into `assets/browser-extension/`. The bridge
+ * declares the same value so the connector handshake accepts the extension.
+ * Once the extension is rebuilt from this codebase, the computed fingerprint
+ * matches by construction and this override can be removed.
+ */
+export const EXTENSION_PROTOCOL_FINGERPRINT =
+  '75eedfbca349aa6afc2fff680af4569711c118b95888a3d783927fb75dc52907'
+
+const ASSETS_DIR = fileURLToPath(new URL('../../assets/browser-extension/', import.meta.url))
+
+/**
+ * Read the extension display version from the bundled manifest, so the
+ * bridge's compatibility check (`extensionDisplayVersion === displayVersion`)
+ * always agrees with the extension the user actually installs.
+ */
+export const extensionDisplayVersion = (): string => {
+  try {
+    const manifest = JSON.parse(
+      readFileSync(join(ASSETS_DIR, 'manifest.json'), 'utf8'),
+    ) as { version?: string }
+    if (typeof manifest.version === 'string' && manifest.version.length > 0) {
+      return manifest.version
+    }
+  } catch {
+    // fall through to the known value
+  }
+  return '0.5.3'
+}
 
 /** The extension identity the bridge expects its connector to present. */
 export const extensionExpectation = (
