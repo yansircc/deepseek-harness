@@ -9,7 +9,7 @@ import InvariantRegistry from '@deepseek-ai/dsh-invariants'
 import * as SessionInvariant from '@deepseek-ai/dsh-session/invariant'
 import * as AgentInvariant from '@deepseek-ai/dsh-agent/invariant'
 import * as AgentLoopInvariant from '@deepseek-ai/dsh-agent-loop/invariant'
-import SubagentRuntime, { snapshotSubagentDescriptor } from '@deepseek-ai/dsh-subagent'
+import SubagentRuntime, { resolveChildAgentOptions, snapshotSubagentDescriptor } from '@deepseek-ai/dsh-subagent'
 import { defineContentToolFixture } from '@deepseek-ai/dsh-tools'
 import { maxTokensResponse, MockAdapter, textResponse, toolCallResponse } from '../../../core/agent-loop/tests/mock-adapter.ts'
 import { startInProcessRun } from '../src/index.ts'
@@ -80,6 +80,32 @@ describe('startInProcessRun', () => {
     expect(child.session.header.cwd).toBe('/workspace')
     await expect(run.result).resolves.toMatchObject({ stopReason: 'completed' })
     await run.dispose()
+  })
+
+  it('inherits the parent ACTIVE session route (its logged request header) when the parent has no explicit model', () => {
+    // The parent carries no explicit provider/model option, but its session has
+    // ALREADY made requests under a concrete route (e.g. a model picked
+    // per-session in the UI and logged in request/header). The child must
+    // inherit that active route rather than falling through to the default.
+    const parent = {
+      options: {},
+      session: {
+        requestHeader: () => ({ config: { provider: 'mock', model: 'active-route-model' } }),
+      },
+      ctx: { get: () => undefined },
+    } as unknown as Agent
+    expect(resolveChildAgentOptions(parent, undefined, 1))
+      .toMatchObject({ provider: 'mock', model: 'active-route-model', subagentDepth: 1 })
+  })
+
+  it('falls back to agentDefaultModel only when the parent has neither an explicit model nor a logged route', () => {
+    const parent = {
+      options: {},
+      session: { requestHeader: () => undefined },
+      ctx: { get: () => ({ currentSelection: () => ({ provider: 'default-p', model: 'default-m' }) }) },
+    } as unknown as Agent
+    expect(resolveChildAgentOptions(parent, undefined, 1))
+      .toMatchObject({ provider: 'default-p', model: 'default-m' })
   })
 
   it('reports a prompt a pre-step rejection discarded as refusal, not completion', async () => {
