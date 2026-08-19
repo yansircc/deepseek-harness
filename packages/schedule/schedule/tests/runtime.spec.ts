@@ -132,6 +132,29 @@ function appendEvery(
   test.agent.session.append('schedule/change', { version: 1, operation: 'create', schedule: record })
 }
 
+function appendCron(
+  test: RuntimeHarness,
+  id: string,
+  scheduledAt = '2026-08-05T09:00:00.000Z',
+  expression = '0 9 * * *',
+  timeZone = 'UTC',
+  prompt = 'daily report',
+): void {
+  test.agent.session.append('schedule/change', {
+    version: 1,
+    operation: 'create',
+    schedule: { id, kind: 'cron', prompt, expression, timeZone, scheduledAt },
+  })
+}
+
+function appendPause(test: RuntimeHarness, id: string): void {
+  test.agent.session.append('schedule/change', { version: 1, operation: 'pause', id })
+}
+
+function appendResume(test: RuntimeHarness, id: string): void {
+  test.agent.session.append('schedule/change', { version: 1, operation: 'resume', id })
+}
+
 async function settle(): Promise<void> {
   for (let index = 0; index < 8; index += 1) await Promise.resolve()
   await vi.advanceTimersByTimeAsync(0)
@@ -795,4 +818,84 @@ describe('Schedule runtime failure and teardown boundaries', () => {
     await settle()
     expect(test.followed).toEqual([])
   })
+})
+
+it('dispatches due cron records and advances to the next match', async () => {
+  const test = await harness()
+  appendCron(test, 'schedule-cron', '2026-08-05T09:00:00.000Z')
+  const runtime = runtimeFor(test)
+  runtime.start()
+  await settle()
+
+  expect(test.followed).toHaveLength(1)
+  const block = test.followed[0]?.content[0]
+  if (block?.type !== 'text') throw new Error('expected recurring batch text')
+  expect(block.text).toContain('[SCHEDULE REMINDER BATCH]')
+  expect(block.text).toContain('"occurrence_at":"2026-08-05T09:00:00.000Z"')
+  const dispatches = test.agent.session.events.filter(event =>
+    event.type === 'schedule/change' && event.data.operation === 'dispatch')
+  expect(dispatches.map(event => event.data)).toEqual([
+    { version: 1, operation: 'dispatch', id: 'schedule-cron', acceptedAt: '2026-08-05T12:00:00.000Z' },
+  ])
+  expect(foldScheduleEvents(test.agent.session.events).active).toEqual([
+    expect.objectContaining({ id: 'schedule-cron', scheduledAt: '2026-08-06T09:00:00.000Z' }),
+  ])
+  await runtime.dispose()
+})
+
+it('wakes for a future cron match and dispatches it when due', async () => {
+  const test = await harness()
+  appendCron(test, 'schedule-cron', '2026-08-05T12:05:00.000Z', '*/5 * * * *')
+  const runtime = runtimeFor(test)
+  runtime.start()
+  await settle()
+  expect(test.followed).toEqual([])
+
+  await vi.advanceTimersByTimeAsync(5 * 60_000)
+  await settle()
+  expect(test.followed).toHaveLength(1)
+  const block = test.followed[0]?.content[0]
+  if (block?.type !== 'text') throw new Error('expected recurring batch text')
+  expect(block.text).toContain('"occurrence_at":"2026-08-05T12:05:00.000Z"')
+  await runtime.dispose()
+})
+
+it('skips paused records entirely and dispatches them on resume', async () => {
+  const test = await harness()
+  appendEvery(test, 'schedule-every', 300, Date.parse('2026-08-05T11:50:00.000Z'), 'repeat')
+  appendPause(test, 'schedule-every')
+  const runtime = runtimeFor(test)
+  runtime.start()
+  await settle()
+
+  // The paused overdue record is neither dispatched nor armed as a wake target.
+  expect(test.followed).toEqual([])
+  expect(test.agent.session.events.filter(event =>
+    event.type === 'schedule/change' && event.data.operation === 'dispatch')).toEqual([])
+
+  appendResume(test, 'schedule-every')
+  runtime.requestDrive()
+  await settle()
+  expect(test.followed).toHaveLength(1)
+  const block = test.followed[0]?.content[0]
+  if (block?.type !== 'text') throw new Error('expected recurring batch text')
+  expect(block.text).toContain('"occurrence_at":"2026-08-05T12:00:00.000Z"')
+  await runtime.dispose()
+})
+
+it('does not arm a timer for a paused future record', async () => {
+  const test = await harness()
+  appendEvery(test, 'schedule-future', 300, Date.now(), 'future')
+  appendPause(test, 'schedule-future')
+  const runtime = runtimeFor(test)
+  runtime.start()
+  await settle()
+  expect(test.followed).toEqual([])
+
+  await vi.advanceTimersByTimeAsync(10 * 60_000)
+  await settle()
+  expect(test.followed).toEqual([])
+  expect(test.agent.session.events.filter(event =>
+    event.type === 'schedule/change' && event.data.operation === 'dispatch')).toEqual([])
+  await runtime.dispose()
 })

@@ -12,6 +12,7 @@ import type {
   EveryScheduleRecord,
   LocalAtInput,
   OneShotScheduleRecord,
+  RecurringScheduleRecord,
   ScheduleChange,
   ScheduleId as ScheduleIdType,
   ScheduleRecord,
@@ -1236,12 +1237,12 @@ export function renderReminderFraming(record: OneShotScheduleRecord): string {
 }
 
 /**
- * Render one injection-resistant fixed-rate batch in target and create order.
+ * Render one injection-resistant recurring batch in target and create order.
  * @param reminders - Complete admitted batch with one latest occurrence per record.
  * @returns Stable model-visible text whose dynamic payload is canonical JSON.
  */
 export function renderEveryReminderBatchFraming(
-  reminders: readonly { readonly record: EveryScheduleRecord; readonly occurrenceAt: string }[],
+  reminders: readonly { readonly record: RecurringScheduleRecord; readonly occurrenceAt: string }[],
 ): string {
   const payload = reminders.map(({ record, occurrenceAt }) => ({
     schedule_id: record.id,
