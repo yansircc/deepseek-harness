@@ -49,6 +49,22 @@ export interface EveryScheduleRecord {
   readonly scheduledAt: string
 }
 
+/** Durable cron-expression reminder whose next target is the next cron match. */
+export interface CronScheduleRecord {
+  /** Session-local stable identity. */
+  readonly id: ScheduleId
+  /** Rule discriminator for a cron-expression recurring reminder. */
+  readonly kind: 'cron'
+  /** Trimmed reminder content supplied at creation. */
+  readonly prompt: string
+  /** Space-separated 5-field cron expression (minute hour dom month dow). */
+  readonly expression: string
+  /** IANA time zone the expression is evaluated in. */
+  readonly timeZone: string
+  /** Next cron match not yet dispatched. */
+  readonly scheduledAt: string
+}
+
 /** Structured local-calendar input accepted by `schedule_create`. */
 export interface LocalAtInput {
   /** Four-digit ISO calendar date. */
@@ -65,8 +81,11 @@ export type AtInput = string | LocalAtInput
 /** One-shot record variants that terminate on an id-only dispatch. */
 export type OneShotScheduleRecord = AfterScheduleRecord | AtScheduleRecord
 
+/** Recurring record variants that advance on an accepted-at dispatch. */
+export type RecurringScheduleRecord = EveryScheduleRecord | CronScheduleRecord
+
 /** The v1 durable reminder record union. */
-export type ScheduleRecord = OneShotScheduleRecord | EveryScheduleRecord
+export type ScheduleRecord = OneShotScheduleRecord | RecurringScheduleRecord
 
 /** Creates one durable reminder record. */
 export interface ScheduleCreateChange {

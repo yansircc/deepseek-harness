@@ -72,7 +72,18 @@ const EVERY_VIEW_SCHEMA = {
   },
 } as const
 
-const VIEW_SCHEMA = { oneOf: [AFTER_VIEW_SCHEMA, AT_VIEW_SCHEMA, EVERY_VIEW_SCHEMA] } as const
+const CRON_VIEW_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    ...SHARED_VIEW_PROPERTIES,
+    kind: { type: 'string', required: true, const: 'cron' },
+    expression: { type: 'string', required: true },
+    timeZone: { type: 'string', required: true },
+  },
+} as const
+
+const VIEW_SCHEMA = { oneOf: [AFTER_VIEW_SCHEMA, AT_VIEW_SCHEMA, EVERY_VIEW_SCHEMA, CRON_VIEW_SCHEMA] } as const
 
 /** Build one exact two-field error schema while preserving its literal code. */
 function basicErrorSchema<const C extends string>(code: C) {

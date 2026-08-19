@@ -8,6 +8,7 @@ import type {
   AfterScheduleRecord,
   AtInput,
   AtScheduleRecord,
+  CronScheduleRecord,
   EveryScheduleRecord,
   LocalAtInput,
   OneShotScheduleRecord,
@@ -446,6 +447,44 @@ function decodeEveryRecord(value: unknown): EveryScheduleRecord {
   })
 }
 
+/** Decode the exact v1 cron record shape. */
+function decodeCronRecord(value: unknown): CronScheduleRecord {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ['id', 'kind', 'prompt', 'expression', 'timeZone', 'scheduledAt'])) {
+    throw new ScheduleLogError('cron schedule must contain exactly id, kind, prompt, expression, timeZone, and scheduledAt')
+  }
+  const prompt = value['prompt']
+  if (typeof prompt !== 'string' || prompt.length === 0 || prompt.trim() !== prompt) {
+    throw new ScheduleLogError('cron prompt must be non-empty and already trimmed')
+  }
+  const expression = value['expression']
+  const timeZone = value['timeZone']
+  if (typeof expression !== 'string' || expression.trim() !== expression) {
+    throw new ScheduleLogError('cron expression must be a non-empty already-trimmed string')
+  }
+  if (typeof timeZone !== 'string' || timeZone.length === 0) {
+    throw new ScheduleLogError('cron timeZone must be a non-empty string')
+  }
+  const parsed = parseCronExpression(expression)
+  if (parsed === undefined) {
+    throw new ScheduleLogError('cron expression is invalid')
+  }
+  let zone: string
+  try {
+    zone = canonicalizeTimeZone(timeZone)
+  } catch {
+    throw new ScheduleLogError('cron timeZone is invalid')
+  }
+  return Object.freeze({
+    id: decodeId(value['id']),
+    kind: 'cron',
+    prompt,
+    expression,
+    timeZone: zone,
+    scheduledAt: decodeInstant(value['scheduledAt']),
+  })
+}
+
 /** Decode one current durable record variant by its exact discriminator. */
 function decodeScheduleRecord(value: unknown): ScheduleRecord {
   if (!isRecord(value)) throw new ScheduleLogError('schedule record must be an object')
@@ -453,7 +492,8 @@ function decodeScheduleRecord(value: unknown): ScheduleRecord {
     case 'after': return decodeAfterRecord(value)
     case 'at': return decodeAtRecord(value)
     case 'every': return decodeEveryRecord(value)
-    default: throw new ScheduleLogError('v1 schedule kind must be "after", "at", or "every"')
+    case 'cron': return decodeCronRecord(value)
+    default: throw new ScheduleLogError('v1 schedule kind must be "after", "at", "every", or "cron"')
   }
 }
 
@@ -552,15 +592,216 @@ export function resolveEveryOccurrence(
 
 type DecodedDispatch = Extract<ScheduleChange, { operation: 'dispatch' }>
 
+// ---------------------------------------------------------------------------
+// Cron expressions
+// ---------------------------------------------------------------------------
+
+/** One parsed cron field: the set of accepted values and whether it was a wildcard. */
+interface CronField {
+  readonly values: ReadonlySet<number>
+  readonly wildcard: boolean
+}
+
+/** Parsed 5-field cron expression (minute hour day-of-month month day-of-week). */
+interface ParsedCron {
+  readonly minute: CronField
+  readonly hour: CronField
+  readonly dayOfMonth: CronField
+  readonly month: CronField
+  readonly dayOfWeek: CronField
+}
+
+const CRON_RANGES = [
+  [0, 59],
+  [0, 23],
+  [1, 31],
+  [1, 12],
+  [0, 6],
+] as const
+
+const WEEKDAY = new Map([
+  ['Sun', 0],
+  ['Mon', 1],
+  ['Tue', 2],
+  ['Wed', 3],
+  ['Thu', 4],
+  ['Fri', 5],
+  ['Sat', 6],
+])
+
+/** Parse one cron field (asterisk, step, range, or a list of those). */
+function parseCronField(source: string, minimum: number, maximum: number): CronField | undefined {
+  const values = new Set<number>()
+  for (const part of source.split(',')) {
+    const stepMatch = /^(.*)\/(\d+)$/.exec(part)
+    const step = stepMatch ? Number(stepMatch[2]) : 1
+    const range = stepMatch?.[1] ?? part
+    if (!Number.isInteger(step) || step < 1) return undefined
+    if (range === '*') {
+      for (let value = minimum; value <= maximum; value += step) values.add(value)
+      continue
+    }
+    const rangeMatch = /^(\d+)-(\d+)$/.exec(range)
+    if (rangeMatch !== null) {
+      const low = Number(rangeMatch[1])
+      const high = Number(rangeMatch[2])
+      if (low < minimum || high > maximum || low > high) return undefined
+      for (let value = low; value <= high; value += step) values.add(value)
+      continue
+    }
+    if (!/^\d+$/.test(range)) return undefined
+    const value = Number(range)
+    if (value < minimum || value > maximum) return undefined
+    values.add(value)
+  }
+  if (values.size === 0) return undefined
+  return { values, wildcard: /^\*(?:\/\d+)?$/.test(source) }
+}
+
+/** Parse a strict 5-field cron expression. */
+export function parseCronExpression(source: string): ParsedCron | undefined {
+  const parts = source.trim().split(/\s+/)
+  if (parts.length !== 5) return undefined
+  const [minuteSource, hourSource, dayOfMonthSource, monthSource, dayOfWeekSource] = parts
+  if (minuteSource === undefined || hourSource === undefined || dayOfMonthSource === undefined
+    || monthSource === undefined || dayOfWeekSource === undefined) {
+    return undefined
+  }
+  const minute = parseCronField(minuteSource, CRON_RANGES[0][0], CRON_RANGES[0][1])
+  const hour = parseCronField(hourSource, CRON_RANGES[1][0], CRON_RANGES[1][1])
+  const dayOfMonth = parseCronField(dayOfMonthSource, CRON_RANGES[2][0], CRON_RANGES[2][1])
+  const month = parseCronField(monthSource, CRON_RANGES[3][0], CRON_RANGES[3][1])
+  const dayOfWeek = parseCronField(dayOfWeekSource, CRON_RANGES[4][0], CRON_RANGES[4][1])
+  if (minute === undefined || hour === undefined || dayOfMonth === undefined
+    || month === undefined || dayOfWeek === undefined) {
+    return undefined
+  }
+  return { minute, hour, dayOfMonth, month, dayOfWeek }
+}
+
+interface CronLocalParts {
+  readonly minute: number
+  readonly hour: number
+  readonly dayOfMonth: number
+  readonly month: number
+  readonly dayOfWeek: number
+}
+
+/** Project one instant into local calendar parts in the given zone. */
+function cronLocalParts(instant: number, formatter: Intl.DateTimeFormat): CronLocalParts | undefined {
+  const byType = new Map(
+    formatter.formatToParts(instant).map(({ type, value }) => [type, value]),
+  )
+  const dayOfWeek = WEEKDAY.get(byType.get('weekday') ?? '')
+  if (dayOfWeek === undefined) return undefined
+  const minute = Number(byType.get('minute'))
+  const hour = Number(byType.get('hour'))
+  const dayOfMonth = Number(byType.get('day'))
+  const month = Number(byType.get('month'))
+  if ([minute, hour, dayOfMonth, month].some(Number.isNaN)) return undefined
+  return { minute, hour, dayOfMonth, month, dayOfWeek }
+}
+
+/** Whether one local projection satisfies the parsed cron day rule (dom/dow OR per POSIX). */
+function cronDayMatches(cron: ParsedCron, parts: CronLocalParts): boolean {
+  const dayOfMonthMatches = cron.dayOfMonth.values.has(parts.dayOfMonth)
+  const dayOfWeekMatches = cron.dayOfWeek.values.has(parts.dayOfWeek)
+  return cron.dayOfMonth.wildcard
+    ? dayOfWeekMatches
+    : cron.dayOfWeek.wildcard
+      ? dayOfMonthMatches
+      : dayOfMonthMatches || dayOfWeekMatches
+}
+
+/** Whether one local projection satisfies every parsed cron field. */
+function cronMatches(cron: ParsedCron, parts: CronLocalParts): boolean {
+  return cron.minute.values.has(parts.minute)
+    && cron.hour.values.has(parts.hour)
+    && cron.month.values.has(parts.month)
+    && cronDayMatches(cron, parts)
+}
+
+/**
+ * Resolve one cron decision: the latest matching occurrence at the decision
+ * time and the first strictly-future match, without enumerating a long backlog.
+ * @param record - Active record whose target is the earliest unmatched occurrence.
+ * @param acceptedAt - Wall-clock decision time in epoch milliseconds.
+ * @returns The latest due occurrence and first future target, if representable.
+ */
+export function resolveCronOccurrence(
+  record: CronScheduleRecord,
+  acceptedAt: number,
+): EveryOccurrence {
+  if (!Number.isSafeInteger(acceptedAt)
+    || acceptedAt < MIN_FOUR_DIGIT_YEAR_MS
+    || acceptedAt > MAX_FOUR_DIGIT_YEAR_MS) {
+    throw new ScheduleLogError('cron acceptedAt must be a representable four-digit-year instant')
+  }
+  const parsed = parseCronExpression(record.expression)
+  if (parsed === undefined) {
+    throw new ScheduleLogError('cron record expression is invalid')
+  }
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: record.timeZone,
+    minute: '2-digit',
+    hour: '2-digit',
+    hourCycle: 'h23',
+    day: '2-digit',
+    month: '2-digit',
+    weekday: 'short',
+  })
+  // The occurrence is the latest whole minute at or before the decision time
+  // that matches (and is not before the record's scheduled target). The next
+  // target is the first strictly-future match.
+  const dueFloor = Math.floor(acceptedAt / 60_000) * 60_000
+  const targetMs = Date.parse(record.scheduledAt)
+  // Backward scan: latest match in [targetMs, dueFloor].
+  let occurrenceAt: string | undefined
+  for (let candidate = dueFloor; candidate >= targetMs; candidate -= 60_000) {
+    const parts = cronLocalParts(candidate, formatter)
+    if (parts !== undefined && cronMatches(parsed, parts)) {
+      occurrenceAt = new Date(candidate).toISOString()
+      break
+    }
+  }
+  if (occurrenceAt === undefined) {
+    // No match between the target and now: fall back to the target itself
+    // (it was a cron match at creation) or fail if it is in the future.
+    occurrenceAt = record.scheduledAt
+  }
+  const occurrenceMs = Date.parse(occurrenceAt)
+  // Forward scan for the next match strictly after the occurrence.
+  const limit = occurrenceMs + 366 * 24 * 60 * 60 * 1_000
+  let nextScheduledAt: string | undefined
+  for (let candidate = occurrenceMs + 60_000; candidate < limit; candidate += 60_000) {
+    const parts = cronLocalParts(candidate, formatter)
+    if (parts !== undefined && cronMatches(parsed, parts)) {
+      nextScheduledAt = new Date(candidate).toISOString()
+      break
+    }
+  }
+  if (nextScheduledAt === undefined) {
+    // No next match in the window: this occurrence is the last representable one.
+    return Object.freeze({ occurrenceAt })
+  }
+  return Object.freeze({ occurrenceAt, nextScheduledAt })
+}
+
 /** Apply one decoded dispatch to its exact active record. */
 function dispatchedRecord(record: ScheduleRecord, change: DecodedDispatch): ScheduleRecord | undefined {
   const hasAcceptedAt = 'acceptedAt' in change
-  if (record.kind !== 'every') {
+  if (record.kind !== 'every' && record.kind !== 'cron') {
     if (hasAcceptedAt) throw new ScheduleLogError('one-shot dispatch must not contain acceptedAt')
     return undefined
   }
-  if (!hasAcceptedAt) throw new ScheduleLogError('every dispatch must contain acceptedAt')
-  const occurrence = resolveEveryOccurrence(record, Date.parse(change.acceptedAt))
+  if (!hasAcceptedAt) throw new ScheduleLogError('recurring dispatch must contain acceptedAt')
+  if (record.kind === 'every') {
+    const occurrence = resolveEveryOccurrence(record, Date.parse(change.acceptedAt))
+    return occurrence.nextScheduledAt === undefined
+      ? undefined
+      : Object.freeze({ ...record, scheduledAt: occurrence.nextScheduledAt })
+  }
+  const occurrence = resolveCronOccurrence(record, Date.parse(change.acceptedAt))
   return occurrence.nextScheduledAt === undefined
     ? undefined
     : Object.freeze({ ...record, scheduledAt: occurrence.nextScheduledAt })
@@ -755,6 +996,79 @@ export function createEveryScheduleRecord(
     everySeconds,
     scheduledAt: futureInstant(target, now),
   })
+}
+
+/**
+ * Validate a cron selector and compute its first matching target.
+ * @param id - Already allocated session-local id.
+ * @param prompt - Reminder content supplied at creation.
+ * @param expression - Space-separated 5-field cron expression.
+ * @param timeZone - IANA time zone the expression is evaluated in.
+ * @param now - Single creation-time wall-clock sample in epoch milliseconds.
+ * @returns Frozen durable cron record.
+ */
+export function createCronScheduleRecord(
+  id: ScheduleIdType,
+  prompt: string,
+  expression: string,
+  timeZone: string,
+  now: number,
+): CronScheduleRecord {
+  const normalizedPrompt = prompt.trim()
+  if (normalizedPrompt.length === 0) {
+    throw new ScheduleInputError('invalid_prompt', 'prompt must be non-empty after trimming.')
+  }
+  const parsed = parseCronExpression(expression)
+  if (parsed === undefined) {
+    throw new ScheduleInputError('invalid_rule', 'cron must be a 5-field expression (minute hour day-of-month month day-of-week).')
+  }
+  let zone: string
+  try {
+    zone = canonicalizeTimeZone(timeZone)
+  } catch (error) {
+    throw new ScheduleInputError(
+      'invalid_time_zone',
+      error instanceof ScheduleInputError ? error.message : 'cron time_zone is invalid.',
+    )
+  }
+  const occurrence = resolveCronOccurrenceForCreate(parsed, zone, now)
+  return Object.freeze({
+    id,
+    kind: 'cron',
+    prompt: normalizedPrompt,
+    expression: expression.trim(),
+    timeZone: zone,
+    scheduledAt: occurrence,
+  })
+}
+
+/** Compute the first cron match strictly after `now` (creation never dispatches immediately). */
+function resolveCronOccurrenceForCreate(
+  parsed: ParsedCron,
+  timeZone: string,
+  now: number,
+): string {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    minute: '2-digit',
+    hour: '2-digit',
+    hourCycle: 'h23',
+    day: '2-digit',
+    month: '2-digit',
+    weekday: 'short',
+  })
+  const start = Math.floor(now / 60_000) * 60_000 + 60_000
+  const limit = start + 366 * 24 * 60 * 60 * 1_000
+  for (let candidate = start; candidate < limit; candidate += 60_000) {
+    const parts = cronLocalParts(candidate, formatter)
+    if (parts !== undefined && cronMatches(parsed, parts)) {
+      return futureInstant(candidate, now)
+    }
+  }
+  throw new ScheduleInputError(
+    'invalid_rule',
+    'cron expression has no match within one year of the current time.',
+  )
 }
 
 /**
