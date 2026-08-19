@@ -262,3 +262,10 @@
   outline: 2px solid var(--dsw-alias-brand-primary);
   outline-offset: 1px;
 }
+
+.bindingNote {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-secondary);
+}

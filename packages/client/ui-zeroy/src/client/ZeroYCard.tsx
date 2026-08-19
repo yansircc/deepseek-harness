@@ -24,7 +24,7 @@ export type ZeroYCardProps =
 export function ZeroYCard(props: ZeroYCardProps) {
   const { t } = props
   const state = props.useZeroYCard(snapshot => snapshot)
-  const actions = { editDraft: props.editDraft, addSite: props.addSite, removeSite: props.removeSite }
+  const actions = { editDraft: props.editDraft, beginBind: props.beginBind, removeSite: props.removeSite }
   const [open, setOpen] = useState(false)
   if (!state.available) return null
 
@@ -86,13 +86,14 @@ export function ZeroYCard(props: ZeroYCardProps) {
 
             <section className={css.section}>
               <h4 className={css.sectionTitle}>{t('addTitle')}</h4>
+              <p className={css.guideLine}>{t('bindGuide')}</p>
               <div className={css.fields}>
                 <Field
                   id="zeroy-site-label"
                   label={t('labelLabel')}
                   hint={t('labelHint')}
                   text={state.draft.label}
-                  disabled={!state.writable || state.adding}
+                  disabled={!state.writable || state.binding}
                   onEdit={(text) => { actions.editDraft('label', text) }}
                 />
                 <Field
@@ -100,30 +101,24 @@ export function ZeroYCard(props: ZeroYCardProps) {
                   label={t('endpointLabel')}
                   hint={t('endpointHint')}
                   text={state.draft.endpoint}
-                  disabled={!state.writable || state.adding}
+                  disabled={!state.writable || state.binding}
                   onEdit={(text) => { actions.editDraft('endpoint', text) }}
                 />
-                <Field
-                  id="zeroy-site-credential"
-                  label={t('credentialLabel')}
-                  hint={t('credentialHint')}
-                  text={state.draft.credentialRef}
-                  disabled={!state.writable || state.adding}
-                  onEdit={(text) => { actions.editDraft('credentialRef', text) }}
-                />
               </div>
-              {state.addFailed ? <p className={css.failed} role="status">{t('addFailed')}</p> : null}
+              {state.binding
+                ? <p className={css.bindingNote} role="status">{t('binding')}</p>
+                : null}
+              {state.bindFailed ? <p className={css.failed} role="status">{t('bindFailed')}</p> : null}
               <div className={css.footer}>
                 <button
                   type="button"
                   className={css.add}
-                  disabled={!state.writable || state.adding
+                  disabled={!state.writable || state.binding
                     || state.draft.label.trim() === ''
-                    || state.draft.endpoint.trim() === ''
-                    || state.draft.credentialRef.trim() === ''}
-                  onClick={actions.addSite}
+                    || state.draft.endpoint.trim() === ''}
+                  onClick={actions.beginBind}
                 >
-                  {t(state.adding ? 'adding' : 'add')}
+                  {t('bind')}
                 </button>
               </div>
             </section>

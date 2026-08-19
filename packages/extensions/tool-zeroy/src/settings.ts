@@ -30,6 +30,34 @@ export interface ZeroYSiteEntry {
 /** Shape of the `zeroy-sites` settings section. */
 export interface ZeroYSitesSettings {
   sites: ZeroYSiteEntry[]
+  /**
+   * One pending browser-driven binding request, written by the WebUI card
+   * and consumed by the host pairing handler. Cleared once the request is
+   * answered (paired or failed).
+   */
+  pendingBindings?: ZeroYPendingBinding[]
+}
+
+/** A browser-initiated binding request awaiting host processing. */
+export interface ZeroYPendingBinding {
+  /** Client-generated request id (echoed back so the card can correlate). */
+  readonly requestId: string
+  /** WordPress site base URL. */
+  readonly endpoint: string
+  /** Human-readable label. */
+  readonly label: string
+  /** PKCE code challenge (SHA-256 of the verifier) — host verifies on exchange. */
+  readonly codeChallenge: string
+  /** OAuth state, echoed back on the callback. */
+  readonly state: string
+  /** When the request was written (ms epoch), for expiry. */
+  readonly createdAt: number
+  /** Updated by the host as the flow progresses. */
+  readonly status: 'pending' | 'awaiting-approval' | 'paired' | 'failed'
+  /** The WP admin approval URL the card should open, once the host created the intent. */
+  readonly approvalUrl?: string
+  /** Failure message when status is 'failed'. */
+  readonly error?: string
 }
 
 export const ZeroYSitesSchema: z<ZeroYSitesSettings> = z.object({
@@ -38,6 +66,22 @@ export const ZeroYSitesSchema: z<ZeroYSitesSettings> = z.object({
     label: z.string(),
     endpoint: z.string(),
     credentialRef: z.string(),
+  })).default([]),
+  pendingBindings: z.array(z.object({
+    requestId: z.string(),
+    endpoint: z.string(),
+    label: z.string(),
+    codeChallenge: z.string(),
+    state: z.string(),
+    createdAt: z.number(),
+    status: z.union([
+      'pending',
+      'awaiting-approval',
+      'paired',
+      'failed',
+    ]),
+    approvalUrl: z.string(),
+    error: z.string(),
   })).default([]),
 })
 
@@ -97,5 +141,31 @@ export async function removeSite(ctx: Context, siteId: string): Promise<boolean>
   const current = currentSource()
   const next = current.sites.filter(s => s.siteId !== siteId)
   await settings.update(ZEROY_SITES_NAMESPACE, { sites: next })
+  return true
+}
+
+// ---------------------------------------------------------------------------
+// Pending browser-driven bindings
+// ---------------------------------------------------------------------------
+
+/** Read the current pending binding requests. */
+export function getPendingBindings(): ReadonlyArray<ZeroYPendingBinding> {
+  return currentSource().pendingBindings ?? []
+}
+
+/**
+ * Update the pending-bindings list, preserving sites. The settings document
+ * is replaced wholesale, so callers pass the full updated binding list.
+ * @returns true when the write succeeded.
+ */
+export async function writePendingBindings(
+  ctx: Context,
+  bindings: ReadonlyArray<ZeroYPendingBinding>,
+): Promise<boolean> {
+  const settings = ctx.get('settings')
+  if (settings === undefined) return false
+  await settings.update(ZEROY_SITES_NAMESPACE, {
+    pendingBindings: [...bindings],
+  })
   return true
 }

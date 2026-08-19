@@ -10,8 +10,7 @@ export type ZeroYLocaleKey =
   | 'guideTitle' | 'guideLine1' | 'guideLine2'
   | 'sitesTitle' | 'noSites' | 'remove' | 'removeConfirm'
   | 'addTitle' | 'labelLabel' | 'labelHint' | 'endpointLabel' | 'endpointHint'
-  | 'credentialLabel' | 'credentialHint'
-  | 'add' | 'adding' | 'addFailed'
+  | 'bind' | 'binding' | 'bindFailed' | 'bindGuide'
   | 'overridden' | 'reset' | 'save' | 'saving' | 'discard' | 'unsaved' | 'saveFailed'
 
 /** English copy. */
@@ -28,16 +27,15 @@ export const en: Record<ZeroYLocaleKey, string> = {
   noSites: 'No sites bound yet. Ask the agent to run zeroy_pair.',
   remove: 'Remove',
   removeConfirm: 'Remove this site?',
-  addTitle: 'Add a site',
+  addTitle: 'Bind a site',
   labelLabel: 'Name',
   labelHint: 'A short label for this site, e.g. "My Company".',
   endpointLabel: 'Site URL',
   endpointHint: 'The WordPress site address, e.g. https://example.com',
-  credentialLabel: 'Credential reference',
-  credentialHint: 'The stored connection secret name. Ask the agent for the exact value after pairing.',
-  add: 'Add site',
-  adding: 'Adding…',
-  addFailed: 'Could not add the site.',
+  bind: 'Bind site',
+  binding: 'Waiting for approval in the new window…',
+  bindFailed: 'The binding was not completed.',
+  bindGuide: 'Click "Bind site" — a new window opens your WordPress admin. Log in if needed, approve the connection, and the site is bound automatically.',
   overridden: 'Overridden',
   reset: 'Reset to default',
   save: 'Save',
@@ -61,16 +59,15 @@ export const zh: Record<ZeroYLocaleKey, string> = {
   noSites: '尚未绑定站点。请让 agent 运行 zeroy_pair。',
   remove: '移除',
   removeConfirm: '确定移除这个站点？',
-  addTitle: '添加站点',
+  addTitle: '绑定站点',
   labelLabel: '名称',
   labelHint: '该站点的简短名称，例如“我的公司”。',
   endpointLabel: '站点地址',
   endpointHint: 'WordPress 站点地址，例如 https://example.com',
-  credentialLabel: '凭证引用',
-  credentialHint: '存储的连接密钥名称。配对后请向 agent 询问确切值。',
-  add: '添加站点',
-  adding: '添加中…',
-  addFailed: '无法添加站点。',
+  bind: '绑定站点',
+  binding: '已在新窗口等待批准…',
+  bindFailed: '绑定未完成。',
+  bindGuide: '点击“绑定站点”后，新窗口会打开你的 WordPress 后台。如需登录请先登录，然后点击“批准”，站点即自动完成绑定。',
   overridden: '已覆盖',
   reset: '恢复默认',
   save: '保存',

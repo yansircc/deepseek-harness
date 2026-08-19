@@ -13,7 +13,7 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 // Type-only: the settings shell's Context merge (ctx.settingsScope).
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import { ZeroYCard } from './ZeroYCard.tsx'
-import { ZEROY_NS, ZeroYCardController, type ZeroYSitesSettings } from './zeroy-card-controller.ts'
+import { ZEROY_NS, ZeroYCardController, installBindSignalListener, type ZeroYSitesSettings } from './zeroy-card-controller.ts'
 import { en, NS, zh, type ZeroYLocaleKey } from './locales.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -40,6 +40,11 @@ export function apply(ctx: ClientContext): void {
   const controller = new ZeroYCardController(
     ctx.settingsScope.bind<ZeroYSitesSettings>({ namespace: ZEROY_NS }),
   )
+
+  // The host callback page postMessages the binding outcome back; route it
+  // into the controller so the card can clear its in-progress state.
+  ctx.effect(() => installBindSignalListener(controller.actions().handleBindSignal),
+    'ui-zeroy: bind signal listener')
 
   ctx.slots.inject('settings.plugin.item', function* () {
     yield ctx.slots.register({

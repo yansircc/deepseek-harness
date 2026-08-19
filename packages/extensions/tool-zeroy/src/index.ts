@@ -12,12 +12,14 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-host-webserver'
 import { type Config as ConfigType } from './config.ts'
 import { registerZeroYSitesSettings } from './settings.ts'
 import { registerInspectTool } from './tools/inspect.ts'
 import { registerCheckoutTool } from './tools/checkout.ts'
 import { registerPushTool } from './tools/push.ts'
 import { registerPairTool, registerUnpairTool } from './tools/pair.ts'
+import { registerPairingRoutes } from './pairing.ts'
 
 export { Config } from './config.ts'
 export type { Config as ConfigType } from './config.ts'
@@ -53,5 +55,9 @@ export function apply(ctx: Context, config: ConfigType): void {
   if (config.pairing !== false) {
     registerPairTool(ctx)
     registerUnpairTool(ctx)
+    // Browser-driven binding routes (no extension needed): the WebUI card
+    // opens /zeroy/connect/start, the user approves in WordPress, and the
+    // callback route completes the exchange. Requires the host webserver.
+    registerPairingRoutes(ctx)
   }
 }

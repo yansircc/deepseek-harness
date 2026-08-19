@@ -1,7 +1,9 @@
 /**
  * The zeroY card's controller: binds the `zeroy-sites` settings scope and
- * exposes the sites list plus add/remove actions. Reads are reactive through
- * the scope snapshot; writes go through the scope's durable set().
+ * exposes the sites list plus one-click browser binding. The binding flow is
+ * OAuth-driven: the card opens /zeroy/connect/start, the user approves in
+ * WordPress, and the host callback stores the grant. The card detects
+ * completion via a postMessage signal and the settings snapshot refresh.
  */
 
 import type { SettingsScope, SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
@@ -32,22 +34,26 @@ export interface ZeroYCardState {
   writable: boolean
   /** The configured sites. */
   sites: readonly ZeroYSite[]
-  /** The add-site draft. */
-  draft: { label: string; endpoint: string; credentialRef: string }
-  /** Whether an add is crossing the wire. */
-  adding: boolean
-  /** Whether the last add failed. */
-  addFailed: boolean
+  /** The bind-site draft. */
+  draft: { label: string; endpoint: string }
+  /** Whether a binding window is open and awaiting approval. */
+  binding: boolean
+  /** Whether the last bind attempt failed. */
+  bindFailed: boolean
+  /** Error message from the last failure. */
+  bindError: string
 }
 
 /** Actions the card dispatches. */
 export interface ZeroYCardActions {
-  /** Update one add-site draft field. */
-  editDraft: (field: 'label' | 'endpoint' | 'credentialRef', text: string) => void
-  /** Add the site described by the draft. */
-  addSite: () => void
+  /** Update one bind-site draft field. */
+  editDraft: (field: 'label' | 'endpoint', text: string) => void
+  /** Open the browser binding flow for the drafted site. */
+  beginBind: () => void
   /** Remove one site by its id. */
   removeSite: (siteId: string) => void
+  /** Handle the postMessage completion signal from the callback page. */
+  handleBindSignal: (signal: string) => void
 }
 
 /** The registration-side face the card's slot entry injects. */
@@ -57,27 +63,19 @@ export interface ZeroYCardFace extends ZeroYCardActions {
   }
 }
 
+/** postMessage signal the host callback page sends on completion. */
+const BIND_SIGNAL_PREFIX = '__dshZeroYBinding:'
+
 const normalizeEndpoint = (value: string): string => value.trim().replace(/\/+$/, '')
 
 const normalizeLabel = (value: string): string => value.trim()
 
-const siteIdOf = (endpoint: string): string => {
-  try {
-    return new URL(endpoint).hostname.replace(/[^a-z0-9.-]/g, '').slice(0, 60) || 'site'
-  } catch {
-    return 'site'
-  }
-}
-
 export class ZeroYCardController {
   private readonly store: SnapshotStore<ZeroYCardState>
-  private draft: { label: string; endpoint: string; credentialRef: string } = {
-    label: '',
-    endpoint: '',
-    credentialRef: '',
-  }
-  private adding = false
-  private addFailed = false
+  private draft: { label: string; endpoint: string } = { label: '', endpoint: '' }
+  private binding = false
+  private bindFailed = false
+  private bindError = ''
 
   /** @param scope - the bound settings scope for the `zeroy-sites` namespace. */
   constructor(private readonly scope: SettingsScope<ZeroYSitesSettings>) {
@@ -93,8 +91,9 @@ export class ZeroYCardController {
       writable: snapshot.writable,
       sites,
       draft: this.draft,
-      adding: this.adding,
-      addFailed: this.addFailed,
+      binding: this.binding,
+      bindFailed: this.bindFailed,
+      bindError: this.bindError,
     }
   }
 
@@ -102,50 +101,76 @@ export class ZeroYCardController {
     this.store.set(this.projection())
   }
 
-  private snapshotValue(): ZeroYSitesSettings {
+  actions(): ZeroYCardFace {
+    return {
+      hooks: { zeroYCard: this.store },
+      editDraft: (field, text) => {
+        this.draft = { ...this.draft, [field]: text }
+        this.bindFailed = false
+        this.bindError = ''
+        this.publish()
+      },
+      beginBind: () => {
+        const label = normalizeLabel(this.draft.label)
+        const endpoint = normalizeEndpoint(this.draft.endpoint)
+        if (label === '' || endpoint === '') return
+        const params = new URLSearchParams({ endpoint, label })
+        const url = `/zeroy/connect/start?${params.toString()}`
+        this.binding = true
+        this.bindFailed = false
+        this.bindError = ''
+        this.publish()
+        // Open the WordPress approval window. The user approves there; the
+        // host callback page postMessages back and the settings snapshot
+        // refreshes to include the new site.
+        try {
+          window.open(url, '_blank', 'noopener,noreferrer')
+        } catch {
+          // Popup blockers may return null; fall back to a top-level open.
+          window.location.href = url
+        }
+        // Clear the in-progress flag after a generous window so the user can
+        // retry if the popup was blocked or they navigated away.
+        window.setTimeout(() => {
+          this.binding = false
+          this.publish()
+        }, 60_000)
+      },
+      removeSite: (siteId) => {
+        const next = this.value().sites.filter(s => s.siteId !== siteId)
+        void this.writeSites(next)
+      },
+      handleBindSignal: (signal) => {
+        this.binding = false
+        if (signal === 'paired') {
+          this.draft = { label: '', endpoint: '' }
+        } else {
+          this.bindFailed = true
+          this.bindError = 'The binding was not completed.'
+        }
+        this.publish()
+      },
+    }
+  }
+
+  private value(): ZeroYSitesSettings {
     return this.scope.getSnapshot().value ?? { sites: [] }
   }
 
   private async writeSites(next: ZeroYSite[]): Promise<void> {
     await this.scope.set('sites', next)
   }
+}
 
-  actions(): ZeroYCardFace {
-    return {
-      hooks: { zeroYCard: this.store },
-      editDraft: (field, text) => {
-        this.draft = { ...this.draft, [field]: text }
-        this.addFailed = false
-        this.publish()
-      },
-      addSite: () => {
-        const label = normalizeLabel(this.draft.label)
-        const endpoint = normalizeEndpoint(this.draft.endpoint)
-        const credentialRef = this.draft.credentialRef.trim()
-        if (label === '' || endpoint === '' || credentialRef === '') return
-        const existing = this.snapshotValue().sites
-        const siteId = siteIdOf(endpoint)
-        const next = [...existing.filter(s => s.siteId !== siteId)]
-        next.push({ siteId, label, endpoint, credentialRef })
-        this.adding = true
-        this.publish()
-        void this.writeSites(next).then(
-          () => {
-            this.adding = false
-            this.draft = { label: '', endpoint: '', credentialRef: '' }
-            this.publish()
-          },
-          () => {
-            this.adding = false
-            this.addFailed = true
-            this.publish()
-          },
-        )
-      },
-      removeSite: (siteId) => {
-        const next = this.snapshotValue().sites.filter(s => s.siteId !== siteId)
-        void this.writeSites(next)
-      },
-    }
+/** Install the postMessage listener for the binding completion signal. */
+export function installBindSignalListener(
+  handle: (signal: string) => void,
+): () => void {
+  const listener = (event: MessageEvent): void => {
+    const data = event.data
+    if (typeof data !== 'string' || !data.startsWith(BIND_SIGNAL_PREFIX)) return
+    handle(data.slice(BIND_SIGNAL_PREFIX.length))
   }
+  window.addEventListener('message', listener)
+  return () => window.removeEventListener('message', listener)
 }
