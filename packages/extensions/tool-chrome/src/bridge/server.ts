@@ -383,8 +383,6 @@ export class BridgeServer {
       return
     }
     const routeName = resolution.name
-    const debugOrigin = request.headers.origin ?? '(local)'
-    process.stderr.write(`[dsh-bridge] ${request.method} ${path} origin=${debugOrigin}\n`)
 
     // Owner routes require owner authorization (except the handshake).
     let ownerBody = ''
@@ -589,7 +587,6 @@ export class BridgeServer {
     }
     const profile = this.connectors.adopt(presented)
     await this.broker?.register(profile.connectorId)
-    process.stderr.write(`[dsh-bridge] connector handshake: ${profile.connectorId} ext=${profile.extensionId} fp=${profile.protocolFingerprint.slice(0, 8)}...\n`)
     const identified = this.identifyAuthorizedConnector(request, response, headers)
     if (!identified) return
     const clientNonce = String(request.headers[CONNECTOR_CLIENT_NONCE_HEADER] ?? '')
