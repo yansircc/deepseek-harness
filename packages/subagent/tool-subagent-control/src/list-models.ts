@@ -31,8 +31,8 @@ interface CatalogModel {
 }
 
 type ListModelsResult =
-  | { readonly providers: readonly CatalogProvider[] }
-  | { readonly provider: Pick<LlmProviderInfo, 'id' | 'name'>; readonly models: readonly CatalogModel[] }
+  | { providers: CatalogProvider[] }
+  | { provider: Pick<LlmProviderInfo, 'id' | 'name'>; models: CatalogModel[] }
 
 /** Project exact-model metadata into the model-facing catalog row. */
 function projectModel(info: LlmResolvedModelInfo): CatalogModel {

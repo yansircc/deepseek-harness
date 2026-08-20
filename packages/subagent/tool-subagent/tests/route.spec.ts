@@ -27,7 +27,11 @@ class CatalogAdapter extends LlmAdapter {
     return Promise.resolve(this.modelsByProvider[provider] ?? [])
   }
 
-  override resolveModel(provider: string, model: string): Promise<LlmResolvedModelInfo> {
+  override resolveModel(
+    provider: string,
+    model: string,
+    _signal?: AbortSignal,
+  ): Promise<LlmResolvedModelInfo> {
     return Promise.resolve(this.resolved[`${provider}/${model}`] ?? { provider, id: model, name: model })
   }
 
