@@ -13,6 +13,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
 
+/** Settings namespace key for configured site metadata and pending bindings. */
 export const ZEROY_SITES_NAMESPACE = settingsNamespace('zeroy-sites')
 
 /** One configured zeroY site's non-secret metadata. */
@@ -60,6 +61,7 @@ export interface ZeroYPendingBinding {
   readonly error?: string
 }
 
+/** Schemastery schema that validates and defaults the `zeroy-sites` settings document. */
 export const ZeroYSitesSchema: z<ZeroYSitesSettings> = z.object({
   sites: z.array(z.object({
     siteId: z.string(),
@@ -94,6 +96,7 @@ let currentSource: () => ZeroYSitesSettings = () => DEFAULT_ENTRY
 /**
  * Register the `zeroy-sites` settings section. Call once during plugin apply().
  * The section falls back to the empty default when no settings provider is mounted.
+ * @param ctx - plugin context that owns the settings registry.
  */
 export function registerZeroYSitesSettings(ctx: Context): void {
   installSettingsSection(ctx, ZEROY_SITES_NAMESPACE, ZeroYSitesSchema, DEFAULT_ENTRY, {
@@ -102,18 +105,27 @@ export function registerZeroYSitesSettings(ctx: Context): void {
   })
 }
 
-/** Read the current list of configured sites. */
+/**
+ * Read the current list of configured sites.
+ * @returns live snapshot of configured site metadata; empty when none are stored.
+ */
 export function getConfiguredSites(): ReadonlyArray<ZeroYSiteEntry> {
   return currentSource().sites
 }
 
-/** Find one site by its routing key. */
+/**
+ * Find one site by its routing key.
+ * @param siteId - routing key used in tool calls.
+ * @returns matching site metadata, or undefined when no site uses that key.
+ */
 export function findSite(siteId: string): ZeroYSiteEntry | undefined {
   return getConfiguredSites().find(s => s.siteId === siteId)
 }
 
 /**
  * Add or update a site entry. Requires `ctx.settings` to be available.
+ * @param ctx - plugin context used to persist the settings document.
+ * @param entry - site metadata to insert or replace by `siteId`.
  * @returns true if the write succeeded, false if no settings provider is mounted.
  */
 export async function upsertSite(ctx: Context, entry: ZeroYSiteEntry): Promise<boolean> {
@@ -133,6 +145,8 @@ export async function upsertSite(ctx: Context, entry: ZeroYSiteEntry): Promise<b
 
 /**
  * Remove a site entry by siteId. Requires `ctx.settings` to be available.
+ * @param ctx - plugin context used to persist the settings document.
+ * @param siteId - routing key of the site to drop.
  * @returns true if the write succeeded, false if no settings provider is mounted.
  */
 export async function removeSite(ctx: Context, siteId: string): Promise<boolean> {
@@ -148,7 +162,10 @@ export async function removeSite(ctx: Context, siteId: string): Promise<boolean>
 // Pending browser-driven bindings
 // ---------------------------------------------------------------------------
 
-/** Read the current pending binding requests. */
+/**
+ * Read the current pending binding requests.
+ * @returns live snapshot of pending bindings; empty when the field is absent.
+ */
 export function getPendingBindings(): ReadonlyArray<ZeroYPendingBinding> {
   return currentSource().pendingBindings ?? []
 }
@@ -156,6 +173,8 @@ export function getPendingBindings(): ReadonlyArray<ZeroYPendingBinding> {
 /**
  * Update the pending-bindings list, preserving sites. The settings document
  * is replaced wholesale, so callers pass the full updated binding list.
+ * @param ctx - plugin context used to persist the settings document.
+ * @param bindings - complete pending-binding list to store.
  * @returns true when the write succeeded.
  */
 export async function writePendingBindings(

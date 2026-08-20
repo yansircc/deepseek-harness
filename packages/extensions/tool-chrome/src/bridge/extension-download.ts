@@ -43,7 +43,11 @@ async function listFiles(root: string): Promise<string[]> {
   return files
 }
 
-/** Build the extension ZIP bytes with the bridge port substituted. */
+/**
+ * Build the extension ZIP bytes with the bridge port substituted.
+ * @param port - local bridge port written over the baked-in placeholder origin.
+ * @returns the ZIP archive bytes, with text assets rewritten to `http://127.0.0.1:${port}`.
+ */
 export async function buildExtensionZip(port: number): Promise<Uint8Array> {
   const origin = `http://127.0.0.1:${port}`
   const files = await listFiles(ASSETS_DIR)
@@ -88,12 +92,16 @@ export async function buildExtensionZip(port: number): Promise<Uint8Array> {
   return out
 }
 
-/** Ensure the assets directory exists (diagnostic). */
+/**
+ * Ensure the assets directory exists (diagnostic).
+ * @returns true when `assets/browser-extension/` is a directory; false when missing or unreadable.
+ */
 export async function assetsReady(): Promise<boolean> {
   try {
     const info = await stat(ASSETS_DIR)
     return info.isDirectory()
   } catch {
+    // Missing assets directory or a failed stat; the card falls back to hints.
     return false
   }
 }

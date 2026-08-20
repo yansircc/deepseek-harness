@@ -68,6 +68,7 @@ const BIND_SIGNAL_PREFIX = '__dshZeroYBinding:'
 
 const normalizeEndpoint = (value: string): string => value.trim().replace(/\/+$/, '')
 
+/** Bridges the `zeroy-sites` scope onto the sites list and bind flow. */
 export class ZeroYCardController {
   private readonly store: SnapshotStore<ZeroYCardState>
   private draft: { endpoint: string } = { endpoint: '' }
@@ -99,6 +100,10 @@ export class ZeroYCardController {
     this.store.set(this.projection())
   }
 
+  /**
+   * Build the face the card's slot registration injects.
+   * @returns the card's snapshot and its bind/remove actions.
+   */
   actions(): ZeroYCardFace {
     return {
       hooks: { zeroYCard: this.store },
@@ -159,7 +164,11 @@ export class ZeroYCardController {
   }
 }
 
-/** Install the postMessage listener for the binding completion signal. */
+/**
+ * Install the postMessage listener for the binding completion signal.
+ * @param handle - called with the suffix after {@link BIND_SIGNAL_PREFIX}.
+ * @returns disposer that removes the listener.
+ */
 export function installBindSignalListener(
   handle: (signal: string) => void,
 ): () => void {

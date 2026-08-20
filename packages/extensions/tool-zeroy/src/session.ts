@@ -36,12 +36,22 @@ export interface ResolvedConnection extends SiteConnection {
 
 /** Thrown when a site is not configured or its credential is missing. */
 export class ZeroYConnectionError extends Error {
+  /** Stable failure code distinguishing unknown site, missing credential, or invalid ref. */
   readonly code: string
   constructor(code: string, message: string) {
     super(message)
     this.name = 'ZeroYConnectionError'
     this.code = code
   }
+}
+
+/** Cache for env-based connections so we don't re-parse on every call. */
+let envConnections: ReadonlyArray<SiteConnection> | undefined
+
+async function getEnvConnections(): Promise<ReadonlyArray<SiteConnection>> {
+  if (envConnections !== undefined) return envConnections
+  envConnections = await loadSiteConnections()
+  return envConnections
 }
 
 /**
@@ -52,15 +62,6 @@ export class ZeroYConnectionError extends Error {
  * @returns the resolved connection with a live grant secret.
  * @throws {ZeroYConnectionError} when the site is unknown or its credential is unconfigured.
  */
-/** Cache for env-based connections so we don't re-parse on every call. */
-let envConnections: ReadonlyArray<SiteConnection> | undefined
-
-async function getEnvConnections(): Promise<ReadonlyArray<SiteConnection>> {
-  if (envConnections !== undefined) return envConnections
-  envConnections = await loadSiteConnections()
-  return envConnections
-}
-
 export async function resolveConnection(ctx: Context, siteId: string): Promise<ResolvedConnection> {
   // First try settings-backed sites
   const entry = findSite(siteId)
@@ -149,6 +150,9 @@ export class SiteMutationGate {
   /**
    * Run `fn` exclusively for `siteId`. Concurrent callers for the same site
    * queue behind each other; callers for different sites run in parallel.
+   * @param siteId - site whose writes this call serializes against.
+   * @param fn - exclusive work to run after prior writes for this site settle.
+   * @returns the value `fn` resolves to.
    */
   async withGate<T>(siteId: string, fn: () => Promise<T>): Promise<T> {
     const prev = this.queues.get(siteId) ?? Promise.resolve()
@@ -168,7 +172,10 @@ export class SiteMutationGate {
 /** Singleton gate shared across all tool invocations within one agent session. */
 let globalGate: SiteMutationGate | undefined
 
-/** Get or create the process-wide mutation gate. */
+/**
+ * Get or create the process-wide mutation gate.
+ * @returns the shared gate used by all tool invocations in this process.
+ */
 export function getMutationGate(): SiteMutationGate {
   if (globalGate === undefined) globalGate = new SiteMutationGate()
   return globalGate

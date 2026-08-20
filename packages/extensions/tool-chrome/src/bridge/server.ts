@@ -217,6 +217,7 @@ const parseJsonBody = <T>(label: string, text: string): T => {
 // Bridge server
 // ---------------------------------------------------------------------------
 
+/** Listen address, extension display version, and optional protocol fingerprint for a local bridge HTTP server. */
 export interface BridgeServerOptions {
   readonly host: string
   readonly port: number
@@ -231,6 +232,12 @@ export interface BridgeServerOptions {
   readonly protocolFingerprint?: string
 }
 
+/**
+ * Local HTTP bridge that owns the command broker, connector bind slot, and
+ * owner/connector HMAC sessions. `start` binds the listen address; `stop`
+ * closes sockets and rejects in-flight mailbox work. A stopped instance
+ * cannot be restarted.
+ */
 export class BridgeServer {
   private server: Server | undefined
   private authentication: BridgeAuthenticationSession | undefined
@@ -244,10 +251,12 @@ export class BridgeServer {
     this.fingerprint = options.protocolFingerprint ?? protocolFingerprint()
   }
 
+  /** Origin `http://{host}:{port}` this instance listens on. */
   get url(): string {
     return `http://${this.options.host}:${this.options.port}`
   }
 
+  /** Extension id, display version, and protocol fingerprint the connector must present. */
   get extensionExpectation(): {
     extensionId: string
     displayVersion: string
@@ -260,11 +269,19 @@ export class BridgeServer {
     }
   }
 
-  /** Load (or create) the owner credential. `credential` is injected by the plugin. */
+  /**
+   * Load (or create) the owner credential. `credential` is injected by the plugin.
+   * @param credential - shared secret the owner client must prove; replaces any prior identity.
+   */
   setOwnerCredential(credential: string): void {
     this.ownerIdentity = { credential, protocolFingerprint: this.fingerprint }
   }
 
+  /**
+   * Bind the listen address and admit owner/connector requests.
+   * No-op when already listening. A raced `stop` closes the socket before it is retained.
+   * @throws BridgeUnavailable when the instance was already stopped; BridgeBindFailed when the address cannot be bound.
+   */
   async start(): Promise<void> {
     if (this.closed) throw new BridgeUnavailable('Chrome bridge is closed and cannot be restarted')
     if (this.server !== undefined) return
@@ -295,12 +312,23 @@ export class BridgeServer {
       server.once('error', onError)
       server.listen(this.options.port, this.options.host, () => {
         server.off('error', onError)
+        // Dispose can win the race against listen; do not keep a socket that
+        // no owner will stop.
+        if (this.closed) {
+          server.close(() => resolve())
+          server.closeAllConnections()
+          return
+        }
         this.server = server
         resolve()
       })
     })
   }
 
+  /**
+   * Close the listen socket, stop the broker, and refuse later `start`.
+   * Safe to call more than once.
+   */
   async stop(): Promise<void> {
     this.closed = true
     await this.broker?.stop()
@@ -314,6 +342,11 @@ export class BridgeServer {
     }
   }
 
+  /**
+   * Snapshot of listen URL, server mode, expected extension identity, and the
+   * currently leased connector when one is connected.
+   * @returns status payload the owner `/status` route returns.
+   */
   status(): BridgeStatusResponse {
     const expectation = this.extensionExpectation
     const connector = this.statusOfConnector()

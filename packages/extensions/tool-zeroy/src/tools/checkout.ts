@@ -466,6 +466,7 @@ async function performCheckout(
 
 /**
  * Register the `zeroy_checkout` tool on the given context.
+ * @param ctx - plugin context that owns the tool registry; no-ops when schema projection failed.
  */
 export function registerCheckoutTool(ctx: Context): void {
   if (CheckoutProviderProjection._tag === 'Failure') {

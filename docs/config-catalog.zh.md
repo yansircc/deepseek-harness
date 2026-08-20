@@ -2250,6 +2250,73 @@ export type CodexPermissionMode =
 
 来源：[`packages/subagent/subagent-codex/src/index.ts:36`](../packages/subagent/subagent-codex/src/index.ts)
 
+<a id="deepseek-aidsh-subagent-cursor"></a>
+
+## `@deepseek-ai/dsh-subagent-cursor`
+
+需要：`subagents` · `subprocess`
+
+```ts config-catalog
+/** Config: how to spawn and pool the child Cursor ACP agent processes. */
+export interface Config {
+  /** Provider name on `ctx.subagents` (default `cursor`). */
+  providerName: string
+  /** The executable to spawn (the Cursor agent CLI, e.g. `agent`). */
+  command: string
+  /**
+   * Optional model key for the child. Absent → the child uses Cursor's own
+   * configured model; present → each pool is keyed by it and spawns
+   * `--model <model> acp`, so one provider can serve several models.
+   */
+  model?: string
+  /** Extra arguments placed before `acp` (e.g. `--trust`). */
+  args?: string[]
+  /**
+   * How to auto-answer the child's `session/request_permission` prompts:
+   * `deny` (default — decline every prompt), `allowEdits` (approve only the
+   * tool kinds in {@link Config.allowEditsKinds}), or `allow` (approve via the
+   * first `allow_once`/`allow_always` option). No prompt is surfaced to a human.
+   */
+  permission?: PermissionPolicy
+  /** Tool kinds approved under `permission: allowEdits`; every other kind is cancelled. */
+  allowEditsKinds?: ToolKind[]
+  /**
+   * Maximum concurrent pooled connections (and therefore concurrent Cursor
+   * runs) per model. At most one active ACP session per connection.
+   */
+  poolSize?: number
+  /** Idle time before a released connection is closed and reaped. */
+  idleTtlMs?: number
+  /** Bound on the per-connection ACP `initialize` handshake. */
+  initTimeoutMs?: number
+  /**
+   * Working-directory override used for BOTH the pooled process and its
+   * sessions. Must be non-empty; a relative path resolves against the harness
+   * launch directory at load, and the result must be an existing directory.
+   * When omitted, the pooled process runs in the harness launch directory
+   * while every delegation's SESSION inherits its parent session's cwd.
+   */
+  cwd?: string
+  /**
+   * Extra environment variables for the child process. Forwarded on top of a
+   * credential-scrubbed copy of the parent env, so an explicit key here
+   * reaches the child while ambient secrets do not leak implicitly.
+   */
+  env?: Record<string, string>
+  /** Grace period (ms) for the child's EOF-driven quiesce on close. */
+  disposeEofGraceMs?: number
+  /** Termination-escalation grace (ms); must not exceed `MAX_TIMER_DELAY_MS`. */
+  disposeGraceMs?: number
+}
+
+/** How to auto-answer the child's `session/request_permission` prompts. */
+export type PermissionPolicy = 'deny' | 'allowEdits' | 'allow'
+```
+
+依赖于：`ToolKind`（`@agentclientprotocol/sdk`）
+
+来源：[`packages/subagent/subagent-cursor/src/index.ts:42`](../packages/subagent/subagent-cursor/src/index.ts)
+
 <a id="deepseek-aidsh-subagent-dsh-sdk"></a>
 
 ## `@deepseek-ai/dsh-subagent-dsh-sdk`
@@ -2510,6 +2577,30 @@ export interface Config {
 ```
 
 来源：[`packages/shell/tool-bash-persistent/src/index.ts:432`](../packages/shell/tool-bash-persistent/src/index.ts)
+
+<a id="deepseek-aidsh-tool-chrome"></a>
+
+## `@deepseek-ai/dsh-tool-chrome`
+
+需要：`tools`
+
+```ts config-catalog
+/** Plugin config: bridge address, owner credential, and command limits. */
+export interface Config {
+  /** Bridge listen host. Defaults to the bridge contract host (127.0.0.1). */
+  host?: string
+  /** Bridge listen port. Defaults to the bridge contract port (17318). */
+  port?: number
+  /** Display version reported to the extension. Defaults to the package version. */
+  displayVersion?: string
+  /** Owner credential reference in ctx.credentials. Defaults to PI_CHROME_OWNER_CREDENTIAL. */
+  ownerCredentialRef?: string
+  /** Per-command timeout in ms. Defaults to 30000. */
+  commandTimeoutMs?: number
+}
+```
+
+来源：[`packages/extensions/tool-chrome/src/config.ts:10`](../packages/extensions/tool-chrome/src/config.ts)
 
 <a id="deepseek-aidsh-tool-fs"></a>
 
@@ -2923,6 +3014,30 @@ export interface Config {
 
 来源：[`packages/workflow/tool-workflow/src/index.ts:33`](../packages/workflow/tool-workflow/src/index.ts)
 
+<a id="deepseek-aidsh-tool-zeroy"></a>
+
+## `@deepseek-ai/dsh-tool-zeroy`
+
+需要：`tools` · `systemPrompt`
+
+```ts config-catalog
+/** Plugin config: which tools to register and operational limits. */
+export interface Config {
+  /** Register `zeroy_inspect`. Defaults to true. */
+  inspect?: boolean
+  /** Register `zeroy_checkout`. Defaults to true. */
+  checkout?: boolean
+  /** Register `zeroy_push`. Defaults to true. */
+  push?: boolean
+  /** Register `zeroy_pair` and `zeroy_unpair`. Defaults to true. */
+  pairing?: boolean
+  /** Maximum concurrent external-check HTTP requests per invocation. Defaults to 4. */
+  externalCheckConcurrency?: number
+}
+```
+
+来源：[`packages/extensions/tool-zeroy/src/config.ts:10`](../packages/extensions/tool-zeroy/src/config.ts)
+
 <a id="deepseek-aidsh-tools"></a>
 
 ## `@deepseek-ai/dsh-tools`
@@ -3199,6 +3314,7 @@ export interface Config {
 - `@deepseek-ai/dsh-client-ui-agent-preset`（[`packages/client/ui-agent-preset/src/index.ts`](../packages/client/ui-agent-preset/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-attachment`（[`packages/client/ui-attachment/src/index.ts`](../packages/client/ui-attachment/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-brand-official`（[`packages/client/ui-brand-official/src/index.ts`](../packages/client/ui-brand-official/src/index.ts)）
+- `@deepseek-ai/dsh-client-ui-chrome`（[`packages/client/ui-chrome/src/index.ts`](../packages/client/ui-chrome/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-commands`（[`packages/client/ui-commands/src/index.ts`](../packages/client/ui-commands/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-conversation`（[`packages/client/ui-conversation/src/index.ts`](../packages/client/ui-conversation/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-cordis`（[`packages/extensions/ui-cordis/src/index.ts`](../packages/extensions/ui-cordis/src/index.ts)）
@@ -3215,6 +3331,7 @@ export interface Config {
 - `@deepseek-ai/dsh-client-ui-plan`（[`packages/client/ui-plan/src/index.ts`](../packages/client/ui-plan/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-reference`（[`packages/client/ui-reference/src/index.ts`](../packages/client/ui-reference/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-renderer`（[`packages/client/ui-renderer/src/index.ts`](../packages/client/ui-renderer/src/index.ts)）
+- `@deepseek-ai/dsh-client-ui-schedule`（[`packages/client/ui-schedule/src/index.ts`](../packages/client/ui-schedule/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-settings`（[`packages/client/ui-settings/src/index.ts`](../packages/client/ui-settings/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-settings-general`（[`packages/client/ui-settings-general/src/index.ts`](../packages/client/ui-settings-general/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-settings-models`（[`packages/client/ui-settings-models/src/index.ts`](../packages/client/ui-settings-models/src/index.ts)）
@@ -3229,6 +3346,7 @@ export interface Config {
 - `@deepseek-ai/dsh-client-ui-user-questions`（[`packages/client/ui-user-questions/src/index.ts`](../packages/client/ui-user-questions/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-workflow-run`（[`packages/client/ui-workflow-run/src/index.ts`](../packages/client/ui-workflow-run/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-workspace`（[`packages/client/ui-workspace/src/index.ts`](../packages/client/ui-workspace/src/index.ts)）
+- `@deepseek-ai/dsh-client-ui-zeroy`（[`packages/client/ui-zeroy/src/index.ts`](../packages/client/ui-zeroy/src/index.ts)）
 - `@deepseek-ai/dsh-command-compact` — 需要 `commands` · `compact`（[`packages/compaction/command-compact/src/index.ts`](../packages/compaction/command-compact/src/index.ts)）
 - `@deepseek-ai/dsh-command-feedback` — 需要 `commands`（[`packages/feedback/command-feedback/src/index.ts`](../packages/feedback/command-feedback/src/index.ts)）
 - `@deepseek-ai/dsh-command-goal` — 需要 `commands` · `goals`（[`packages/goal/command-goal/src/index.ts`](../packages/goal/command-goal/src/index.ts)）

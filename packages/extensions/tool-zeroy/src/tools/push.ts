@@ -1641,6 +1641,7 @@ async function executePush(
 
 /**
  * Register the `zeroy_push` tool on the given context.
+ * @param ctx - plugin context that owns the tool registry; no-ops when schema projection failed.
  */
 export function registerPushTool(ctx: Context): void {
   if (PushProviderProjection._tag === 'Failure') {

@@ -64,6 +64,8 @@ import * as ToolTeam from '@deepseek-ai/dsh-experimental-tool-agent-team'
 import * as ToolTodo from '@deepseek-ai/dsh-tool-todo'
 import * as ToolSubagent from '@deepseek-ai/dsh-tool-subagent'
 import * as ToolWeb from '@deepseek-ai/dsh-tool-web'
+import * as ToolChrome from '@deepseek-ai/dsh-tool-chrome'
+import * as ToolZeroy from '@deepseek-ai/dsh-tool-zeroy'
 import VmWorkflowEngine from '@deepseek-ai/dsh-workflow-worker-thread'
 import * as ToolRalph from '@deepseek-ai/dsh-tool-ralph'
 import * as ToolWorkflow from '@deepseek-ai/dsh-tool-workflow'
@@ -614,6 +616,37 @@ const TOOL_PACKAGES: ToolPackage[] = [
     },
     note:
       'web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-tool-chrome',
+    dir: 'tool-chrome',
+    source: 'packages/extensions/tool-chrome/src/index.ts',
+    requires: ['ctx.tools', 'ctx.credentials at call time'],
+    writes: ['tool/call', 'tool/result', 'local Chrome-bridge HTTP server'],
+    async mount(ctx) {
+      // Ephemeral port so harvest does not collide with a running product bridge.
+      await ctx.plugin(ToolChrome, { port: 0 })
+    },
+    note:
+      'chrome_status plus the atomic chrome_* tools share one plugin; the extension must be loaded in a real Chrome profile before those calls succeed.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-tool-zeroy',
+    dir: 'tool-zeroy',
+    source: {
+      zeroy_inspect: 'packages/extensions/tool-zeroy/src/tools/inspect.ts',
+      zeroy_checkout: 'packages/extensions/tool-zeroy/src/tools/checkout.ts',
+      zeroy_push: 'packages/extensions/tool-zeroy/src/tools/push.ts',
+      zeroy_pair: 'packages/extensions/tool-zeroy/src/tools/pair.ts',
+      zeroy_unpair: 'packages/extensions/tool-zeroy/src/tools/pair.ts',
+    },
+    requires: ['ctx.tools', 'ctx.systemPrompt', 'ctx.credentials and ctx.settings at call time'],
+    writes: ['tool/call', 'tool/result', 'zeroy-sites settings', 'credential grants'],
+    async mount(ctx) {
+      await ctx.plugin(ToolZeroy)
+    },
+    note:
+      'inspect, checkout, push, and pairing are independent config flags; pairing registers both zeroy_pair and zeroy_unpair. Default harvest enables every flag.',
   },
 ]
 

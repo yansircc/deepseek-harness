@@ -30,7 +30,7 @@
 | `@deepseek-ai/dsh-tool-fs-search` | `glob`、`grep` | `ctx.tools`、`ctx.subprocess`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | glob 和 grep 是无条件可用的发现工具，通过 ctx.subprocess spawn 随包提供的 ripgrep 二进制文件（`@vscode/ripgrep`），并作为普通前台调用运行，绝不作为后台任务；无需在宿主机安装 `rg`，也不经过 shell 层。本目录使用 `sampleOverCapGlobResults: true`；部署必须显式选择该行为。结果超过上限时，会通过可选的 ctx.spillStore 后端保存完整的格式化列表；在共置部署中，如果后端公开本地路径，返回的定位信息可供后续读取／搜索。 |
 | `@deepseek-ai/dsh-tool-terminal` | `terminal_close`、`terminal_list`、`terminal_open`、`terminal_read`、`terminal_send`、`terminal_signal` | `ctx.tools`、`ctx.terminals`、`ctx.systemPrompt`、`ctx.jobs at call time for run_in_background` | `tool/call`、`tool/result` | - | 这 6 个终端工具需要选择启用，用于补充一次性 bash／文件系统工具。`terminal_send(run_in_background: true)` 会注册到 `ctx.jobs`；schema 不包含 TUI、具名按键序列、BEL、调整尺寸、自动启动和跨 agent 共享。 |
 | `@deepseek-ai/dsh-tool-goal` | `create_goal`、`get_goal`、`update_goal` | `ctx.tools`、`ctx.agents`、`ctx.goals`、`ctx.systemPrompt`、`a calling Agent in an authorized open turn` | `tool/call`、`goal/change for mutations`、`tool/result` | - | create、edit、pause 和 resume 要求直接来自人类的根权限；complete 和 blocked 也接受确切的当前 Goal Round。blocked 的默认下限是 3 个获准的 Round。 |
-| `@deepseek-ai/dsh-schedule` | `schedule_create`、`schedule_delete`、`schedule_list` | `ctx.tools`、`ctx.sessions`、Session 持久化、未来创建的 live 根 Agent | `tool/call`、`schedule/change create or delete`、`tool/result` | - | 仅在选择启用的 Schedule 插件加载后创建的 live 根 Agent scope 内注册。版本 1 接受 after_seconds、显式绝对 at 和有界固定速率 every_seconds，并披露 session-local 交付；管理读取与变更必须通过共享的 Session 持久化 barrier。 |
+| `@deepseek-ai/dsh-schedule` | `schedule_create`、`schedule_delete`、`schedule_list`、`schedule_pause`、`schedule_resume`、`schedule_run_now`、`schedule_update` | `ctx.tools`、`ctx.sessions`、Session 持久化、未来创建的 live 根 Agent | `tool/call`、`schedule/change create or delete`、`tool/result` | - | 仅在选择启用的 Schedule 插件加载后创建的 live 根 Agent scope 内注册。版本 1 接受 after_seconds、显式绝对 at 和有界固定速率 every_seconds，并披露 session-local 交付；管理读取与变更必须通过共享的 Session 持久化 barrier。 |
 | `@deepseek-ai/dsh-tool-lsp` | `lsp` | `ctx.tools`、`ctx.lsp`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | lsp 工具将提供方选择和语言服务器子进程置于 ctx.lsp 之后，因此其模型可见 schema 在更换提供方时保持稳定。运行时要求已注册提供方，例如 `@deepseek-ai/dsh-lsp-stdio`；如果没有提供方，查询会返回结构化 `LSP_UNAVAILABLE` 错误，而不会改变 schema。 |
 | `@deepseek-ai/dsh-tool-ralph` | `ralph` | `ctx.tools`、`ctx.workflowEngine`、`ctx.subagents`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents every fresh round)` | `tool/call`、`tool/result`、`workflow and child session events during execution` | - | 固定的前台工作流会在每个 Round 启动一个全新的结构化子级；模型只能选择不可变目标和可选的 Round 上限。 |
 | `@deepseek-ai/dsh-tool-skill` | `skill` | `ctx.tools`、`ctx.agents`、`ctx.skills` | `tool/call`、`tool/result`、`user/message replacement catalogs via agent.inject()` | - | - |
@@ -43,6 +43,8 @@
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`、`owning Agent session` | `tool/call`、`todo/write`、`tool/result` | - | todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为检查清单。`allowParallelInProgress` 是没有默认值的必填项，因此本目录明确选择 `true`，对应描述允许同时存在多个 `in_progress` 项。选择 `false` 的部署会获得同一工具，但描述会要求只能有 1 个活动任务。 |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`、`ctx.workflowEngine`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents the script children)` | `tool/call`、`tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`、`web_search` | `ctx.tools`、`ctx.web`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可见 schema 在更换后端时保持稳定。 |
+| `@deepseek-ai/dsh-tool-chrome` | `chrome_click`、`chrome_console`、`chrome_drag`、`chrome_evaluate`、`chrome_fill`、`chrome_hover`、`chrome_inspect`、`chrome_navigate`、`chrome_network_get`、`chrome_network_list`、`chrome_press`、`chrome_read`、`chrome_screenshot`、`chrome_scroll`、`chrome_snapshot`、`chrome_status`、`chrome_tab_activate`、`chrome_tab_close`、`chrome_tab_group`、`chrome_tab_list`、`chrome_tab_new`、`chrome_tab_ungroup`、`chrome_tap`、`chrome_type`、`chrome_upload`、`chrome_wait` | `ctx.tools`、`ctx.credentials at call time` | `tool/call`、`tool/result`、`local Chrome-bridge HTTP server` | - | chrome_status 与原子 chrome_* 工具共用一个插件；这些调用成功前必须在真实 Chrome 配置里加载扩展。 |
+| `@deepseek-ai/dsh-tool-zeroy` | `zeroy_checkout`、`zeroy_inspect`、`zeroy_pair`、`zeroy_push`、`zeroy_unpair` | `ctx.tools`、`ctx.systemPrompt`、`ctx.credentials and ctx.settings at call time` | `tool/call`、`tool/result`、`zeroy-sites settings`、`credential grants` | - | inspect、checkout、push 和 pairing 是彼此独立的 config 开关；pairing 同时注册 zeroy_pair 与 zeroy_unpair。默认采集会启用全部开关。 |
 
 <a id="deepseek-aidsh-tool-ask-user"></a>
 
@@ -1071,7 +1073,7 @@ create、edit、pause 和 resume 要求直接来自人类的根权限；complete
 
 ### `schedule_create`
 
-在当前会话中创建一条提醒。请提供非空 prompt 和恰好一个 selector：正的安全整数 after_seconds 延时；作为严格带偏移日期时间或本地日期／时间对象的 at；或不小于 300 的安全整数 every_seconds。固定速率提醒始终与创建时刻对齐，会跳过错过的发生时点，并把每条逾期规则的最新一个发生时点合并到一个批次中。交付模式是 session-local：只有此会话处于 live 状态时，提醒才会准时运行；否则提醒会进入 overdue 状态，直至会话恢复。
+在当前会话中创建一条提醒。请提供非空 prompt 和恰好一个 selector：正的安全整数 after_seconds 延时；作为严格带偏移日期时间或本地日期／时间对象的 at；不小于 300 的安全整数 every_seconds；或 cron（5 字段表达式，可选 IANA time_zone，默认 UTC）。固定速率和 cron 提醒会跳过错过的发生时点，并把每条逾期规则的最新一个发生时点派发一次。交付模式是 session-local：只有此会话处于 live 状态时，提醒才会准时运行；否则提醒会进入 overdue 状态，直至会话恢复。
 
 ```json
 {
@@ -1116,6 +1118,22 @@ create、edit、pause 和 resume 要求直接来自人类的根权限；complete
         }
       ],
       "description": "Absolute target as strict offset RFC 3339 or local date/time with an explicit IANA zone."
+    },
+    "cron": {
+      "type": "object",
+      "description": "Recurring cron selector: a 5-field expression (minute hour day-of-month month day-of-week) with an optional IANA time_zone defaulting to UTC.",
+      "additionalProperties": false,
+      "properties": {
+        "expression": {
+          "type": "string"
+        },
+        "time_zone": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "expression"
+      ]
     }
   },
   "required": [
@@ -1155,6 +1173,146 @@ create、edit、pause 和 resume 要求直接来自人类的根权限；complete
 {
   "type": "object",
   "properties": {}
+}
+```
+
+来源：[`packages/schedule/schedule/src/tools.ts`](../packages/schedule/schedule/src/tools.ts)
+
+### `schedule_pause`
+
+按确切 id 暂停当前会话中的一条活动提醒。已暂停的提醒保留其目标，但会被实时计时器跳过，直到调用 schedule_resume。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Exact session-local schedule id."
+    }
+  },
+  "required": [
+    "id"
+  ]
+}
+```
+
+来源：[`packages/schedule/schedule/src/tools.ts`](../packages/schedule/schedule/src/tools.ts)
+
+### `schedule_resume`
+
+按确切 id 恢复当前会话中一条已暂停的提醒。如果暂停期间目标已过，下一次实时计时器判定会把它当作 overdue 派发。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Exact session-local schedule id."
+    }
+  },
+  "required": [
+    "id"
+  ]
+}
+```
+
+来源：[`packages/schedule/schedule/src/tools.ts`](../packages/schedule/schedule/src/tools.ts)
+
+### `schedule_run_now`
+
+立即按当前时间派发一条活动提醒，忽略其目标。一次性提醒触发后删除；周期提醒从现在起前进到下一个目标。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Exact session-local schedule id."
+    }
+  },
+  "required": [
+    "id"
+  ]
+}
+```
+
+来源：[`packages/schedule/schedule/src/tools.ts`](../packages/schedule/schedule/src/tools.ts)
+
+### `schedule_update`
+
+按确切 id 更新当前会话中的一条活动提醒。可提供新的 prompt，以及至多一个时间选择器（after_seconds、at、every_seconds 或 cron），或两者都提供。没有选择器时保留当前时间规则；有选择器时重建规则并从现在起重算下一个目标。一次性目标必须严格位于未来。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Exact session-local schedule id."
+    },
+    "prompt": {
+      "type": "string",
+      "description": "Replacement reminder content; when omitted the current prompt is kept."
+    },
+    "after_seconds": {
+      "type": "number",
+      "description": "Replacement positive safe-integer delay in seconds."
+    },
+    "every_seconds": {
+      "type": "number",
+      "description": "Replacement fixed-rate safe-integer interval in seconds, at least 300."
+    },
+    "at": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "date": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "time_zone": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "date",
+            "time",
+            "time_zone"
+          ]
+        }
+      ],
+      "description": "Replacement absolute target as strict offset RFC 3339 or local date/time with an explicit IANA zone."
+    },
+    "cron": {
+      "type": "object",
+      "description": "Replacement recurring cron selector: a 5-field expression (minute hour day-of-month month day-of-week) with an optional IANA time_zone defaulting to UTC.",
+      "additionalProperties": false,
+      "properties": {
+        "expression": {
+          "type": "string"
+        },
+        "time_zone": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "expression"
+      ]
+    }
+  },
+  "required": [
+    "id"
+  ]
 }
 ```
 
@@ -2253,3 +2411,1210 @@ todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为
 来源：[`packages/web/tool-web/src/index.ts`](../packages/web/tool-web/src/index.ts)
 
 web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可见 schema 在更换后端时保持稳定。
+
+<a id="deepseek-aidsh-tool-chrome"></a>
+
+## `@deepseek-ai/dsh-tool-chrome`
+
+### `chrome_click`
+
+Click a fresh Action Graph ref, selector, or viewport coordinate with real Chrome input.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "at": {
+      "type": "object",
+      "description": "An element (uid/selector) or viewport coordinate.",
+      "additionalProperties": true,
+      "properties": {
+        "by": {
+          "type": "string",
+          "enum": [
+            "uid",
+            "selector",
+            "coordinate"
+          ]
+        },
+        "value": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      }
+    },
+    "includeSnapshot": {
+      "type": "boolean",
+      "description": "Include a fresh Action Graph snapshot after the operation completes."
+    },
+    "maxElements": {
+      "type": "integer",
+      "description": "Cap the included snapshot element count (1-80)."
+    }
+  }
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_console`
+
+Read captured page console entries.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "clear": {
+      "type": "boolean",
+      "description": "Clear captured entries after reading."
+    }
+  }
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_drag`
+
+Drag between two elements or coordinates with real Chrome input.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "from": {
+      "type": "object",
+      "description": "An element (uid/selector) or viewport coordinate.",
+      "additionalProperties": true,
+      "properties": {
+        "by": {
+          "type": "string",
+          "enum": [
+            "uid",
+            "selector",
+            "coordinate"
+          ]
+        },
+        "value": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      }
+    },
+    "to": {
+      "type": "object",
+      "description": "An element (uid/selector) or viewport coordinate.",
+      "additionalProperties": true,
+      "properties": {
+        "by": {
+          "type": "string",
+          "enum": [
+            "uid",
+            "selector",
+            "coordinate"
+          ]
+        },
+        "value": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      }
+    },
+    "steps": {
+      "type": "integer",
+      "description": "Drag steps (3-40)."
+    }
+  }
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_evaluate`
+
+Evaluate one JavaScript expression in the page and return bounded JSON.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "expression": {
+      "type": "string",
+      "description": "The JavaScript expression to evaluate."
+    },
+    "awaitPromise": {
+      "type": "boolean",
+      "description": "Await the promise result."
+    }
+  },
+  "required": [
+    "expression"
+  ]
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_fill`
+
+Replace the value of a fresh Action Graph ref or selector with real Chrome input.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "text": {
+      "type": "string",
+      "description": "Text to fill (max 500 chars)."
+    },
+    "into": {
+      "type": "object",
+      "description": "A fresh Action Graph ref (uid) or CSS selector.",
+      "additionalProperties": true,
+      "properties": {
+        "by": {
+          "type": "string",
+          "enum": [
+            "uid",
+            "selector"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "submit": {
+      "type": "boolean",
+      "description": "Submit the surrounding form after filling."
+    },
+    "includeSnapshot": {
+      "type": "boolean",
+      "description": "Include a fresh Action Graph snapshot after the operation completes."
+    },
+    "maxElements": {
+      "type": "integer",
+      "description": "Cap the included snapshot element count (1-80)."
+    }
+  },
+  "required": [
+    "text"
+  ]
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_hover`
+
+Move the real Chrome pointer over an element or coordinate.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "at": {
+      "type": "object",
+      "description": "An element (uid/selector) or viewport coordinate.",
+      "additionalProperties": true,
+      "properties": {
+        "by": {
+          "type": "string",
+          "enum": [
+            "uid",
+            "selector",
+            "coordinate"
+          ]
+        },
+        "value": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_inspect`
+
+Inspect one page element and its local context.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "element": {
+      "type": "object",
+      "description": "A fresh Action Graph ref (uid) or CSS selector.",
+      "additionalProperties": true,
+      "properties": {
+        "by": {
+          "type": "string",
+          "enum": [
+            "uid",
+            "selector"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "scrollIntoView": {
+      "type": "boolean",
+      "description": "Scroll the element into view first."
+    }
+  }
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_navigate`
+
+Navigate the session-owned page or one explicitly selected tab.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "url": {
+      "type": "string",
+      "description": "The URL to navigate to."
+    },
+    "waitUntilLoad": {
+      "type": "boolean",
+      "description": "Wait for the load event before returning."
+    },
+    "timeoutMs": {
+      "type": "integer",
+      "description": "Navigation timeout (1-120000ms)."
+    },
+    "initScript": {
+      "type": "string",
+      "description": "Optional script to run before navigation."
+    },
+    "snapshot": {
+      "type": "object",
+      "description": "Optional snapshot options to run after navigation.",
+      "additionalProperties": true,
+      "properties": {
+        "ref": {
+          "type": "string",
+          "description": "Snapshot ref."
+        },
+        "mode": {
+          "type": "string",
+          "description": "Snapshot mode."
+        },
+        "query": {
+          "type": "string",
+          "description": "Snapshot query."
+        },
+        "maxElements": {
+          "type": "integer",
+          "description": "Snapshot max elements."
+        },
+        "maxTextChars": {
+          "type": "integer",
+          "description": "Snapshot max text chars."
+        }
+      }
+    }
+  },
+  "required": [
+    "url"
+  ]
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_network_get`
+
+Read one captured network request and response body.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "requestId": {
+      "type": "string",
+      "description": "The captured request id."
+    }
+  },
+  "required": [
+    "requestId"
+  ]
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_network_list`
+
+List captured page network requests.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "includePreserved": {
+      "type": "boolean",
+      "description": "Include preserved entries from earlier navigations."
+    },
+    "clear": {
+      "type": "boolean",
+      "description": "Clear captured entries after listing."
+    }
+  }
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_press`
+
+Press one key with real Chrome input, optionally after focusing a fresh Action Graph ref.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "key": {
+      "type": "string",
+      "description": "The key to press (e.g. Enter, Escape, Tab)."
+    },
+    "at": {
+      "type": "object",
+      "description": "A fresh Action Graph ref (uid) or CSS selector.",
+      "additionalProperties": true,
+      "properties": {
+        "by": {
+          "type": "string",
+          "enum": [
+            "uid",
+            "selector"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "modifiers": {
+      "type": "object",
+      "description": "Modifier keys.",
+      "additionalProperties": true,
+      "properties": {
+        "shift": {
+          "type": "boolean"
+        },
+        "control": {
+          "type": "boolean"
+        },
+        "alt": {
+          "type": "boolean"
+        },
+        "meta": {
+          "type": "boolean"
+        }
+      }
+    },
+    "includeSnapshot": {
+      "type": "boolean",
+      "description": "Include a fresh Action Graph snapshot after the operation completes."
+    },
+    "maxElements": {
+      "type": "integer",
+      "description": "Cap the included snapshot element count (1-80)."
+    }
+  },
+  "required": [
+    "key"
+  ]
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_read`
+
+Read bounded rendered content from the current page without loading the Action Graph.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "ref": {
+      "type": "string",
+      "description": "A fresh context or frontier ref returned by page observation."
+    },
+    "view": {
+      "type": "string",
+      "description": "Read view.",
+      "enum": [
+        "content",
+        "outline"
+      ]
+    },
+    "query": {
+      "type": "string",
+      "description": "CSS query to scope the read."
+    },
+    "maxChars": {
+      "type": "integer",
+      "description": "Cap characters (1-24000)."
+    }
+  }
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_screenshot`
+
+Capture the viewport or a bounded full-page tile set. The image is saved into the workspace; use capture.path (viewport) or capture.directory (full-page) to choose the destination, otherwise a timestamped path under .chrome-screenshots/ is used.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "capture": {
+      "type": "object",
+      "description": "Capture mode: viewport or full-page-tiles.",
+      "additionalProperties": true,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "viewport",
+            "full-page-tiles"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "description": "Workspace-relative path for a viewport capture."
+        },
+        "directory": {
+          "type": "string",
+          "description": "Workspace-relative directory for full-page tiles."
+        }
+      }
+    },
+    "format": {
+      "type": "string",
+      "description": "Output format.",
+      "enum": [
+        "png",
+        "jpeg"
+      ]
+    },
+    "quality": {
+      "type": "integer",
+      "description": "JPEG quality (0-100)."
+    }
+  },
+  "required": [
+    "capture"
+  ]
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_scroll`
+
+Scroll the page or one element with real Chrome wheel input.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "within": {
+      "type": "object",
+      "description": "A fresh Action Graph ref (uid) or CSS selector.",
+      "additionalProperties": true,
+      "properties": {
+        "by": {
+          "type": "string",
+          "enum": [
+            "uid",
+            "selector"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "deltaY": {
+      "type": "number",
+      "description": "Vertical scroll delta."
+    },
+    "deltaX": {
+      "type": "number",
+      "description": "Horizontal scroll delta."
+    },
+    "steps": {
+      "type": "integer",
+      "description": "Scroll steps (3-40)."
+    }
+  }
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_snapshot`
+
+Observe the page and return a compact Action Graph. Use its refs for actions.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "ref": {
+      "type": "string",
+      "description": "A fresh context or frontier ref returned by page observation."
+    },
+    "mode": {
+      "type": "string",
+      "description": "Snapshot mode.",
+      "enum": [
+        "auto",
+        "interactive",
+        "forms",
+        "pageMap",
+        "text",
+        "changes",
+        "full"
+      ]
+    },
+    "query": {
+      "type": "string",
+      "description": "CSS query to scope the snapshot."
+    },
+    "maxElements": {
+      "type": "integer",
+      "description": "Cap element count (1-80)."
+    },
+    "maxTextChars": {
+      "type": "integer",
+      "description": "Cap text characters (1-100000)."
+    },
+    "containingText": {
+      "type": "string",
+      "description": "Only include elements containing this text."
+    },
+    "role": {
+      "type": "string",
+      "description": "Only include elements with this ARIA role."
+    },
+    "nearUid": {
+      "type": "string",
+      "description": "Only include elements near this element uid."
+    }
+  }
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_status`
+
+Read the Chrome bridge and connector status without changing it.
+
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_tab_activate`
+
+Activate one exact Chrome tab.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "target": {
+      "type": "object",
+      "description": "Exactly one Chrome tab selector.",
+      "additionalProperties": true,
+      "properties": {
+        "by": {
+          "type": "string",
+          "enum": [
+            "id",
+            "url",
+            "title"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_tab_close`
+
+Close one exact Chrome tab.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "target": {
+      "type": "object",
+      "description": "Exactly one Chrome tab selector.",
+      "additionalProperties": true,
+      "properties": {
+        "by": {
+          "type": "string",
+          "enum": [
+            "id",
+            "url",
+            "title"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_tab_group`
+
+Place one exact Chrome tab in the Pi session group.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "target": {
+      "type": "object",
+      "description": "Exactly one Chrome tab selector.",
+      "additionalProperties": true,
+      "properties": {
+        "by": {
+          "type": "string",
+          "enum": [
+            "id",
+            "url",
+            "title"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "groupColor": {
+      "type": "string",
+      "description": "Optional tab-group color.",
+      "enum": [
+        "grey",
+        "blue",
+        "red",
+        "yellow",
+        "green",
+        "pink",
+        "purple",
+        "cyan",
+        "orange"
+      ]
+    }
+  }
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_tab_list`
+
+List Chrome tabs visible to this Pi session.
+
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_tab_new`
+
+Create another session-owned Chrome tab.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "url": {
+      "type": "string",
+      "description": "Optional URL to open in the new tab."
+    },
+    "groupColor": {
+      "type": "string",
+      "description": "Optional tab-group color.",
+      "enum": [
+        "grey",
+        "blue",
+        "red",
+        "yellow",
+        "green",
+        "pink",
+        "purple",
+        "cyan",
+        "orange"
+      ]
+    }
+  }
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_tab_ungroup`
+
+Remove one exact Chrome tab from its group.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "target": {
+      "type": "object",
+      "description": "Exactly one Chrome tab selector.",
+      "additionalProperties": true,
+      "properties": {
+        "by": {
+          "type": "string",
+          "enum": [
+            "id",
+            "url",
+            "title"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_tap`
+
+Send a real Chrome touch tap to an element or coordinate.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "at": {
+      "type": "object",
+      "description": "An element (uid/selector) or viewport coordinate.",
+      "additionalProperties": true,
+      "properties": {
+        "by": {
+          "type": "string",
+          "enum": [
+            "uid",
+            "selector",
+            "coordinate"
+          ]
+        },
+        "value": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_type`
+
+Type text with real Chrome keyboard input, optionally into an element.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "text": {
+      "type": "string",
+      "description": "Text to type (max 500 chars)."
+    },
+    "into": {
+      "type": "object",
+      "description": "A fresh Action Graph ref (uid) or CSS selector.",
+      "additionalProperties": true,
+      "properties": {
+        "by": {
+          "type": "string",
+          "enum": [
+            "uid",
+            "selector"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "pressEnter": {
+      "type": "boolean",
+      "description": "Press Enter after typing."
+    },
+    "includeSnapshot": {
+      "type": "boolean",
+      "description": "Include a fresh Action Graph snapshot after the operation completes."
+    },
+    "maxElements": {
+      "type": "integer",
+      "description": "Cap the included snapshot element count (1-80)."
+    }
+  },
+  "required": [
+    "text"
+  ]
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_upload`
+
+Upload workspace files through a fresh file-input Action Graph ref or selector.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "into": {
+      "type": "object",
+      "description": "A fresh Action Graph ref (uid) or CSS selector.",
+      "additionalProperties": true,
+      "properties": {
+        "by": {
+          "type": "string",
+          "enum": [
+            "uid",
+            "selector"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "paths": {
+      "type": "array",
+      "description": "Workspace-relative file paths to upload (max 32).",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "paths"
+  ]
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_wait`
+
+Wait for one typed page condition.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "condition": {
+      "type": "object",
+      "description": "The condition to wait for.",
+      "additionalProperties": true,
+      "properties": {
+        "by": {
+          "type": "string",
+          "enum": [
+            "selector",
+            "urlIncludes",
+            "textContains",
+            "expression"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "timeoutMs": {
+      "type": "integer",
+      "description": "Wait timeout (1-120000ms)."
+    },
+    "intervalMs": {
+      "type": "integer",
+      "description": "Poll interval (1-10000ms)."
+    }
+  },
+  "required": [
+    "condition"
+  ]
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+chrome_status 与原子 chrome_* 工具共用一个插件；这些调用成功前必须在真实 Chrome 配置里加载扩展。
+
+<a id="deepseek-aidsh-tool-zeroy"></a>
+
+## `@deepseek-ai/dsh-tool-zeroy`
+
+### `zeroy_checkout`
+
+Materialize one immutable zeroY SiteCommit as a local Git-tracked working tree. Inspect current state and refs, checkout one active release or DraftRef, then begin at .zeroy/README.md. Edit only normal authored files in that checkout; .zeroy is a derived, read-only Brief and Review projection. Push each coherent repair slice. Every renderable push becomes an administrator-only PreviewRelease; the extension owns object hashes, CAS, rebase, retries, BuildResult, browser evidence, and Proof. Only an administrator may publish a proof-ready PreviewRelease to the public site.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "siteId": {
+      "type": "string",
+      "description": "Configured zeroY site identifier."
+    },
+    "source": {
+      "type": "string",
+      "description": "One of: active-release, draft-ref."
+    },
+    "draftRef": {
+      "type": "string",
+      "description": "Required when source = draft-ref. Pattern: refs/drafts/..."
+    }
+  },
+  "required": [
+    "siteId",
+    "source"
+  ]
+}
+```
+
+Source: [`packages/extensions/tool-zeroy/src/tools/checkout.ts`](../packages/extensions/tool-zeroy/src/tools/checkout.ts)
+
+### `zeroy_inspect`
+
+Read one typed zeroY Connector resource, including external browser checks. Inspect current state and refs, checkout one active release or DraftRef, then begin at .zeroy/README.md. Edit only normal authored files in that checkout; .zeroy is a derived, read-only Brief and Review projection. Push each coherent repair slice. Every renderable push becomes an administrator-only PreviewRelease; the extension owns object hashes, CAS, rebase, retries, BuildResult, browser evidence, and Proof. Only an administrator may publish a proof-ready PreviewRelease to the public site.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "resource": {
+      "type": "string",
+      "description": "One of: sites, refs, commit, releaseHistory, site, current, review, proof, integrity, externalCheck."
+    },
+    "siteId": {
+      "type": "string",
+      "description": "Required when resource != sites."
+    },
+    "commitView": {
+      "type": "string",
+      "description": "Optional when resource = commit; defaults to summary."
+    },
+    "commit": {
+      "type": "string",
+      "description": "Commit hash (sha256:...)."
+    },
+    "base": {
+      "type": "string",
+      "description": "Base commit hash for diff view."
+    },
+    "reviewView": {
+      "type": "string",
+      "description": "Optional when resource = review; defaults to summary."
+    },
+    "proofId": {
+      "type": "string",
+      "description": "Required when resource = proof."
+    },
+    "proofView": {
+      "type": "string",
+      "description": "Optional when resource = proof; defaults to summary."
+    },
+    "draftRef": {
+      "type": "string",
+      "description": "Draft ref (refs/drafts/...)."
+    },
+    "buildId": {
+      "type": "string",
+      "description": "Build result hash."
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Page size (1-50)."
+    },
+    "cursor": {
+      "type": "string",
+      "description": "Pagination cursor."
+    },
+    "urls": {
+      "type": "array",
+      "description": "Optional same-origin URLs for externalCheck.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "externalCheckView": {
+      "type": "string",
+      "description": "Optional when resource = externalCheck; defaults to summary."
+    }
+  },
+  "required": [
+    "resource"
+  ]
+}
+```
+
+Source: [`packages/extensions/tool-zeroy/src/tools/inspect.ts`](../packages/extensions/tool-zeroy/src/tools/inspect.ts)
+
+### `zeroy_pair`
+
+Bind a WordPress site to zeroY. Two-step flow: (1) call with endpoint+label to get an intentId, then ask the user to create a pairing code in WP admin; (2) call again with endpoint+label+intentId+code to complete the binding. The grant secret is stored securely and never exposed to the model.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "endpoint": {
+      "type": "string",
+      "description": "WordPress site base URL (e.g. https://example.com)."
+    },
+    "label": {
+      "type": "string",
+      "description": "Human-readable label for this site."
+    },
+    "intentId": {
+      "type": "string",
+      "description": "Pairing intent ID from step 1. Required for step 2."
+    },
+    "code": {
+      "type": "string",
+      "description": "Pairing code from WP admin. Required for step 2."
+    }
+  },
+  "required": [
+    "endpoint",
+    "label"
+  ]
+}
+```
+
+Source: [`packages/extensions/tool-zeroy/src/tools/pair.ts`](../packages/extensions/tool-zeroy/src/tools/pair.ts)
+
+### `zeroy_push`
+
+Upload content-addressed objects and publish one SiteCommit as a PreviewRelease. Inspect current state and refs, checkout one active release or DraftRef, then begin at .zeroy/README.md. Edit only normal authored files in that checkout; .zeroy is a derived, read-only Brief and Review projection. Push each coherent repair slice. Every renderable push becomes an administrator-only PreviewRelease; the extension owns object hashes, CAS, rebase, retries, BuildResult, browser evidence, and Proof. Only an administrator may publish a proof-ready PreviewRelease to the public site.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "siteId": {
+      "type": "string",
+      "description": "Configured zeroY site identifier."
+    },
+    "checkoutId": {
+      "type": "string",
+      "description": "Checkout ID returned by zeroy_checkout."
+    },
+    "message": {
+      "type": "string",
+      "description": "Optional commit message (max 500 chars)."
+    }
+  },
+  "required": [
+    "siteId",
+    "checkoutId"
+  ]
+}
+```
+
+Source: [`packages/extensions/tool-zeroy/src/tools/push.ts`](../packages/extensions/tool-zeroy/src/tools/push.ts)
+
+### `zeroy_unpair`
+
+Unbind a zeroY WordPress site. Revokes the grant on the WP side, removes the credential from secure storage, and removes the site metadata.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "siteId": {
+      "type": "string",
+      "description": "The site identifier to unbind."
+    }
+  },
+  "required": [
+    "siteId"
+  ]
+}
+```
+
+Source: [`packages/extensions/tool-zeroy/src/tools/pair.ts`](../packages/extensions/tool-zeroy/src/tools/pair.ts)
+
+inspect、checkout、push 和 pairing 是彼此独立的 config 开关；pairing 同时注册 zeroy_pair 与 zeroy_unpair。默认采集会启用全部开关。

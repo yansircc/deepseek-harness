@@ -1,3 +1,4 @@
+/** Limits, markers, and rendering rules `chrome_evaluate` uses to project page values onto JSON. */
 export const EVALUATION_VALUE_CONTRACT = {
   algorithmVersion: 2,
   marker: {
@@ -82,4 +83,5 @@ type WidenContract<Value> = Value extends string
         ? { readonly [Key in keyof Value]: WidenContract<Value[Key]> }
         : Value
 
+/** Widened form of {@link EVALUATION_VALUE_CONTRACT} for callers that accept any compatible contract. */
 export type EvaluationValueContract = WidenContract<typeof EVALUATION_VALUE_CONTRACT>

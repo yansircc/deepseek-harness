@@ -21,6 +21,9 @@
       "path": "../ui-settings"
     },
     {
+      "path": "../ui-settings-plugins"
+    },
+    {
       "path": "../ui-slots"
     },
     {
@@ -28,6 +31,9 @@
     },
     {
       "path": "../ui-primitives"
+    },
+    {
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

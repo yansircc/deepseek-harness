@@ -87,7 +87,13 @@ export interface CursorPoolConfig {
   spawn: (spec: SubprocessSpawnSpec) => SubprocessHandle
 }
 
-/** Answer one permission request under {@link policy}. Exported for direct unit tests. */
+/**
+ * Answer one permission request under {@link policy}. Exported for direct unit tests.
+ * @param policy - pool-wide permission policy for this backend.
+ * @param allowEditsKinds - tool kinds treated as edits under `allowEdits`.
+ * @param params - the child's ACP permission request.
+ * @returns the selected allow option, or a cancelled outcome.
+ */
 export function answerPermission(
   policy: PermissionPolicy,
   allowEditsKinds: readonly ToolKind[],
@@ -129,6 +135,8 @@ async function treeExitsWithin(child: SubprocessHandle, ms: number): Promise<boo
  * stdin EOF (the child's window to flush and reap its own descendants), then
  * the terminate() escalation (SIGTERM → grace → SIGKILL) and its whole-tree
  * exit proof. Resolves only at whole-tree quiescence.
+ * @param child - the pooled subprocess handle to close.
+ * @param eofGraceMs - wait after stdin EOF before the terminate escalation.
  */
 export async function closeConnection(child: SubprocessHandle, eofGraceMs: number): Promise<void> {
   if (child.pid <= 0) {
@@ -175,7 +183,10 @@ export class CursorPool {
 
   constructor(private readonly config: CursorPoolConfig) {}
 
-  /** Per-model connection counts, for tests and diagnostics. */
+  /**
+   * Per-model connection counts, for tests and diagnostics.
+   * @returns idle, in-use, and pending-spawn counts keyed by model.
+   */
   counts(): Record<string, { idle: number; inUse: number; pending: number }> {
     const out: Record<string, { idle: number; inUse: number; pending: number }> = {}
     for (const [model, slot] of this.slots) {
@@ -184,7 +195,11 @@ export class CursorPool {
     return out
   }
 
-  /** Answer one permission request under this pool's configured policy. */
+  /**
+   * Answer one permission request under this pool's configured policy.
+   * @param params - the child's ACP permission request.
+   * @returns the selected allow option, or a cancelled outcome.
+   */
   answer(params: RequestPermissionRequest): RequestPermissionResponse {
     return answerPermission(this.config.permission, this.config.allowEditsKinds, params)
   }
@@ -319,6 +334,9 @@ export class CursorPool {
   /**
    * Borrow one connection for a run, spawning or waiting as needed. Rejects on
    * `signal` abort, spawn/handshake failure, or pool disposal.
+   * @param model - model key; `undefined` uses the empty-string default slot.
+   * @param signal - cancels a waiting or in-flight acquire.
+   * @returns a live pooled connection reserved for one run.
    */
   async acquire(model: string | undefined, signal: AbortSignal): Promise<PoolConnection> {
     if (this.disposed) throw new Error('subagent-cursor: provider pool is disposed')
@@ -407,7 +425,10 @@ export class CursorPool {
     connection.idleTimer.unref()
   }
 
-  /** Close one connection and remove it from every bookkeeping structure. */
+  /**
+   * Close one connection and remove it from every bookkeeping structure.
+   * @param connection - the connection to evict and tear down.
+   */
   async close(connection: PoolConnection): Promise<void> {
     clearIdleTimer(connection)
     const slot = this.slots.get(connection.model)

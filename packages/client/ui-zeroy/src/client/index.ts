@@ -12,6 +12,8 @@ import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 // Type-only: the settings shell's Context merge (ctx.settingsScope).
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
+// Type-only: the shared `settings.plugin.item` SlotMap declaration.
+import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import { ZeroYCard } from './ZeroYCard.tsx'
 import { ZEROY_NS, ZeroYCardController, installBindSignalListener, type ZeroYSitesSettings } from './zeroy-card-controller.ts'
 import { en, NS, zh, type ZeroYLocaleKey } from './locales.ts'
@@ -20,10 +22,6 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     /** The zeroY sites card's copy. */
     'settings.zeroy': ZeroYLocaleKey
-  }
-  interface SlotMap {
-    /** One plugin's card in the plugin configuration section. */
-    'settings.plugin.item': { kind: 'keyed'; scope: 'root'; owner: { children?: never } }
   }
 }
 

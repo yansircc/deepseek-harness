@@ -33,17 +33,17 @@ import {
 import { ATOMIC_TOOL_DESCRIPTORS } from './protocol/operations.ts'
 import { BRIDGE_HOST, BRIDGE_PORT } from './protocol/bridge-contract.ts'
 import { registerChromeSettings, getChromeSettings } from './settings.ts'
-import type { Config as ConfigType } from './config.ts'
+import { Config } from './config.ts'
 import type { BridgeOwnerIdentity } from './protocol/auth.ts'
 import type { SessionContext, WireDomainRequest } from './protocol/schema.ts'
 
-export { Config, type Config as ConfigType } from './config.ts'
+export { Config } from './config.ts'
 
 /** Cordis plugin name used by loader diagnostics. */
 export const name = 'tool-chrome'
 
-/** Services required by this plugin. */
-export const inject = ['tools', 'credentials'] as const
+/** Services required by this plugin. Credentials are resolved at call time. */
+export const inject = ['tools']
 
 /** Default owner credential reference. */
 export const OWNER_CREDENTIAL_REF = 'PI_CHROME_OWNER_CREDENTIAL'
@@ -63,7 +63,7 @@ function sessionContextFor(ctx: Context): SessionContext {
  * Register the chrome tools and start the bridge. Called by the Cordis loader
  * when this plugin is mounted.
  */
-export function apply(ctx: Context, config: ConfigType): void {
+export function apply(ctx: Context, config: Config): void {
   // Register the settings section for bridge configuration (port, credential ref).
   registerChromeSettings(ctx)
   const chromeSettings = getChromeSettings()
@@ -91,7 +91,7 @@ export function apply(ctx: Context, config: ConfigType): void {
         const resolved = await credentials.resolve(credentialRef(ownerCredentialRef))
         if (resolved !== undefined) return resolved.value
       } catch {
-        // fall through to env
+        // Missing or unreadable stored secret; env is the remaining source.
       }
     }
     return process.env[ownerCredentialRef]
@@ -107,7 +107,8 @@ export function apply(ctx: Context, config: ConfigType): void {
         ctx.logger.info('tool-chrome: generated and stored owner credential %s', ownerCredentialRef)
         return generated
       } catch {
-        // storage unavailable; fall back to in-memory for this process
+        // Credential store rejected the write; keep the generated secret in
+        // this process only.
       }
     }
     return generated
@@ -158,7 +159,9 @@ export function apply(ctx: Context, config: ConfigType): void {
 
   // Start the bridge on plugin activation. The owner credential must be
   // loaded first: every owner route (status, command) is gated on it.
-  void (async () => {
+  // Dispose awaits this promise so a harvest or HMR unload cannot leave
+  // the listen handle alive after start() loses the race with stop().
+  const started = (async () => {
     try {
       const identity = await getIdentity()
       if (identity !== undefined) server.setOwnerCredential(identity.credential)
@@ -169,10 +172,7 @@ export function apply(ctx: Context, config: ConfigType): void {
     }
   })()
 
-  // Stop the bridge when the plugin fiber is disposed.
-  ctx.effect(() => () => {
-    void server.stop()
-  }, 'tool-chrome.bridge')
+  ctx.effect(() => () => started.then(() => server.stop()), 'tool-chrome.bridge')
 
   // ---- chrome_status ----
   ctx.tools.register(defineTool({

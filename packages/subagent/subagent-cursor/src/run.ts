@@ -39,7 +39,11 @@ export interface CursorRunSpec {
   onError?: (error: Error, stopReason: SubagentStopReason) => void
 }
 
-/** Map an ACP {@link StopReason} to a harness {@link SubagentStopReason}. */
+/**
+ * Map an ACP {@link StopReason} to a harness {@link SubagentStopReason}.
+ * @param reason - the child's ACP terminal stop reason.
+ * @returns the harness stop reason used by the shared result fold.
+ */
 export function cursorStopReason(reason: StopReason): SubagentStopReason {
   switch (reason) {
     case 'end_turn':
@@ -61,12 +65,20 @@ export function cursorStopReason(reason: StopReason): SubagentStopReason {
   }
 }
 
-/** Collect the text of an ACP content block (non-text blocks contribute nothing). */
+/**
+ * Collect the text of an ACP content block (non-text blocks contribute nothing).
+ * @param content - one ACP content block from the child session.
+ * @returns the text payload, or an empty string for non-text blocks.
+ */
 export function cursorContentText(content: AcpContentBlock): string {
   return content.type === 'text' ? content.text : ''
 }
 
-/** Translate the harness prompt blocks into ACP prompt blocks (text only). */
+/**
+ * Translate the harness prompt blocks into ACP prompt blocks (text only).
+ * @param prompt - harness content blocks from the start request.
+ * @returns ACP text blocks; non-text harness blocks are dropped.
+ */
 export function toAcpPrompt(prompt: ContentBlock[]): AcpContentBlock[] {
   const blocks: AcpContentBlock[] = []
   for (const block of prompt) {

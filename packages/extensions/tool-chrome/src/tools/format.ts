@@ -19,7 +19,11 @@ export interface ScreenshotResult {
   [key: string]: unknown
 }
 
-/** Validate a workspace-relative path (no traversal, no absolute). */
+/**
+ * Validate a workspace-relative path (no traversal, no absolute).
+ * @param value - candidate path; rejected when empty, absolute, containing `..` / `.` / NUL, or a Windows drive path.
+ * @returns true when `value` may be joined under the workspace cwd.
+ */
 export function isSafeRelativePath(value: string): boolean {
   if (value.length === 0) return false
   if (isAbsolute(value)) return false
@@ -118,6 +122,7 @@ export async function projectScreenshot(
  * @param toolName - the chrome tool name (to special-case screenshot).
  * @param input - the tool input (for screenshot path args).
  * @param value - the bridge result value.
+ * @returns the saved-screenshot summary, a screenshot-error object, or `value` unchanged for other tools.
  */
 export async function projectToolResult(
   cwd: string,

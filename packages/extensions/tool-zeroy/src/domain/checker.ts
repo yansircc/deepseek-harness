@@ -12,7 +12,9 @@
 
 type JsonRecord = Readonly<Record<string, unknown>>
 
+/** Fetch or HTML-read failure during an external page or PageSpeed request. */
 export class ZeroYExternalCheckError extends Error {
+  /** Closed-union discriminant for this fetch or read failure. */
   readonly code = 'ZeroYExternalCheckError' as const
 
   constructor(message: string) {
@@ -21,6 +23,7 @@ export class ZeroYExternalCheckError extends Error {
   }
 }
 
+/** One fetched page: HTTP, SEO tags, internal-link sample, or a captured fetch error. */
 export type PageCheck = {
   readonly scenarioId: string
   readonly routeKind: string
@@ -40,6 +43,7 @@ export type PageCheck = {
   readonly error: string | null
 }
 
+/** Page the checker should fetch: expected status and identity fields. */
 export type ExternalCheckTarget = {
   readonly scenarioId: string
   readonly routeKind: string
@@ -49,11 +53,13 @@ export type ExternalCheckTarget = {
   readonly expectedStatus: number
 }
 
+/** Rejection when a requested URL is not absolute or not same-origin with the site. */
 export type ExternalCheckUrlError = {
   readonly code: 'zeroy_external_check_url_invalid' | 'zeroy_external_check_url_origin_invalid'
   readonly message: string
 }
 
+/** Completed external check: per-page results plus optional PageSpeed score. */
 export type ExternalCheck = {
   readonly checkedAt: number
   readonly pages: ReadonlyArray<PageCheck>
@@ -64,12 +70,19 @@ export type ExternalCheck = {
   }
 }
 
+/** Projection page: summary counts, all pages, or failing pages only. */
 export type ExternalCheckView = 'summary' | 'pages' | 'failures'
 
 // ---------------------------------------------------------------------------
 // URL validation
 // ---------------------------------------------------------------------------
 
+/**
+ * Accept only absolute URLs whose origin matches the site endpoint. Stops at the first invalid URL.
+ * @param endpoint - configured site origin; trailing path is ignored after `new URL`.
+ * @param urls - caller-supplied URLs to admit.
+ * @returns href list in input order, or the first URL error.
+ */
 export const sameOriginExternalCheckUrls = (
   endpoint: string,
   urls: ReadonlyArray<string>,
@@ -355,6 +368,15 @@ const pageSpeed = async (
 // Public API
 // ---------------------------------------------------------------------------
 
+/**
+ * Fetch each unique target (release pages then requested URLs), sample internal links,
+ * and optionally run PageSpeed when `ZEROY_PAGESPEED_API_KEY` is set. Page fetch
+ * failures become `PageCheck.error`; they do not reject the promise.
+ * @param releaseTargets - pages from the active-release scenarios.
+ * @param requestedUrls - extra same-origin URLs treated as expected 200.
+ * @param signal - optional abort for page and PageSpeed fetches.
+ * @returns check timestamp, per-page results, and PageSpeed state.
+ */
 export const runExternalCheck = async (
   releaseTargets: ReadonlyArray<ExternalCheckTarget>,
   requestedUrls: ReadonlyArray<string> = [],
@@ -389,6 +411,11 @@ export const runExternalCheck = async (
   }
 }
 
+/**
+ * One-line count of pages, HTTP mismatches or errors, and broken internal links.
+ * @param check - completed external check.
+ * @returns compact summary for inspect output.
+ */
 export const externalCheckSummary = (check: ExternalCheck): string => {
   const failures = check.pages.filter(
     page => page.status !== page.expectedStatus || page.error !== null,
@@ -418,6 +445,15 @@ const externalCheckPageProjection = (page: PageCheck): JsonRecord => ({
   error: page.error,
 })
 
+/**
+ * Project an external check for inspect. `summary` omits items; `pages` and `failures`
+ * paginate with limit capped at 10.
+ * @param check - completed external check.
+ * @param view - which item list to include; defaults to `summary`.
+ * @param limit - page size before the cap of 10.
+ * @param cursor - decimal offset into the selected list; omitted starts at 0.
+ * @returns summary envelope or a paged list with `nextCursor` and `hasMore`.
+ */
 export const externalCheckProjection = (
   check: ExternalCheck,
   view: ExternalCheckView = 'summary',

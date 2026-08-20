@@ -41,6 +41,7 @@ import {
 } from '../protocol/bridge-contract.ts'
 import { decodeBridgeStatusJson } from './codec.ts'
 
+/** Bounded HTTP result from an owner-route fetch: status, ok flag, and raw body text. */
 export interface OwnerResponse {
   readonly ok: boolean
   readonly status: number
@@ -66,6 +67,16 @@ const readBodyBounded = async (response: Response, limitBytes: number): Promise<
   return text
 }
 
+/**
+ * Fetch one owner-facing bridge route without attaching HMAC request proof.
+ * Used for the handshake; other routes go through authenticated owner requests.
+ * @param baseUrl - bridge origin, with no trailing path.
+ * @param routeName - owner route whose method and path are selected from the route table.
+ * @param init - fetch init excluding `method`, which the route owns.
+ * @param timeoutMs - abort deadline; defaults to `OWNER_REQUEST_DEADLINE_MS`.
+ * @returns the HTTP status and bounded body text.
+ * @throws BridgeOwnerUnreachable when fetch fails; BridgeUnavailable when the body exceeds the route limit.
+ */
 export const ownerRequest = async (
   baseUrl: string,
   routeName: OwnerBridgeRouteName,
@@ -101,6 +112,12 @@ export const ownerRequest = async (
   }
 }
 
+/**
+ * Require an HTTP-success owner response and return its body.
+ * @param response - result from `ownerRequest` or an authenticated owner fetch.
+ * @returns the response text when `ok` is true.
+ * @throws BridgeUnavailable when the status is not 2xx, including the status and body in the message.
+ */
 export const requireOwnerSuccess = async (response: OwnerResponse): Promise<string> => {
   if (response.ok) return response.text
   throw new BridgeUnavailable(
@@ -175,6 +192,13 @@ const authenticatedOwnerRequest = async (
   )
 }
 
+/**
+ * Prove the owner credential against a live bridge via the handshake challenge.
+ * @param url - bridge origin.
+ * @param identity - owner credential and protocol fingerprint the listener must match.
+ * @throws BridgeUnavailable when the fingerprint or server proof does not match;
+ *   BridgeOwnerUnreachable when the listener cannot be reached.
+ */
 export const handshakeWithOwner = async (
   url: string,
   identity: BridgeOwnerIdentity,
@@ -182,6 +206,13 @@ export const handshakeWithOwner = async (
   await ownerChallenge(url, identity)
 }
 
+/**
+ * Read current bridge status as the authenticated owner.
+ * @param url - bridge origin.
+ * @param identity - owner credential used to complete the challenge and sign the GET.
+ * @returns the decoded status payload.
+ * @throws BridgeUnavailable on non-2xx or failed proof; BridgeOwnerUnreachable when the listener cannot be reached.
+ */
 export const statusFromOwner = async (
   url: string,
   identity: BridgeOwnerIdentity,
@@ -191,6 +222,14 @@ export const statusFromOwner = async (
   return decodeBridgeStatusJson(text)
 }
 
+/**
+ * Fetch owner status via the wait route with a caller-chosen abort deadline.
+ * @param url - bridge origin.
+ * @param identity - owner credential used to complete the challenge and sign the GET.
+ * @param timeoutMs - abort deadline for this request.
+ * @returns the decoded status payload.
+ * @throws BridgeUnavailable on non-2xx or failed proof; BridgeOwnerUnreachable when the listener cannot be reached.
+ */
 export const waitForStatusFromOwner = async (
   url: string,
   identity: BridgeOwnerIdentity,
@@ -203,6 +242,12 @@ export const waitForStatusFromOwner = async (
 
 /**
  * Forward one command to the bridge as the owner and await its result.
+ * @param url - bridge origin.
+ * @param identity - owner credential used to complete the challenge and sign the POST.
+ * @param request - domain request forwarded in the command envelope.
+ * @param session - session context attached to the envelope.
+ * @param timeoutMs - command deadline; the HTTP abort is this plus `OWNER_COMMAND_HTTP_RESPONSE_GRACE_MS`.
+ * @returns the command result value on `ok`.
  * @throws BridgeFailure on rejection/timeout/unreachable.
  */
 export const forwardCommandToOwner = async (

@@ -21,7 +21,9 @@ export type SiteConnection = {
   readonly revoked: boolean
 }
 
+/** Thrown when `ZEROY_SITES` JSON is missing required fields, has a bad endpoint, or duplicates `siteId`. */
 export class ZeroYConnectionConfigError extends Error {
+  /** Closed-union discriminant for this configuration failure. */
   readonly code = 'ZeroYConnectionConfigError' as const
 
   constructor(message: string) {
@@ -62,7 +64,12 @@ const decodeConnection = (value: unknown): SiteConnection | ZeroYConnectionConfi
   }
 }
 
-/** Load headless/CI connections from ZEROY_SITES. Empty result = no sites. */
+/**
+ * Load headless/CI connections from ZEROY_SITES. Empty result = no sites.
+ * Throws `ZeroYConnectionConfigError` when the JSON is invalid, not an array, or an item fails decode.
+ * @param name - environment variable to parse; defaults to `ZEROY_SITES`.
+ * @returns decoded connections in env order; empty when the variable is unset, blank, or `[]`.
+ */
 export async function loadSiteConnections(
   name: string = 'ZEROY_SITES',
 ): Promise<ReadonlyArray<SiteConnection>> {
@@ -102,6 +109,12 @@ export async function loadSiteConnections(
   }
 }
 
+/**
+ * Find a connection by `siteId`. Does not throw; missing sites return `ZeroYConnectionConfigError`.
+ * @param connections - loaded site list.
+ * @param siteId - routing key.
+ * @returns the matching connection, or `ZeroYConnectionConfigError` when no site uses that key.
+ */
 export function connectionFor(
   connections: ReadonlyArray<SiteConnection>,
   siteId: string,

@@ -17,6 +17,7 @@ import { MAX_ADMITTED_COMMANDS_PER_CONNECTOR } from './bridge-contract.ts'
 // Primitive constraints
 // ---------------------------------------------------------------------------
 
+/** JSON-compatible value the wire protocol may carry in results and error details. */
 export type JsonValue =
   | null
   | boolean
@@ -25,39 +26,52 @@ export type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue }
 
+/** Chrome tab selector by numeric id, URL, or title. */
 export type Target =
   | { by: 'id'; value: number }
   | { by: 'url'; value: string }
   | { by: 'title'; value: string }
 
+/** Page element selector by Action Graph uid or CSS selector. */
 export type ElementTarget =
   | { by: 'uid'; value: string }
   | { by: 'selector'; value: string }
 
+/** Pointer target: an element or a viewport coordinate in CSS pixels. */
 export type PointerTarget =
   | ElementTarget
   | { by: 'coordinate'; x: number; y: number }
 
+/** Tab-domain wire call: `op` plus operation-specific fields. */
 export type TabCall = { op: string; [key: string]: unknown }
+/** Page-domain wire call: `op` plus operation-specific fields. */
 export type PageCall = { op: string; [key: string]: unknown }
+/** Input-domain wire call: `op` plus operation-specific fields. */
 export type InputCall = { op: string; [key: string]: unknown }
+/** Page-domain call as it appears on the wire (same fields as {@link PageCall}). */
 export type WirePageCall = PageCall
+/** System-domain wire call: `op` plus operation-specific fields. */
 export type SystemCall = { op: string; [key: string]: unknown }
+/** Tool-facing input call (same fields as {@link InputCall}). */
 export type ToolInputCall = InputCall
+/** Tool-facing page call (same fields as {@link PageCall}). */
 export type ToolPageCall = PageCall
 
+/** Session grouping the connector uses to own tabs and decide foreground. */
 export interface SessionContext {
   key: string
   groupTitle: string
   foreground: boolean
 }
 
+/** Stored connector credentials: id, shared secret, and display label. */
 export interface ConnectorIdentity {
   connectorId: string
   secret: string
   label: string
 }
 
+/** Connector fields the HTTP route and HMAC proofs bind: id, extension, version, fingerprint. */
 export interface ConnectorRouteIdentity {
   connectorId: string
   extensionId: string
@@ -65,12 +79,15 @@ export interface ConnectorRouteIdentity {
   protocolFingerprint: string
 }
 
+/** Full connector record: stored credentials plus route/HMAC identity. */
 export interface ProfileConnector extends ConnectorIdentity, ConnectorRouteIdentity {}
 
+/** Connector identity safe to expose without the shared secret. */
 export interface PublicConnector extends ConnectorRouteIdentity {
   label: string
 }
 
+/** Live connector view: public identity plus connection and mailbox counts. */
 export interface ConnectorStatus extends PublicConnector {
   connected: boolean
   lastSeenAt?: number
@@ -78,6 +95,7 @@ export interface ConnectorStatus extends PublicConnector {
   pendingCommands: number
 }
 
+/** `/status` payload: bind URL, server mode, expected extension, and optional connector. */
 export interface BridgeStatusResponse {
   url: string
   mode: 'server' | 'client' | 'stopped' | 'closed'
@@ -89,19 +107,23 @@ export interface BridgeStatusResponse {
   connector?: ConnectorStatus
 }
 
+/** Domain-tagged automation call without the command envelope. */
 export type WireDomainRequest =
   | { domain: 'tab'; call: TabCall }
   | { domain: 'page'; call: WirePageCall }
   | { domain: 'input'; call: InputCall }
   | { domain: 'system'; call: SystemCall }
 
+/** Command id and session context wrapped around a domain call. */
 export interface WireCommandEnvelope {
   id: string
   session: SessionContext
 }
 
+/** Enqueued command: domain call plus id and session. */
 export type WireCommand = WireDomainRequest & WireCommandEnvelope
 
+/** Connector refused the command; `code` is the stable rejection reason. */
 export interface WireCommandRejected {
   _tag: 'CommandRejected'
   code: string
@@ -109,23 +131,28 @@ export interface WireCommandRejected {
   details?: JsonValue
 }
 
+/** Command finished without a known success or rejection. */
 export interface WireCommandOutcomeUnknown {
   _tag: 'CommandOutcomeUnknown'
   message: string
   cause: string
 }
 
+/** Terminal connector failure: explicit rejection or unknown outcome. */
 export type WireCommandTerminalFailure = WireCommandRejected | WireCommandOutcomeUnknown
 
+/** Per-command result: `ok` plus `value`, or `ok: false` plus a terminal failure. */
 export type WireResult =
   | { id: string; ok: true; value: JsonValue }
   | { id: string; ok: false; error: WireCommandTerminalFailure }
 
+/** Owner `/command` body: domain call, session, and timeout in milliseconds. */
 export type ForwardRequest = WireDomainRequest & {
   session: SessionContext
   timeoutMs: number
 }
 
+/** Owner-visible failure when the bridge cannot complete a forwarded command. */
 export type WireBridgeFailure =
   | { _tag: 'BridgeStopped'; message: string }
   | { _tag: 'BridgeUnavailable'; message: string; cause?: string }
@@ -136,10 +163,12 @@ export type WireBridgeFailure =
   | WireCommandRejected
   | { _tag: 'ProtocolFailure'; message: string; cause: string }
 
+/** Owner `/command` response: success value or a {@link WireBridgeFailure}. */
 export type ForwardResponse =
   | { ok: true; value: JsonValue }
   | { ok: false; error: WireBridgeFailure }
 
+/** Handshake body the bridge returns so the client can verify the server proof. */
 export interface BridgeAuthenticationHandshake {
   bridgeDisplayVersion: string
   protocolFingerprint: string
@@ -148,6 +177,7 @@ export interface BridgeAuthenticationHandshake {
   proof: string
 }
 
+/** Connector `/next` payload: incompatible versions, a command, or an idle poll. */
 export type PollResponse =
   | {
     type: 'incompatible'
@@ -188,6 +218,7 @@ export type JsonSchemaNode = {
   additionalProperties?: boolean
 }
 
+/** JSON Schema projections mixed into the protocol fingerprint for each wire payload. */
 export const WireProtocolContractSchema: Record<string, JsonSchemaNode> = {
   bridgeStatus: {
     type: 'object',
@@ -300,12 +331,18 @@ export const WireProtocolContractSchema: Record<string, JsonSchemaNode> = {
   },
 }
 
-/** Project a wire schema node to plain JSON (for canonical serialization). */
+/**
+ * Project a wire schema node to plain JSON (for canonical serialization).
+ * @param node - a {@link JsonSchemaNode} or the named schema map.
+ * @returns the same value; identity projection so callers can serialize without a Schema runtime.
+ */
 export const toJsonSchema = (node: JsonSchemaNode | Record<string, JsonSchemaNode>): unknown =>
   node
 
+/** Alias of {@link WireProtocolContractSchema} used as the fingerprint `wire` input. */
 export const WireProtocolContract = WireProtocolContractSchema
 
+/** Named JSON Schema map bound into the protocol fingerprint as `wire`. */
 export type WireProtocolContract = typeof WireProtocolContractSchema
 
 // Re-export for convenience

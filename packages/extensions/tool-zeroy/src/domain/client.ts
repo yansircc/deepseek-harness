@@ -33,9 +33,13 @@ export type SiteConnection = {
 // Error class (replaces Data.TaggedError)
 // ---------------------------------------------------------------------------
 
+/** Connector HTTP or decode failure. Successful HTTP still requires `decodeConnectorPayload`. */
 export class ZeroYConnectorError extends Error {
+  /** Connector-supplied error code when present; `zeroy_connector_response_invalid` after a schema miss. */
   readonly code: string | undefined
+  /** HTTP status when the Connector rejected the request. */
   readonly status: number | undefined
+  /** Optional Connector error data or decode issue list. */
   readonly data: JsonRecord | undefined
 
   constructor(fields: {
@@ -78,6 +82,17 @@ const connectorError = (
 // Core HTTP call
 // ---------------------------------------------------------------------------
 
+/**
+ * Call `/wp-json/zeroy/v1/{path}` with Bearer grant or legacy `x-zeroy-key`.
+ * Throws when the grant secret cannot be read, the site has no credential,
+ * fetch/read/JSON fails, or the HTTP status is not ok.
+ * @param connection - site endpoint and credential projection.
+ * @param path - path under `zeroy/v1/`.
+ * @param init - fetch init; JSON Content-Type is set when `body` is present.
+ * @param signal - optional abort for the HTTP call.
+ * @param draftActorId - optional value for `x-zeroy-draft-actor`.
+ * @returns parsed JSON object from a successful response. Does not validate the envelope.
+ */
 export async function connectorCall(
   connection: SiteConnection,
   path: string,
@@ -167,6 +182,14 @@ export async function connectorCall(
 // Public convenience wrappers
 // ---------------------------------------------------------------------------
 
+/**
+ * GET a Connector path. Same auth, abort, and throw behavior as `connectorCall`.
+ * @param connection - site endpoint and credential projection.
+ * @param path - path under `zeroy/v1/`.
+ * @param signal - optional abort for the HTTP call.
+ * @param draftActorId - optional value for `x-zeroy-draft-actor`.
+ * @returns parsed JSON object from a successful response.
+ */
 export function connectorGet(
   connection: SiteConnection,
   path: string,
@@ -176,6 +199,15 @@ export function connectorGet(
   return connectorCall(connection, path, { method: 'GET' }, signal, draftActorId)
 }
 
+/**
+ * POST JSON to a Connector path. Same auth, abort, and throw behavior as `connectorCall`.
+ * @param connection - site endpoint and credential projection.
+ * @param path - path under `zeroy/v1/`.
+ * @param payload - JSON body.
+ * @param signal - optional abort for the HTTP call.
+ * @param draftActorId - optional value for `x-zeroy-draft-actor`.
+ * @returns parsed JSON object from a successful response.
+ */
 export function connectorPost(
   connection: SiteConnection,
   path: string,
@@ -202,6 +234,11 @@ export function connectorPost(
  * tool result. Dynamic site facts remain inside their declared JsonValue
  * slots; this checks the stable envelope without creating a local shadow
  * model of a site's ThemeSchema or content.
+ * @param contract - TypeBox schema for the stable response envelope.
+ * @param label - name used in the thrown error message and issue bag.
+ * @param payload - JSON object from a successful Connector HTTP call.
+ * @returns the payload narrowed to the schema. Throws `ZeroYConnectorError`
+ *   with code `zeroy_connector_response_invalid` when the payload misses the schema.
  */
 export function decodeConnectorPayload<Schema extends TSchema>(
   contract: Schema,

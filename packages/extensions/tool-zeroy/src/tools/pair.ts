@@ -76,6 +76,12 @@ async function connectorPostUnauthenticated(
 // zeroy_pair tool
 // ---------------------------------------------------------------------------
 
+/**
+ * Register `zeroy_pair` on the tool registry. Step 1 creates a WordPress pairing
+ * intent; step 2 exchanges the admin code for a grant, stores it in credentials,
+ * and persists site metadata. The grant secret never appears in the tool result.
+ * @param ctx - plugin context that owns tools, credentials, and settings.
+ */
 export function registerPairTool(ctx: Context): void {
   ctx.tools.register(defineTool({
     name: 'zeroy_pair',
@@ -196,6 +202,12 @@ export function registerPairTool(ctx: Context): void {
 // zeroy_unpair tool
 // ---------------------------------------------------------------------------
 
+/**
+ * Register `zeroy_unpair` on the tool registry. Revokes the WordPress grant
+ * when reachable, then drops the stored credential and site metadata even if
+ * the remote revoke fails.
+ * @param ctx - plugin context that owns tools, credentials, and settings.
+ */
 export function registerUnpairTool(ctx: Context): void {
   ctx.tools.register(defineTool({
     name: 'zeroy_unpair',

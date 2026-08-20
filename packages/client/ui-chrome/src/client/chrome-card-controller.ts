@@ -79,6 +79,7 @@ const parsePort = (text: string): number | undefined => {
   return Number.isInteger(parsed) && parsed > 0 && parsed <= 65535 ? parsed : undefined
 }
 
+/** Bridges the `tool-chrome` scope onto the Chrome card's staged port field. */
 export class ChromeCardController {
   private readonly store: SnapshotStore<ChromeCardState>
   private readonly staged = new Map<string, StagedEdit>()
@@ -179,6 +180,10 @@ export class ChromeCardController {
     this.publish()
   }
 
+  /**
+   * Build the face the card's slot registration injects.
+   * @returns the card's snapshot and its form actions.
+   */
   actions(): ChromeCardFace {
     return {
       hooks: { chromeCard: this.store },

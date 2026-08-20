@@ -110,11 +110,9 @@ Named instances keep the same provider package and different policies:
 
 ### Child request
 
-The Cursor child receives the standalone text blocks as one turn in a fresh ACP session. Its workspace is the delegating session's cwd, and its model, system instructions, tools, and authentication come from the native Cursor installation and configuration (or the `model` pool key).
-
 #### What the model sees
 
-Through `dsh-tool-subagent`, a foreground call gives the parent the selected final Cursor answer or the consumer's exact error for a non-completed result. A background call first returns a Job id; the generic job controls later deliver a completion notice, expose the final answer and status through `job_output`, and let `job_kill` request cancellation. Cursor reasoning, tool activity, stderr, and product ids are not copied into the parent Session.
+The Cursor child receives the standalone text blocks as one turn in a fresh ACP session. Its workspace is the delegating session's cwd, and its model, system instructions, tools, and authentication come from the native Cursor installation and configuration (or the `model` pool key). Through `dsh-tool-subagent`, a foreground call gives the parent the selected final Cursor answer or the consumer's exact error for a non-completed result. A background call first returns a Job id; the generic job controls later deliver a completion notice, expose the final answer and status through `job_output`, and let `job_kill` request cancellation. Cursor reasoning, tool activity, stderr, and product ids are not copied into the parent Session.
 
 #### Token effect
 

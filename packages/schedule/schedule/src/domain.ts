@@ -716,7 +716,11 @@ function parseCronField(source: string, minimum: number, maximum: number): CronF
   return { values, wildcard: /^\*(?:\/\d+)?$/.test(source) }
 }
 
-/** Parse a strict 5-field cron expression. */
+/**
+ * Parse a strict 5-field cron expression.
+ * @param source - space-separated minute hour dom month dow.
+ * @returns the parsed fields, or `undefined` when any field is invalid.
+ */
 export function parseCronExpression(source: string): ParsedCron | undefined {
   const parts = source.trim().split(/\s+/)
   if (parts.length !== 5) return undefined
@@ -889,7 +893,12 @@ export function resolveRunNow(record: ScheduleRecord, at: number): RunNowOutcome
   })
 }
 
-/** Apply one decoded dispatch to its exact active record. */
+/**
+ * Apply one decoded dispatch to its exact active record.
+ * @param record - the currently active reminder being dispatched.
+ * @param change - the decoded one-shot or recurring dispatch event.
+ * @returns the advanced recurring record, or `undefined` when the record ends.
+ */
 export function dispatchedRecord(record: ScheduleRecord, change: DecodedDispatch): ScheduleRecord | undefined {
   const hasAcceptedAt = 'acceptedAt' in change
   if (record.kind !== 'every' && record.kind !== 'cron') {

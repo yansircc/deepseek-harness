@@ -110,11 +110,9 @@ dsh --profile <name>
 
 ### 子代理请求
 
-Cursor 子代理在一个全新 ACP 会话里收到独立文本块作为一轮任务。工作区是委派会话的 cwd；模型、系统指令、工具与认证来自原生 Cursor 安装与配置（或 `model` 池键）。
-
 #### 模型看到什么
 
-通过 `dsh-tool-subagent`，前台调用把选定的最终 Cursor 答案（或非完成结果的精确错误）交给父代理。后台调用先返回 Job id；通用 job 控制随后投递完成通知，通过 `job_output` 暴露最终答案与状态，`job_kill` 可请求取消。Cursor 的推理、工具活动、stderr 与产品 id 不进入父会话。
+Cursor 子代理在一个全新 ACP 会话里收到独立文本块作为一轮任务。工作区是委派会话的 cwd；模型、系统指令、工具与认证来自原生 Cursor 安装与配置（或 `model` 池键）。通过 `dsh-tool-subagent`，前台调用把选定的最终 Cursor 答案（或非完成结果的精确错误）交给父代理。后台调用先返回 Job id；通用 job 控制随后投递完成通知，通过 `job_output` 暴露最终答案与状态，`job_kill` 可请求取消。Cursor 的推理、工具活动、stderr 与产品 id 不进入父会话。
 
 #### Token 影响
 

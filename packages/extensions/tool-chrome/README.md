@@ -1,5 +1,7 @@
 # @deepseek-ai/dsh-tool-chrome
 
+English | [中文](README.zh.md)
+
 Control a real signed-in Chrome profile from DeepSeek Harness through a local bridge + browser extension.
 
 ## Overview
@@ -85,3 +87,25 @@ The same secret must match the extension's expectation; the protocol fingerprint
 - **DSH-native lifecycle**: the bridge starts in the plugin's `apply()` and stops on fiber disposal.
 - **Credentials via `ctx.credentials`**: the owner secret never appears in code or logs.
 - **Protocol compatibility**: the fingerprint is a version tag; set `protocolFingerprint` in config to declare which extension protocol version this bridge speaks (defaults to the pi-chrome v1 fingerprint `75eedfbc…`).
+
+## Model Experience
+
+### Tool schemas
+
+#### What the model sees
+
+The generated [`chrome_status` and `chrome_*` schemas](../../../docs/tool-catalog.md#deepseek-aidsh-tool-chrome). Descriptions and JSON parameters are the catalog text; this package adds no extra system-prompt section.
+
+#### Token effect
+
+Each registered tool schema is present on every request while the plugin is mounted. There is no per-tool config switch.
+
+#### KV Cache effect
+
+Prefix-stable while the plugin stays mounted. Loading or unloading the plugin changes the tool prefix.
+
+## Known Limitations and Deferred Work
+
+- **The bridge needs a real Chrome profile** — without the loaded extension, every `chrome_*` call fails after `chrome_status` reports `waiting-for-extension` or `offline`.
+- **Owner credential generation is process-local when storage is missing** — a generated secret that never reached `ctx.credentials` does not survive restart.
+- **Screenshots write into the process cwd** — the tool result points at those files; they are not session-log attachments.

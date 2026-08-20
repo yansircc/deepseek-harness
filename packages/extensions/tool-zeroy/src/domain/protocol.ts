@@ -15,6 +15,7 @@ const JsonValue = Type.Recursive(Self =>
   ]),
 )
 
+/** TypeBox schema for `zeroy_inspect` input, discriminated on `resource`. */
 export const InspectInputContract = Type.Union([
   Type.Object({ resource: Type.Literal('sites') }),
   Type.Object({
@@ -99,8 +100,10 @@ export const InspectInputContract = Type.Union([
     ),
   }),
 ])
+/** Decoded `zeroy_inspect` command after domain validation. */
 export type InspectInput = Static<typeof InspectInputContract>
 
+/** TypeBox schema for `zeroy_checkout` input, discriminated on `source`. */
 export const CheckoutInputContract = Type.Union([
   Type.Object(
     { siteId: SiteId, source: Type.Literal('active-release') },
@@ -115,8 +118,10 @@ export const CheckoutInputContract = Type.Union([
     { additionalProperties: false },
   ),
 ])
+/** Decoded `zeroy_checkout` command after domain validation. */
 export type CheckoutInput = Static<typeof CheckoutInputContract>
 
+/** TypeBox schema for `zeroy_push` input. Unknown fields fail at decode. */
 export const PushInputContract = Type.Object(
   {
     siteId: SiteId,
@@ -125,6 +130,7 @@ export const PushInputContract = Type.Object(
   },
   { additionalProperties: false },
 )
+/** Decoded `zeroy_push` command after exact-field validation. */
 export type PushInput = Static<typeof PushInputContract>
 
 const BrowserViewportContract = Type.Object({
@@ -138,6 +144,7 @@ const BrowserContrastPairContract = Type.Object({
   background: Type.String({ pattern: '^--z-' }),
   minimum: Type.Number({ minimum: 1 }),
 })
+/** TypeBox schema for a Connector-issued `zeroy/browser-verification-challenge@4`. */
 export const BrowserVerificationChallengeContract = Type.Object({
   contract: Type.Literal('zeroy/browser-verification-challenge@4'),
   verifier: Type.Object({
@@ -172,6 +179,7 @@ export const BrowserVerificationChallengeContract = Type.Object({
   ),
   challengeHash: Type.String({ pattern: '^[a-f0-9]{64}$' }),
 })
+/** Challenge the local Chromium verifier must execute before Proof. */
 export type BrowserVerificationChallenge = Static<typeof BrowserVerificationChallengeContract>
 
 const BrowserResultContract = Type.Object(
@@ -201,6 +209,7 @@ const BrowserResultContract = Type.Object(
   },
   { additionalProperties: false },
 )
+/** TypeBox schema for verifier-produced `zeroy/browser-evidence@4`. */
 export const BrowserEvidenceContract = Type.Object({
   contract: Type.Literal('zeroy/browser-evidence@4'),
   challengeHash: Type.String({ pattern: '^[a-f0-9]{64}$' }),
@@ -216,8 +225,10 @@ export const BrowserEvidenceContract = Type.Object({
   }),
   results: Type.Array(BrowserResultContract, { minItems: 1 }),
 })
+/** Measurements collected by the local Chromium verifier for one challenge. */
 export type BrowserEvidence = Static<typeof BrowserEvidenceContract>
 
+/** TypeBox schema for a `zeroy/site-release@3` receipt, including an optional browser challenge. */
 export const SiteReleaseReceiptContract = Type.Object({
   contract: Type.Literal('zeroy/site-release@3'),
   releaseId: Type.String({ minLength: 1 }),
@@ -270,7 +281,9 @@ type Variant = {
   readonly required: ReadonlySet<string>
 }
 
+/** Failure when a provider-facing tool schema cannot be projected from a domain schema. */
 export class ProviderSchemaProjectionError extends Error {
+  /** Closed-union discriminant for this projection failure. */
   readonly code = 'ProviderSchemaProjectionError' as const
   constructor(message: string) {
     super(message)
@@ -278,7 +291,9 @@ export class ProviderSchemaProjectionError extends Error {
   }
 }
 
+/** Failure when tool JSON does not satisfy the selected domain variant. */
 export class ToolInputValidationError extends Error {
+  /** Closed-union discriminant for this decode failure. */
   readonly code = 'ToolInputValidationError' as const
   constructor(message: string) {
     super(message)
@@ -286,6 +301,7 @@ export class ToolInputValidationError extends Error {
   }
 }
 
+/** Tagged success or failure; callers must match `_tag` instead of catching. */
 export type ProtocolResult<Success, Failure> =
   | { readonly _tag: 'Success'; readonly value: Success }
   | { readonly _tag: 'Failure'; readonly error: Failure }
@@ -310,6 +326,12 @@ const resolveLocalSchemaReference = (root: JsonSchema, reference: string): unkno
   return cursor
 }
 
+/**
+ * Accept a provider tool-parameter schema only when it is a top-level object,
+ * contains no `additionalProperties`, and every `$ref` resolves under `#/$defs/`.
+ * @param schema - candidate JSON Schema document from a provider projection.
+ * @returns Success with the schema as `TSchema`, or Failure with the first projection error.
+ */
 export const validateProviderSchemaDocument = (
   schema: unknown,
 ): ProtocolResult<TSchema, ProviderSchemaProjectionError> => {
@@ -520,10 +542,20 @@ const decodeExact = <Output>(
   return failure(new ToolInputValidationError(`Invalid ${label} input: ${issues}`))
 }
 
+/** Provider-safe inspect parameters: flattened `resource` union without `additionalProperties`. */
 export const InspectProviderProjection = providerSafeParameters(InspectInputContract, 'resource')
+/** Provider-safe checkout parameters: flattened `source` union without `additionalProperties`. */
 export const CheckoutProviderProjection = providerSafeParameters(CheckoutInputContract, 'source')
+/** Provider-safe push parameters: object schema with `additionalProperties` stripped. */
 export const PushProviderProjection = providerSafeObject(PushInputContract)
 
+/**
+ * Decode inspect JSON against the `resource` union and apply commit/review field rules.
+ * Review rejects `commit` and `draftRef` together; commit summary requires `commit`;
+ * commit diff requires `commit` and `base`.
+ * @param input - untrusted tool-call JSON.
+ * @returns Success with `InspectInput`, or Failure for projection or validation errors.
+ */
 export const decodeInspectInput = (
   input: unknown,
 ): ProtocolResult<InspectInput, ToolInputValidationError | ProviderSchemaProjectionError> => {
@@ -551,12 +583,29 @@ export const decodeInspectInput = (
   return decoded
 }
 
-export const decodeCheckoutInput = (input: unknown) =>
+/**
+ * Decode checkout JSON against the `source` union. Unknown fields on the selected variant fail.
+ * @param input - untrusted tool-call JSON.
+ * @returns Success with `CheckoutInput`, or Failure for projection or validation errors.
+ */
+export const decodeCheckoutInput = (
+  input: unknown,
+): ProtocolResult<CheckoutInput, ToolInputValidationError | ProviderSchemaProjectionError> =>
   decodeDiscriminated<CheckoutInput>(CheckoutInputContract, 'source', input)
-export const decodePushInput = (input: unknown) =>
+
+/**
+ * Decode push JSON against the exact object schema. Unknown fields fail.
+ * @param input - untrusted tool-call JSON.
+ * @returns Success with `PushInput`, or Failure when fields do not match.
+ */
+export const decodePushInput = (
+  input: unknown,
+): ProtocolResult<PushInput, ToolInputValidationError> =>
   decodeExact<PushInput>(PushInputContract, 'push', input)
 
+/** Model-visible checkout guidance: inspect first, edit authored files only, push repair slices; administrators own publish. */
 export const CHECKOUT_PROMPT_GUIDELINES =
   'Inspect current state and refs, checkout one active release or DraftRef, then begin at .zeroy/README.md. Edit only normal authored files in that checkout; .zeroy is a derived, read-only Brief and Review projection. Push each coherent repair slice. Every renderable push becomes an administrator-only PreviewRelease; the extension owns object hashes, CAS, rebase, retries, BuildResult, browser evidence, and Proof. Only an administrator may publish a proof-ready PreviewRelease to the public site.'
 
+/** JSON object record used for Connector payloads and diagnostic bags. */
 export type JsonRecord = Readonly<Record<string, unknown>>

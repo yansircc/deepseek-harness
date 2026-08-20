@@ -22,7 +22,14 @@ export interface ChromeStatusPayload {
   error: string | null
 }
 
-/** Compute the current bridge status as the owner. */
+/**
+ * Compute the current bridge status as the owner.
+ * @param url - bridge origin shown on the payload and used for the owner status fetch.
+ * @param getIdentity - resolves the owner identity; `undefined` yields `unconfigured`.
+ * @returns `ready` when a connector is connected, `waiting-for-extension` when
+ *   the bridge answers without a live connector, `offline` when the owner fetch
+ *   fails, or `unconfigured` when no credential is available.
+ */
 export async function computeChromeStatus(
   url: string,
   getIdentity: () => Promise<BridgeOwnerIdentity | undefined>,

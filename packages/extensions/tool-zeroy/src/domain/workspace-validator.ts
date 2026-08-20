@@ -4,18 +4,22 @@ const Ajv2020 = (Ajv2020Module as unknown as { default?: typeof Ajv2020Module })
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 
+/** One authored JSON file that missed its projected Connector schema. */
 export type WorkspaceValidationFailure = {
   readonly path: string
   readonly contract: string
   readonly issues: readonly string[]
 }
 
+/** Workspace evaluation: schema failures plus paths whose projected contract file is missing. */
 export type WorkspaceValidation = {
   readonly failures: readonly WorkspaceValidationFailure[]
   readonly stalePaths: readonly string[]
 }
 
+/** Thrown while parsing authored JSON or compiling a projected schema; callers usually surface it as a failure issue. */
 export class WorkspaceValidationError extends Error {
+  /** Closed-union discriminant for this validation failure. */
   readonly code = 'WorkspaceValidationError' as const
   override readonly cause?: unknown
 
@@ -80,6 +84,9 @@ const compileAndValidate = (
 /**
  * This is deliberately a generic closed-schema evaluator. Document meaning is
  * owned by the Connector-generated contracts, never reimplemented here.
+ * @param root - checkout root containing authored files and `.zeroy/contracts`.
+ * @param authoredPaths - relative paths to consider; only `.json` files with a mapped contract are evaluated.
+ * @returns schema failures and paths whose projected contract file is missing.
  */
 export async function validateWorkspaceDocuments(
   root: string,

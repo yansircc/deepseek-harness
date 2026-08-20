@@ -172,12 +172,21 @@ const semanticProtocolProjection = (contract: unknown): unknown => {
   }
 }
 
+/**
+ * Canonical JSON of a protocol-contract object after semantic JSON Schema stripping and key sort.
+ * @param contract - raw contract tree (wire, operation results, auth messages, and fixtures).
+ * @returns deterministic JSON string; equal contracts produce equal strings.
+ */
 export const canonicalProtocolContractFor = (contract: unknown): string =>
   JSON.stringify(canonicalize(semanticProtocolProjection(contract)))
 
 /** The browser-companion contract placeholder. Kept minimal and stable. */
 export const BROWSER_COMPANION_CONTRACT = 'pipee/browser-companion@2'
 
+/**
+ * Canonical JSON of the live bridge/extension protocol contract.
+ * @returns deterministic JSON of wire, operations, evaluation, auth, companion, and JSON fixtures.
+ */
 export const canonicalProtocolContract: () => string = () =>
   canonicalProtocolContractFor({
     wire: WireProtocolContract,
@@ -189,6 +198,9 @@ export const canonicalProtocolContract: () => string = () =>
     connectorAuthentication,
   })
 
-/** Compute the protocol fingerprint: SHA-256 hex of the canonical contract. */
+/**
+ * Compute the protocol fingerprint: SHA-256 hex of the canonical contract.
+ * @returns 64-character lowercase hex; mismatch means the peers refuse to connect.
+ */
 export const protocolFingerprint: () => string = () =>
   createHash('sha256').update(canonicalProtocolContract(), 'utf8').digest('hex')

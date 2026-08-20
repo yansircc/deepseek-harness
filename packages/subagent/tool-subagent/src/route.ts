@@ -31,12 +31,20 @@ export interface ResolveDelegationRouteInput {
   readonly signal: AbortSignal
 }
 
-/** Whether this transport composes a local child that honors `AgentOptions`. */
+/**
+ * Whether this transport composes a local child that honors `AgentOptions`.
+ * @param provider - the selected subagent transport.
+ * @returns true when the child can apply provider, model, and effort.
+ */
 export function honorsLlmRoute(provider: SubagentProvider): boolean {
   return provider.capabilities.persona && provider.capabilities.toolFilter
 }
 
-/** Whether the model named any LLM-route override. */
+/**
+ * Whether the model named any LLM-route override.
+ * @param args - the model-facing route fields on one delegation call.
+ * @returns true when provider, model, or reasoning_effort is present.
+ */
 export function hasDelegationRouteArgs(args: DelegationRouteArgs): boolean {
   return args.provider !== undefined || args.model !== undefined || args.reasoning_effort !== undefined
 }
@@ -60,6 +68,8 @@ function parentActiveRoute(parent: Agent): {
  * provider/model/effort. Omitted call fields inherit the parent's active
  * route. A changed provider/model drops inherited effort so the new model
  * keeps its adapter default unless the call names one.
+ * @param input - parent agent, transport, call args, config, and catalog.
+ * @returns the child options, or the config options when the call names none.
  */
 export async function resolveDelegationAgentOptions(
   input: ResolveDelegationRouteInput,

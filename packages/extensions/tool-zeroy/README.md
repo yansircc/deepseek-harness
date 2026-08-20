@@ -1,5 +1,7 @@
 # @deepseek-ai/dsh-tool-zeroy
 
+English | [中文](README.zh.md)
+
 Model-facing zeroY WordPress site management tools for DeepSeek Harness.
 
 ## Overview
@@ -103,3 +105,25 @@ zeroy_checkout({ siteId: "site-b", source: "active-release" }) → checkout site
 ## Origin
 
 Ported from [pipee zeroY extension](https://github.com/yansircc/pipee/tree/main/extensions/zeroy). The domain logic (object hashing, merge, browser verification) is preserved; the Pi/Effect-TS adapter layer is replaced with DSH-native async/await patterns.
+
+## Model Experience
+
+### Tool schemas
+
+#### What the model sees
+
+The generated [`zeroy_inspect`, `zeroy_checkout`, `zeroy_push`, `zeroy_pair`, and `zeroy_unpair` schemas](../../../docs/tool-catalog.md#deepseek-aidsh-tool-zeroy). Config flags `inspect`, `checkout`, `push`, and `pairing` omit the corresponding tools at load; pairing covers both `zeroy_pair` and `zeroy_unpair`.
+
+#### Token effect
+
+Each config-enabled tool schema is present on every request. Toggling a flag adds or removes that schema.
+
+#### KV Cache effect
+
+Prefix-stable while the enabled-tool set is unchanged. Flipping a config flag or unloading the plugin changes the tool prefix.
+
+## Known Limitations and Deferred Work
+
+- **Push never activates the public site** — only an administrator can publish a proof-ready PreviewRelease in WordPress.
+- **File bytes never enter tool arguments** — the agent edits the local checkout with ordinary file tools, then `zeroy_push` reads that tree.
+- **Browser pairing needs the Host web server** — without it, only the two-step `zeroy_pair` tool flow remains.

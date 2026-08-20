@@ -23,6 +23,7 @@ const INSPECT_DESCRIPTION =
 
 /**
  * Register the `zeroy_inspect` tool on the given context.
+ * @param ctx - plugin context that owns the tool registry; no-ops when schema projection failed.
  */
 export function registerInspectTool(ctx: Context): void {
   if (InspectProviderProjection._tag === 'Failure') {

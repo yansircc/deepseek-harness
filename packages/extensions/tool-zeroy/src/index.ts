@@ -13,7 +13,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-host-webserver'
-import { type Config as ConfigType } from './config.ts'
+import { Config } from './config.ts'
 import { registerZeroYSitesSettings } from './settings.ts'
 import { registerInspectTool } from './tools/inspect.ts'
 import { registerCheckoutTool } from './tools/checkout.ts'
@@ -23,20 +23,19 @@ import { registerPairingRoutes } from './pairing.ts'
 import { registerPluginDownload } from './plugin-download.ts'
 
 export { Config } from './config.ts'
-export type { Config as ConfigType } from './config.ts'
 
 /** Cordis plugin name used by loader diagnostics. */
 export const name = 'tool-zeroy'
 
 /** Services required by this plugin. */
-export const inject = ['tools', 'systemPrompt'] as const
+export const inject = ['tools', 'systemPrompt']
 
 /**
  * Register zeroY tools and settings. Called once by the Cordis loader when
  * this plugin is mounted. Tool registration is gated by config flags so a
  * deployment can selectively enable/disable capabilities.
  */
-export function apply(ctx: Context, config: ConfigType): void {
+export function apply(ctx: Context, config: Config): void {
   // Register the settings section for site metadata persistence.
   // Falls back to empty when no settings provider is mounted.
   registerZeroYSitesSettings(ctx)

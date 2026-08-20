@@ -61,7 +61,7 @@ type OneShotScheduleRecord = AfterScheduleRecord | AtScheduleRecord
 
 ```ts type-equiv
 /** The v1 durable reminder record union. */
-type ScheduleRecord = OneShotScheduleRecord | EveryScheduleRecord
+type ScheduleRecord = OneShotScheduleRecord | RecurringScheduleRecord
 ```
 
 ## Absolute-time input
@@ -91,7 +91,7 @@ Schedule rejects invalid offsets and zones, offset-free strings, non-future targ
 
 ## Fixed-rate input and catch-up
 
-`every_seconds` is a per-record interval of at least 300 seconds, anchored to creation time. It is fixed-rate recurrence only: the protocol has no calendar or Cron expression, recurrence time zone, shared cooldown, or cross-record admission gate.
+`every_seconds` is a per-record interval of at least 300 seconds, anchored to creation time. `cron` is a 5-field expression evaluated in an explicit IANA zone (UTC when omitted). Neither form has a shared cooldown or cross-record admission gate.
 
 When a Session was cold or busy across several targets, one Every record contributes only its latest due occurrence. The dispatch advances it directly to the first creation-anchor-aligned target after the dispatch decision time, without enumerating, persisting, or replaying missed intervals. If that next target cannot fit in a four-digit UTC year, the final dispatch terminates the record.
 
@@ -146,7 +146,14 @@ type ScheduleDispatchChange = OneShotScheduleDispatchChange | EveryScheduleDispa
 
 ```ts type-equiv
 /** Strict version-1 durable Schedule mutation union. */
-type ScheduleChange = ScheduleCreateChange | ScheduleDeleteChange | ScheduleDispatchChange
+type ScheduleChange =
+  | ScheduleCreateChange
+  | ScheduleDeleteChange
+  | SchedulePauseChange
+  | ScheduleResumeChange
+  | ScheduleUpdateChange
+  | ScheduleRunNowChange
+  | ScheduleDispatchChange
 ```
 
 The strict decoder and fold reject unknown versions, extra fields, reused ids, mismatched one-shot or Every dispatch shapes, and delete or dispatch transitions against inactive records. A normal Session folds its complete event stream. A fork folds only events at or after `SessionHeader.seedLength`, so it retains history without adopting the parent Session's active reminders. The `schedule/change` declaration and source location are also indexed in the [persistence catalog](../persistence-catalog.md#schedulechange--log-only).
@@ -172,10 +179,12 @@ type ScheduleView = ScheduleRecord & {
   readonly state: ScheduleState
   /** Reminder delivery never leaves the owning session. */
   readonly deliveryMode: ScheduleDeliveryMode
+  /** Whether the reminder is paused and skipped by the live timer. */
+  readonly paused: boolean
 }
 ```
 
-The generated [tool catalog](../tool-catalog.md#deepseek-aidsh-schedule) owns the argument and result schemas for `schedule_create`, `schedule_list`, and `schedule_delete`. Management calls serialize with due work in one Agent-scoped queue. Every read or decision first waits for the shared Session persistence barrier; create and an actual delete wait again after appending. A barrier failure reports `persistence_uncertain` instead of guessing whether an eager write committed. The other stable error codes are `invalid_prompt`, `invalid_selector`, `invalid_rule`, `invalid_time_zone`, `not_future`, `time_out_of_range`, `frequency_too_high`, `corrupt_schedule_log`, and `internal_error`.
+The generated [tool catalog](../tool-catalog.md#deepseek-aidsh-schedule) owns the argument and result schemas for `schedule_create`, `schedule_list`, `schedule_delete`, `schedule_pause`, `schedule_resume`, `schedule_run_now`, and `schedule_update`. Management calls serialize with due work in one Agent-scoped queue. Every read or decision first waits for the shared Session persistence barrier; create and an actual delete wait again after appending. A barrier failure reports `persistence_uncertain` instead of guessing whether an eager write committed. The other stable error codes are `invalid_prompt`, `invalid_selector`, `invalid_rule`, `invalid_time_zone`, `not_future`, `time_out_of_range`, `frequency_too_high`, `corrupt_schedule_log`, and `internal_error`.
 
 ## Live delivery
 

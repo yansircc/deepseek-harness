@@ -1,9 +1,11 @@
+/** One unresolved three-way conflict: file path, optional JSON pointer, and kind. */
 export type MergeConflict = {
   readonly path: string
   readonly fieldPath?: string
   readonly kind: 'content' | 'delete-modify' | 'binary'
 }
 
+/** Three-way JSON merge: merged value plus JSON Pointers that still conflict. */
 export type JsonMergeResult = {
   readonly value: unknown
   readonly conflicts: readonly string[]
@@ -59,6 +61,14 @@ const mergeJsonValue = (
   return { value: ours, conflicts: [pointer || '/'] }
 }
 
+/**
+ * Three-way merge of JSON values. Equal sides win; objects recurse by key; other
+ * disagreements keep `ours` and record the pointer.
+ * @param base - common ancestor value.
+ * @param ours - local value.
+ * @param remote - incoming value.
+ * @returns merged value (`null` if the root vanished) and conflict pointers.
+ */
 export const mergeJsonDocuments = (
   base: unknown,
   ours: unknown,
@@ -71,22 +81,47 @@ export const mergeJsonDocuments = (
   }
 }
 
+/**
+ * Parse UTF-8 bytes as JSON. Throws `SyntaxError` on invalid JSON.
+ * @param bytes - encoded JSON document.
+ * @returns the parsed JSON value.
+ */
 export const decodeJsonDocument = (bytes: Uint8Array): unknown =>
   JSON.parse(new TextDecoder().decode(bytes)) as unknown
 
+/**
+ * Encode a JSON value as pretty-printed UTF-8 with a trailing newline.
+ * @param value - JSON-serializable value.
+ * @returns UTF-8 bytes.
+ */
 export const encodeJsonDocument = (value: unknown): Uint8Array =>
   new TextEncoder().encode(`${JSON.stringify(value, null, 2)}\n`)
 
+/**
+ * True when the path's extension is treated as mergeable text (php, css, js, html, md, txt, svg, and related).
+ * @param path - relative checkout path.
+ * @returns whether a content merge is attempted for this path.
+ */
 export const isMergeableTextPath = (path: string): boolean =>
   ['.php', '.css', '.js', '.mjs', '.cjs', '.html', '.md', '.txt', '.svg'].some(extension =>
     path.toLowerCase().endsWith(extension),
   )
 
+/**
+ * Classify an incomplete merge: `content` for mergeable text, `binary` otherwise.
+ * @param path - relative checkout path.
+ * @returns conflict kind for that path.
+ */
 export const incompleteMergeConflictKind = (path: string): 'content' | 'binary' =>
   isMergeableTextPath(path) ? 'content' : 'binary'
 
 const normalizeCheckoutText = (content: string): string =>
   content.replaceAll('\r\n', '\n').replaceAll('\r', '\n')
 
+/**
+ * Encode text as UTF-8 after normalizing CR/LF and CR to LF.
+ * @param value - checkout or merge text.
+ * @returns normalized UTF-8 bytes.
+ */
 export const normalizedTextBytes = (value: string): Uint8Array =>
   new TextEncoder().encode(normalizeCheckoutText(value))

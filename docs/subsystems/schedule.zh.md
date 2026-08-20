@@ -61,7 +61,7 @@ type OneShotScheduleRecord = AfterScheduleRecord | AtScheduleRecord
 
 ```ts type-equiv
 /** The v1 durable reminder record union. */
-type ScheduleRecord = OneShotScheduleRecord | EveryScheduleRecord
+type ScheduleRecord = OneShotScheduleRecord | RecurringScheduleRecord
 ```
 
 ## 绝对时间输入
@@ -91,7 +91,7 @@ Schedule 会拒绝无效偏移量与时区、不带偏移量的字符串、非�
 
 ## 固定速率输入与补偿
 
-`every_seconds` 是每条记录单独拥有且至少为 300 秒的间隔，以创建时间为锚点。它只提供固定速率重复调度：协议不包含日历规则或 Cron 表达式、重复调度时区、共享冷却时间或跨记录准入门禁。
+`every_seconds` 是每条记录单独拥有且至少为 300 秒的间隔，以创建时间为锚点。`cron` 是在显式 IANA 时区（省略时为 UTC）中求值的 5 字段表达式。两种形式都没有共享冷却时间或跨记录准入门禁。
 
 如果一个 Session 在多个目标到期期间处于 cold 或 busy 状态，一条 Every 记录只会贡献其中最新的一次到期触发。dispatch 会直接将记录推进到 dispatch 判断时刻之后第一个与创建锚点对齐的目标，而不会枚举、持久化或回放错过的间隔。如果下一个目标无法落在四位数年份的 UTC 范围内，最后一次 dispatch 将终结该记录。
 
@@ -146,7 +146,14 @@ type ScheduleDispatchChange = OneShotScheduleDispatchChange | EveryScheduleDispa
 
 ```ts type-equiv
 /** Strict version-1 durable Schedule mutation union. */
-type ScheduleChange = ScheduleCreateChange | ScheduleDeleteChange | ScheduleDispatchChange
+type ScheduleChange =
+  | ScheduleCreateChange
+  | ScheduleDeleteChange
+  | SchedulePauseChange
+  | ScheduleResumeChange
+  | ScheduleUpdateChange
+  | ScheduleRunNowChange
+  | ScheduleDispatchChange
 ```
 
 严格 decoder 与 fold 会拒绝未知版本、额外字段、复用 id、不匹配的一次性提醒或 Every dispatch 形状，以及针对非活动记录的 delete 或 dispatch 转换。普通 Session 折叠完整事件流。fork 只折叠 `SessionHeader.seedLength` 位置及其后的事件，因此保留历史，但不会接管父 Session 的活动提醒。`schedule/change` 声明和源码位置也编入[持久化目录](../persistence-catalog.md#schedulechange--log-only)。
@@ -172,10 +179,12 @@ type ScheduleView = ScheduleRecord & {
   readonly state: ScheduleState
   /** Reminder delivery never leaves the owning session. */
   readonly deliveryMode: ScheduleDeliveryMode
+  /** Whether the reminder is paused and skipped by the live timer. */
+  readonly paused: boolean
 }
 ```
 
-生成的[工具目录](../tool-catalog.md#deepseek-aidsh-schedule)负责 `schedule_create`、`schedule_list` 和 `schedule_delete` 的参数与结果 schema。一条 Agent-scoped 队列将管理调用与到期工作串行化。每次读取或判断都会先等待共享的 Session 持久化 barrier；create 与实际执行的 delete 在追加后还会再次等待。barrier 失败会报告 `persistence_uncertain`，而不是猜测 eager write 是否已提交。其他稳定错误代码是 `invalid_prompt`、`invalid_selector`、`invalid_rule`、`invalid_time_zone`、`not_future`、`time_out_of_range`、`frequency_too_high`、`corrupt_schedule_log` 和 `internal_error`。
+生成的[工具目录](../tool-catalog.md#deepseek-aidsh-schedule)负责 `schedule_create`、`schedule_list`、`schedule_delete`、`schedule_pause`、`schedule_resume`、`schedule_run_now` 和 `schedule_update` 的参数与结果 schema。一条 Agent-scoped 队列将管理调用与到期工作串行化。每次读取或判断都会先等待共享的 Session 持久化 barrier；create 与实际执行的 delete 在追加后还会再次等待。barrier 失败会报告 `persistence_uncertain`，而不是猜测 eager write 是否已提交。其他稳定错误代码是 `invalid_prompt`、`invalid_selector`、`invalid_rule`、`invalid_time_zone`、`not_future`、`time_out_of_range`、`frequency_too_high`、`corrupt_schedule_log` 和 `internal_error`。
 
 ## Live 交付
 

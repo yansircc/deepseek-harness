@@ -7,8 +7,10 @@
 /** The dictionary keys of the `schedule` namespace. */
 export type ScheduleKey = keyof typeof zh
 
+/** Dictionary namespace owned by this plugin. */
 export const NS = 'schedule'
 
+/** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh = {
   'reminders': '提醒',
   'paused.count': '{count} 个已暂停',
@@ -31,6 +33,7 @@ export const zh = {
   'days': '{count} 天',
 } satisfies Record<string, string>
 
+/** English dictionary; keys must match {@link zh}. */
 export const en = {
   'reminders': 'Reminders',
   'paused.count': '{count} paused',

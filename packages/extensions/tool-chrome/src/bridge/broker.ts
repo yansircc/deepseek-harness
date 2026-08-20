@@ -28,6 +28,7 @@ import type {
   WireResult,
 } from '../protocol/schema.ts'
 
+/** Lease liveness and queue depths for one connector mailbox, plus the last-seen extension identity when a lease is recorded. */
 export type BrokerStatus = {
   readonly connectorId: string
   readonly connected: boolean
@@ -105,9 +106,19 @@ const emptyStatus = (connectorId: string): BrokerStatus => ({
   pendingCommands: 0,
 })
 
+/**
+ * Owns one mailbox per registered connector. The owner awaits `send`; the
+ * connector claims with `next` and settles with `complete`. Stopping the
+ * broker or a mailbox rejects queued work as `BridgeStopped` and
+ * already-delivered work as `CommandOutcomeUnknown`.
+ */
 export class CommandBroker {
   private constructor(private state: BrokerState) {}
 
+  /**
+   * Allocate an empty broker with no mailboxes.
+   * @returns a broker that has not been stopped and owns no connectors yet.
+   */
   static async make(): Promise<CommandBroker> {
     return new CommandBroker({ mailboxes: new Map(), stopped: false })
   }
@@ -128,6 +139,11 @@ export class CommandBroker {
     return next.then(() => result)
   }
 
+  /**
+   * Create a mailbox for `connectorId` if one is not already present.
+   * No-op when the broker is stopped or the id is already registered.
+   * @param connectorId - mailbox key the connector will poll and complete against.
+   */
   async register(connectorId: string): Promise<void> {
     if (this.state.stopped) return
     if (this.state.mailboxes.has(connectorId)) return
@@ -140,6 +156,12 @@ export class CommandBroker {
     })
   }
 
+  /**
+   * Stop and remove the mailbox for `connectorId`. Pending queued commands
+   * reject as `BridgeStopped`; already-delivered commands reject as
+   * `CommandOutcomeUnknown`. No-op when the broker is stopped or the id is unknown.
+   * @param connectorId - mailbox to dispose.
+   */
   async drop(connectorId: string): Promise<void> {
     if (this.state.stopped) return
     const mailbox = this.state.mailboxes.get(connectorId)
@@ -150,6 +172,11 @@ export class CommandBroker {
 
   /**
    * Send one command to a bound connector and await its result.
+   * @param connectorId - mailbox that must be registered, not stopped, and currently leased.
+   * @param request - domain request body copied onto the wire command.
+   * @param session - session context attached to the command envelope.
+   * @param timeoutMs - milliseconds to wait for delivery; elapsed queued work
+   *   rejects as `CommandTimeout`, already-delivered work as `CommandOutcomeUnknown`.
    * @returns the command result value.
    * @throws BridgeFailure on rejection/timeout/offline.
    */
@@ -255,6 +282,10 @@ export class CommandBroker {
   /**
    * Connector poll: claim the next queued command for the given connector.
    * Returns undefined when the mailbox is stopped, idle, or timed out.
+   * @param connector - identity used to refresh the lease and stamp the claim.
+   * @param timeoutMs - milliseconds to wait for a queued command before returning undefined.
+   * @param onConnected - optional hook after the lease is recorded and before the claim wait.
+   * @returns the claimed command, or undefined when none is available before the deadline.
    */
   async next(
     connector: PublicConnector,
@@ -311,6 +342,8 @@ export class CommandBroker {
 
   /**
    * Connector completion: report a command result, resolving the owner.
+   * @param connector - identity that must match the claim that delivered the command.
+   * @param result - success value or terminal failure for the claimed command id.
    * @returns true when the result was accepted for a known executing command.
    */
   async complete(connector: PublicConnector, result: WireResult): Promise<boolean> {
@@ -356,6 +389,12 @@ export class CommandBroker {
     return true
   }
 
+  /**
+   * Current mailbox snapshot for `connectorId`. Unknown, stopped, or unleased
+   * mailboxes report `connected: false` and empty identity fields.
+   * @param connectorId - mailbox to inspect.
+   * @returns queue depths plus lease identity when a connection is recorded.
+   */
   status(connectorId: string): BrokerStatus {
     if (this.state.stopped) return emptyStatus(connectorId)
     const mailbox = this.state.mailboxes.get(connectorId)
@@ -375,6 +414,10 @@ export class CommandBroker {
     }
   }
 
+  /**
+   * Stop the broker and every mailbox. Subsequent `send` throws `BridgeStopped`;
+   * `next`/`complete` become no-ops. Idempotent.
+   */
   async stop(): Promise<void> {
     if (this.state.stopped) return
     this.state.stopped = true

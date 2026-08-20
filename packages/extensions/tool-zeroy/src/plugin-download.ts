@@ -46,7 +46,10 @@ async function listFiles(root: string): Promise<string[]> {
   return files
 }
 
-/** Build the plugin ZIP bytes with the canonical top-level folder. */
+/**
+ * Build the plugin ZIP bytes with the canonical top-level folder.
+ * @returns ZIP contents WordPress accepts as a plugin upload.
+ */
 export async function buildPluginZip(): Promise<Uint8Array> {
   const files = await listFiles(ASSETS_DIR)
   const chunks: Uint8Array[] = []
@@ -83,7 +86,10 @@ export async function buildPluginZip(): Promise<Uint8Array> {
   return out
 }
 
-/** Ensure the assets directory exists (diagnostic). */
+/**
+ * Ensure the assets directory exists (diagnostic).
+ * @returns true when the packaged WordPress plugin sources are present on disk.
+ */
 export async function pluginAssetsReady(): Promise<boolean> {
   try {
     const info = await stat(ASSETS_DIR)

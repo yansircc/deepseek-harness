@@ -12,6 +12,7 @@
 // Parameter schema node (DSH JSON Schema subset)
 // ---------------------------------------------------------------------------
 
+/** JSON Schema subset used to describe one atomic-tool parameter. */
 export type JsonSchemaProperty = {
   type?: string
   required?: true
@@ -26,8 +27,10 @@ export type JsonSchemaProperty = {
 // Tool descriptors
 // ---------------------------------------------------------------------------
 
+/** High-level input action verb mapped to one atomic tool name. */
 export type ActionVerb = 'click' | 'fill' | 'press' | 'upload'
 
+/** Registration record for one `chrome_*` tool: schema, prompt, and wire `op` projection. */
 export type AtomicToolDescriptor = {
   readonly name: `chrome_${string}`
   readonly label: string
@@ -457,6 +460,7 @@ const labelOf = (name: string): string =>
     .map(part => (part[0] ? part[0].toUpperCase() + part.slice(1) : part))
     .join(' ')
 
+/** The 25 atomic `chrome_*` tools in tab, then page, then input registration order. */
 export const ATOMIC_TOOL_DESCRIPTORS: ReadonlyArray<AtomicToolDescriptor> = [
   ...TAB,
   ...PAGE,
@@ -472,12 +476,18 @@ export const ATOMIC_TOOL_DESCRIPTORS: ReadonlyArray<AtomicToolDescriptor> = [
   }) as Record<string, unknown> & { op: string },
 }))
 
+/** Atomic tool name for each {@link ActionVerb}; used to route high-level input actions. */
 export const ACTION_TOOL_NAME_BY_VERB: Readonly<Record<ActionVerb, string>> = Object.fromEntries(
   ATOMIC_TOOL_DESCRIPTORS.flatMap(({ actionVerb, name }) =>
     actionVerb === undefined ? [] : [[actionVerb, name]],
   ),
 ) as Readonly<Record<ActionVerb, string>>
 
+/**
+ * Look up one atomic tool by its `chrome_*` name.
+ * @param name - registered tool name such as `chrome_click`.
+ * @returns the descriptor, or `undefined` when `name` is not an atomic tool.
+ */
 export const atomicToolDescriptor = (name: string): AtomicToolDescriptor | undefined =>
   ATOMIC_TOOL_DESCRIPTORS.find(descriptor => descriptor.name === name)
 
@@ -485,6 +495,7 @@ export const atomicToolDescriptor = (name: string): AtomicToolDescriptor | undef
 // Operation contracts (for the fingerprint)
 // ---------------------------------------------------------------------------
 
+/** Deadline class that selects the command timeout for an operation. */
 export type OperationDeadlineKind =
   | 'default'
   | 'navigate'
@@ -492,6 +503,7 @@ export type OperationDeadlineKind =
   | 'screenshot'
   | 'text-input'
 
+/** How an operation result is described for the protocol fingerprint. */
 export type OperationResultContract =
   | { mode: 'opaque' }
   | { mode: 'schema'; schema: unknown }
@@ -501,6 +513,7 @@ export type OperationResultContract =
     variants: Readonly<Record<string, Readonly<Record<string, unknown>>>>
   }
 
+/** Domain, deadline class, and result description for one named operation. */
 export type OperationContract = {
   readonly operation: string
   readonly domain: 'tab' | 'page' | 'input' | 'system'
@@ -630,6 +643,7 @@ const deadlines: Record<string, Record<string, OperationDeadlineKind>> = {
   system: { version: 'default', 'automation-status': 'default', cleanup: 'default', 'cleanup-all': 'default', probe: 'default' },
 }
 
+/** Per-domain map of operation name to {@link OperationContract}. */
 export const OPERATION_CONTRACTS: Record<string, Record<string, OperationContract>> = Object.fromEntries(
   (['tab', 'page', 'input', 'system'] as const).map(domain => [
     domain,
@@ -647,6 +661,7 @@ export const OPERATION_CONTRACTS: Record<string, Record<string, OperationContrac
   ]),
 )
 
+/** Fingerprint projection: each operation's result contract plus its deadline class. */
 export const operationResultProtocolContract = Object.fromEntries(
   Object.entries(OPERATION_CONTRACTS).map(([domain, contracts]) => [
     domain,
@@ -663,7 +678,11 @@ export const operationResultProtocolContract = Object.fromEntries(
 // Wire call types
 // ---------------------------------------------------------------------------
 
+/** Tab-domain wire call: `op` plus operation-specific fields. */
 export type TabCall = { op: string; [key: string]: unknown }
+/** Page-domain wire call: `op` plus operation-specific fields. */
 export type PageCall = { op: string; [key: string]: unknown }
+/** Input-domain wire call: `op` plus operation-specific fields. */
 export type InputCall = { op: string; [key: string]: unknown }
+/** System-domain wire call: `op` plus operation-specific fields. */
 export type SystemCall = { op: string; [key: string]: unknown }

@@ -38,9 +38,16 @@ const deriveExtensionPackageId = (encodedKey: string): string => {
     .join('')
 }
 
+/**
+ * Derive the Chrome extension id from a base64-encoded SPKI public key.
+ * @param encodedKey - base64 SPKI bytes; must decode as RSA.
+ * @returns the 32-character Chrome packed-app id.
+ * @throws when the key is not valid RSA SPKI.
+ */
 export const extensionPackageIdFromPublicKey = (encodedKey: string): string =>
   deriveExtensionPackageId(encodedKey)
 
+/** Packed Chrome extension id derived from the shipped `EXTENSION_PUBLIC_KEY`. */
 export const EXTENSION_PACKAGE_ID = extensionPackageIdFromPublicKey(EXTENSION_PUBLIC_KEY)
 
 /**
@@ -59,6 +66,7 @@ const ASSETS_DIR = fileURLToPath(new URL('../../assets/browser-extension/', impo
  * Read the extension display version from the bundled manifest, so the
  * bridge's compatibility check (`extensionDisplayVersion === displayVersion`)
  * always agrees with the extension the user actually installs.
+ * @returns `manifest.json` `version`, or `0.5.3` when the file is missing or has no version.
  */
 export const extensionDisplayVersion = (): string => {
   try {
@@ -69,12 +77,17 @@ export const extensionDisplayVersion = (): string => {
       return manifest.version
     }
   } catch {
-    // fall through to the known value
+    // Unreadable or missing extension manifest; use the known shipped version.
   }
   return '0.5.3'
 }
 
-/** The extension identity the bridge expects its connector to present. */
+/**
+ * The extension identity the bridge expects its connector to present.
+ * @param displayVersion - human-facing extension version the connector must report.
+ * @param protocolFingerprint - protocol hash the connector must report.
+ * @returns identity triple compared during connector bind.
+ */
 export const extensionExpectation = (
   displayVersion: string,
   protocolFingerprint: string,

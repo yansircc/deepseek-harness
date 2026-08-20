@@ -457,6 +457,12 @@ const evaluate = async <Value>(page: CdpSession, expression: string): Promise<Va
   return result?.value as Value
 }
 
+/**
+ * Build the in-page measurement script for one challenge. Contrast pairs are baked in;
+ * missing stylesheet colors report 0 rather than aborting the push.
+ * @param challenge - Connector challenge whose contrast pairs the script reads.
+ * @returns a JS IIFE string for `Runtime.evaluate`; the result must match the evidence measurement fields.
+ */
 export const browserMeasurementExpression = (
   challenge: BrowserVerificationChallenge,
 ): string => `(() => {
@@ -691,6 +697,13 @@ const executeChallenge = async (
   } satisfies BrowserEvidence
 }
 
+/**
+ * Run the challenge in a local Chromium and always tear the browser down afterward,
+ * including launch failure. Rejects on launch, CDP, navigation, evaluation, abort, or timeout.
+ * @param challenge - Connector-issued challenge to execute.
+ * @param signal - optional abort checked before each scenario navigation.
+ * @returns evidence matching `zeroy/browser-evidence@4`.
+ */
 export const verifyBrowserChallengeWithLocalBrowser = async (
   challenge: BrowserVerificationChallenge,
   signal?: AbortSignal,
@@ -703,6 +716,13 @@ export const verifyBrowserChallengeWithLocalBrowser = async (
   }
 }
 
+/**
+ * Verify a challenge and map every runtime failure to `ZeroYConnectorError`
+ * (`zeroy_browser_verification_failed`).
+ * @param challenge - Connector-issued challenge to execute.
+ * @param signal - optional abort forwarded to the local-browser run.
+ * @returns evidence matching `zeroy/browser-evidence@4`.
+ */
 export const verifyBrowserChallenge = async (
   challenge: BrowserVerificationChallenge,
   signal: AbortSignal | undefined,
