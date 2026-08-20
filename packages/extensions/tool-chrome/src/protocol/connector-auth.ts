@@ -1,7 +1,5 @@
 /**
- * Connector authentication headers and the extension public key.
- * Ported from the pi-chrome extension (`src/protocol/connector-auth.ts`) as
- * pure data.
+ * Connector authentication headers and the extension public key. Pure data.
  *
  * @module @deepseek-ai/dsh-tool-chrome/protocol/connector-auth
  */

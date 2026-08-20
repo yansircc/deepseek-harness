@@ -4,13 +4,10 @@
  * means the two sides speak different protocol versions and refuse to
  * connect.
  *
- * Ported from the pi-chrome extension (`src/protocol/protocol-fingerprint.ts`)
- * with Effect replaced by plain functions.
- *
- * NOTE: The Chrome extension is rebuilt from this same codebase, so the
+ * The Chrome extension is rebuilt from this same codebase, so the
  * fingerprint here and the one the extension computes are consistent by
- * construction. The canonicalization rules (semantic JSON Schema stripping,
- * sorting) are preserved from the original so the value is deterministic.
+ * construction. Canonicalization (semantic JSON Schema stripping and key
+ * sort) is deterministic.
  *
  * @module @deepseek-ai/dsh-tool-chrome/protocol/fingerprint
  */
@@ -181,7 +178,7 @@ export const canonicalProtocolContractFor = (contract: unknown): string =>
   JSON.stringify(canonicalize(semanticProtocolProjection(contract)))
 
 /** The browser-companion contract placeholder. Kept minimal and stable. */
-export const BROWSER_COMPANION_CONTRACT = 'pipee/browser-companion@2'
+export const BROWSER_COMPANION_CONTRACT = 'dsh-chrome/browser-companion@2'
 
 /**
  * Canonical JSON of the live bridge/extension protocol contract.

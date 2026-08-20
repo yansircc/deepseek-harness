@@ -1,7 +1,6 @@
 /**
  * Wire codec: JSON decode of bridge protocol payloads and bridge-failure
- * conversion. Ported from the pi-chrome extension (`src/protocol/codec.ts`)
- * with Effect Schema replaced by plain parse + shape checks.
+ * conversion. Plain parse plus shape checks.
  *
  * @module @deepseek-ai/dsh-tool-chrome/bridge/codec
  */

@@ -46,7 +46,7 @@ export const name = 'tool-chrome'
 export const inject = ['tools']
 
 /** Default owner credential reference. */
-export const OWNER_CREDENTIAL_REF = 'PI_CHROME_OWNER_CREDENTIAL'
+export const OWNER_CREDENTIAL_REF = 'DSH_CHROME_OWNER_CREDENTIAL'
 
 /** The session context this DSH session uses for bridge commands. */
 function sessionContextFor(ctx: Context): SessionContext {
@@ -76,14 +76,14 @@ export function apply(ctx: Context, config: Config): void {
     host,
     port,
     displayVersion: extensionDisplayVersion,
-    // The shipped extension speaks the pipee v1 protocol fingerprint; the
+    // The shipped extension speaks the v1 protocol fingerprint; the
     // bridge declares the same value so the handshake accepts it.
     protocolFingerprint: EXTENSION_PROTOCOL_FINGERPRINT,
   })
 
   // Resolve the owner credential from ctx.credentials (or env fallback). If
   // none is configured, generate one automatically and store it — the user
-  // never has to set a secret by hand (pi-chrome does the same).
+  // never has to set a secret by hand.
   const credentials = ctx.get('credentials')
   const loadCredential = async (): Promise<string | undefined> => {
     if (credentials !== undefined) {

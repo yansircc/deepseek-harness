@@ -1,8 +1,6 @@
 /**
  * Bridge authentication: HMAC proof construction and verification, plus the
- * challenge registry. Ported from the pi-chrome extension
- * (`src/pi/bridge-authentication-node.ts` and `src/protocol/bridge-authentication.ts`)
- * with Effect replaced by plain functions and node:crypto.
+ * challenge registry. Plain functions over `node:crypto`.
  *
  * @module @deepseek-ai/dsh-tool-chrome/protocol/auth
  */

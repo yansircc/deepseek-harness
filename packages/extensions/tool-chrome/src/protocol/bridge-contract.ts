@@ -1,9 +1,7 @@
 /**
  * Bridge transport contract: routes, limits, deadlines, and authentication
- * constants for the pi-chrome local bridge. Pure data projection of
+ * constants for the DSH Chrome local bridge. Pure data projection of
  * `bridge.json` — no runtime dependencies.
- *
- * Ported from the pi-chrome extension (`src/protocol/bridge-contract.ts`).
  *
  * @module @deepseek-ai/dsh-tool-chrome/protocol/bridge-contract
  */

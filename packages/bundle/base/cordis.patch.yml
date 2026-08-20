@@ -427,7 +427,7 @@
       name: '@deepseek-ai/dsh-tool-zeroy'
 
     # Real Chrome control: 25 chrome_* tools through a local bridge. The
-    # bridge starts with the plugin; the credential (PI_CHROME_OWNER_CREDENTIAL)
+    # bridge starts with the plugin; the credential (DSH_CHROME_OWNER_CREDENTIAL)
     # and extension install are user-facing, shown in the WebUI card.
     - id: tool-chrome
       name: '@deepseek-ai/dsh-tool-chrome'

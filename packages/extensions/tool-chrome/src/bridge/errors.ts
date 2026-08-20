@@ -1,7 +1,5 @@
 /**
- * Bridge error types. Ported from the pi-chrome extension
- * (`src/core/errors.ts`) with Effect Data.TaggedError replaced by plain
- * Error subclasses carrying a `_tag` discriminant.
+ * Bridge error types. Plain Error subclasses carrying a `_tag` discriminant.
  *
  * @module @deepseek-ai/dsh-tool-chrome/bridge/errors
  */

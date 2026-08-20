@@ -16412,7 +16412,7 @@
 	var set = /*#__PURE__*/ dual(2, (self, value) => sync(() => set$1(self.ref, value)));
 	//#endregion
 	//#region ../../protocols/companion-contracts/src/browser-companion.ts
-	var BROWSER_COMPANION_CONTRACT = "pipee/browser-companion@2";
+	var BROWSER_COMPANION_CONTRACT = "dsh-chrome/browser-companion@2";
 	Struct({
 		contract: Literal(BROWSER_COMPANION_CONTRACT),
 		directory: String$1,
@@ -16423,7 +16423,7 @@
 		displayVersion: NonEmptyString,
 		protocolFingerprint: NonEmptyString
 	});
-	var BROWSER_COMPANION_PROBE_KIND = "pipee/browser-companion-probe";
+	var BROWSER_COMPANION_PROBE_KIND = "dsh-chrome/browser-companion-probe";
 	var BrowserCompanionProbeRequest = Struct({
 		kind: Literal(BROWSER_COMPANION_PROBE_KIND),
 		version: Literal(2)
@@ -16458,7 +16458,7 @@
 			mismatches: ArraySchema(BrowserCompanionMismatch)
 		})
 	]);
-	var BROWSER_COMPANION_WAKE_KIND = "pipee/browser-companion-wake";
+	var BROWSER_COMPANION_WAKE_KIND = "dsh-chrome/browser-companion-wake";
 	var BrowserCompanionWakeRequest = Struct({
 		kind: Literal(BROWSER_COMPANION_WAKE_KIND),
 		version: Literal(2)
@@ -16518,7 +16518,7 @@
 	}
 	var classifyChromeConnectorCompatibility = (expected, connector) => classifyChromeCompatibility(expected, projectChromeExtensionEvidence(connector));
 	Struct({
-		kind: Literal("pi-chrome/status"),
+		kind: Literal("dsh-chrome/status"),
 		version: Literal(3),
 		state: Literals([
 			"ready",
@@ -16595,19 +16595,19 @@
 			"keyEncoding": "hex",
 			"proofEncoding": "hex",
 			"domains": {
-				"ownerServerProof": "pi-chrome/bridge-owner/server-proof/v1",
-				"ownerRequestProof": "pi-chrome/bridge-owner/request-proof/v1",
-				"connectorServerProof": "pi-chrome/connector/server-proof/v1",
-				"connectorRequestProof": "pi-chrome/connector/request-proof/v1"
+				"ownerServerProof": "dsh-chrome/bridge-owner/server-proof/v1",
+				"ownerRequestProof": "dsh-chrome/bridge-owner/request-proof/v1",
+				"connectorServerProof": "dsh-chrome/connector/server-proof/v1",
+				"connectorRequestProof": "dsh-chrome/connector/request-proof/v1"
 			}
 		},
 		headers: {
-			"ownerProtocolFingerprint": "x-pi-chrome-protocol-fingerprint",
-			"ownerClientNonce": "x-pi-chrome-owner-client-nonce",
-			"ownerBridgeEpoch": "x-pi-chrome-owner-bridge-epoch",
-			"ownerRequestNonce": "x-pi-chrome-owner-request-nonce",
-			"ownerBodySha256": "x-pi-chrome-owner-body-sha256",
-			"ownerProof": "x-pi-chrome-owner-proof"
+			"ownerProtocolFingerprint": "x-dsh-chrome-protocol-fingerprint",
+			"ownerClientNonce": "x-dsh-chrome-owner-client-nonce",
+			"ownerBridgeEpoch": "x-dsh-chrome-owner-bridge-epoch",
+			"ownerRequestNonce": "x-dsh-chrome-owner-request-nonce",
+			"ownerBodySha256": "x-dsh-chrome-owner-body-sha256",
+			"ownerProof": "x-dsh-chrome-owner-proof"
 		},
 		routes: {
 			"owner": {
@@ -17980,19 +17980,19 @@
 	});
 	var connector_auth_default = {
 		extensionPublicKey: "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxOM4CMNraddlpkOjrntKxTQZth8PQVBPo8fF3jMETPAecXJc1WMV58kG4MYkELqJI2PF2tNhsHLX6M013uPhqL1WEFpInAvX3v0+vMj+IeLWtyy5I/TR2AcRWnKi+UBn/x9chtZ/8iZF9iNXHu7gY8S4F9atScM1BvbpDJmYm48UDjV5YTTEOqLFonCdMEeW3l1EMSTM6uJ68aiXdemAAHzQbVd1Hu8TI5oawPyW3uPhe0clKN1r2O/lu7Xf/HOgo8OvArIfacICEdlcEoBR/WKxK7ENtwbEHQjqYUghjHLyLLuc1uk9ze9c2d6RRRFYmdVfJnwC8JOKccsE5Fb0FQIDAQAB",
-		storageKey: "piChromeConnectorIdentity",
+		storageKey: "dshChromeConnectorIdentity",
 		headers: {
-			"id": "x-pi-chrome-connector-id",
-			"extensionId": "x-pi-chrome-extension-id",
-			"clientNonce": "x-pi-chrome-connector-client-nonce",
-			"bridgeEpoch": "x-pi-chrome-connector-bridge-epoch",
-			"requestNonce": "x-pi-chrome-connector-request-nonce",
-			"bodySha256": "x-pi-chrome-connector-body-sha256",
-			"proof": "x-pi-chrome-connector-proof"
+			"id": "x-dsh-chrome-connector-id",
+			"extensionId": "x-dsh-chrome-extension-id",
+			"clientNonce": "x-dsh-chrome-connector-client-nonce",
+			"bridgeEpoch": "x-dsh-chrome-connector-bridge-epoch",
+			"requestNonce": "x-dsh-chrome-connector-request-nonce",
+			"bodySha256": "x-dsh-chrome-connector-body-sha256",
+			"proof": "x-dsh-chrome-connector-proof"
 		},
 		metadataHeaders: {
-			"displayVersion": "x-pi-chrome-extension-version",
-			"protocolFingerprint": "x-pi-chrome-protocol-fingerprint"
+			"displayVersion": "x-dsh-chrome-extension-version",
+			"protocolFingerprint": "x-dsh-chrome-protocol-fingerprint"
 		}
 	};
 	//#endregion
@@ -18258,7 +18258,7 @@
 	}).pipe(flatMap(canonicalProtocolContractFor)).pipe(flatMap(fingerprintCanonicalProtocolContract));
 	//#endregion
 	//#region src/browser/command-journal.ts
-	var COMMAND_JOURNAL_STORAGE_KEY = "piChromeCommandJournal";
+	var COMMAND_JOURNAL_STORAGE_KEY = "dshChromeCommandJournal";
 	var COMMAND_JOURNAL_VERSION = 1;
 	var StableJournalEnvelope = Struct({
 		version: Literal(COMMAND_JOURNAL_VERSION),
@@ -18371,7 +18371,7 @@
 		const fingerprint = yield* currentFingerprint("load");
 		const commandId = extractCommandId(value);
 		if (!commandId) {
-			yield* logWarning("pi-chrome cleared an unrecoverable command journal without a stable command id");
+			yield* logWarning("dsh-chrome cleared an unrecoverable command journal without a stable command id");
 			yield* remove;
 			return;
 		}
@@ -18573,7 +18573,7 @@
 			message: "Could not cancel bridge response body",
 			cause
 		})
-	}).pipe(catch_((error) => logWarning("pi-chrome failed to cancel bridge response body", error.message)));
+	}).pipe(catch_((error) => logWarning("dsh-chrome failed to cancel bridge response body", error.message)));
 	var readResponseText = (response, limitBytes) => {
 		const declaredLength = Number(response.headers.get("content-length"));
 		if (Number.isFinite(declaredLength) && declaredLength > limitBytes) {
@@ -18608,7 +18608,7 @@
 					if (receivedBytes > limitBytes) {
 						chunks.length = 0;
 						const failure = responseTooLarge(limitBytes);
-						reader.cancel().then(() => finish(fail(failure)), (cause) => finish(logWarning("pi-chrome failed to cancel oversized bridge response", String(cause)).pipe(andThen(fail(failure)))));
+						reader.cancel().then(() => finish(fail(failure)), (cause) => finish(logWarning("dsh-chrome failed to cancel oversized bridge response", String(cause)).pipe(andThen(fail(failure)))));
 						return;
 					}
 					chunks.push(value);
@@ -18622,7 +18622,7 @@
 			read();
 			return sync(() => {
 				finished = true;
-			}).pipe(andThen(promise(() => reader.cancel())), catch_((cause) => logWarning("pi-chrome failed to cancel bridge response reader", String(cause))));
+			}).pipe(andThen(promise(() => reader.cancel())), catch_((cause) => logWarning("dsh-chrome failed to cancel bridge response reader", String(cause))));
 		});
 	};
 	var bridgeRequest = (routeName, init, connector, authentication, timeoutMs) => {
@@ -18696,8 +18696,8 @@
 	TaggedError("ConnectorIdentityMessageFailure");
 	var isConnectorIdentityRequest = (value) => {
 		if (typeof value !== "object" || value === null || !("type" in value)) return false;
-		if (value.type === "pi-chrome/connector/load") return true;
-		return value.type === "pi-chrome/connector/rename" && "label" in value && typeof value.label === "string";
+		if (value.type === "dsh-chrome/connector/load") return true;
+		return value.type === "dsh-chrome/connector/rename" && "label" in value && typeof value.label === "string";
 	};
 	//#endregion
 	//#region src/browser/connector-identity.ts
@@ -18732,7 +18732,7 @@
 		...identity,
 		extensionId: chrome.runtime.id,
 		extensionDisplayVersion: chrome.runtime.getManifest().version,
-		protocolFingerprint: "75eedfbca349aa6afc2fff680af4569711c118b95888a3d783927fb75dc52907"
+		protocolFingerprint: "593fb1f978e0ef1f0e3896f02cde26ac64ac647909a6c93aa7eb7fc4660cd501"
 	}).pipe(flatMap(decodeUnknownEffect(ProfileConnector)), mapError((cause) => cause instanceof ConnectorIdentityFailure ? cause : new ConnectorIdentityFailure({
 		message: "Live connector metadata is invalid",
 		cause
@@ -18815,7 +18815,7 @@
 	//#endregion
 	//#region src/browser/injected/action-core.ts
 	function getPiChromeState() {
-		const state = window.__PI_CHROME_STATE__ || {
+		const state = window.__DSH_CHROME_STATE__ || {
 			nextElementUid: 1,
 			nextFrontierUid: 1,
 			refs: /* @__PURE__ */ new Map(),
@@ -18825,7 +18825,7 @@
 			instrumentationInstalled: false,
 			lastSnapshotDigest: null
 		};
-		window.__PI_CHROME_STATE__ = state;
+		window.__DSH_CHROME_STATE__ = state;
 		return state;
 	}
 	//#endregion
@@ -18845,7 +18845,7 @@
 		const NETWORK_HEADER_VALUE_CHAR_LIMIT = 256;
 		const NETWORK_HEADER_TEXT_CHAR_LIMIT = 4096;
 		const NETWORK_ERROR_CHAR_LIMIT = 512;
-		const state = window.__PI_CHROME_STATE__ || {
+		const state = window.__DSH_CHROME_STATE__ || {
 			nextElementUid: 1,
 			nextFrontierUid: 1,
 			refs: /* @__PURE__ */ new Map(),
@@ -18855,7 +18855,7 @@
 			instrumentationInstalled: false,
 			lastSnapshotDigest: null
 		};
-		window.__PI_CHROME_STATE__ = state;
+		window.__DSH_CHROME_STATE__ = state;
 		if (state.instrumentationInstalled) return;
 		state.instrumentationInstalled = true;
 		const boundedText = (value, limit) => {
@@ -18940,12 +18940,12 @@
 			"error"
 		]) {
 			const original = console[level];
-			if (typeof original !== "function" || original.__piChromeWrapped) continue;
+			if (typeof original !== "function" || original.__dshChromeWrapped) continue;
 			const wrapped = function(...args) {
 				pushConsole(level, args);
 				return original.apply(this, args);
 			};
-			wrapped.__piChromeWrapped = true;
+			wrapped.__dshChromeWrapped = true;
 			console[level] = wrapped;
 		}
 		window.addEventListener("error", (event) => pushConsole("pageerror", [event.message, event.filename + ":" + event.lineno + ":" + event.colno]));
@@ -19005,7 +19005,7 @@
 			if (state.network.length > NETWORK_ENTRY_LIMIT) state.network.splice(0, state.network.length - NETWORK_ENTRY_LIMIT);
 			return entry;
 		};
-		if (window.fetch && !window.fetch.__piChromeWrapped) {
+		if (window.fetch && !window.fetch.__dshChromeWrapped) {
 			const originalFetch = window.fetch.bind(window);
 			const wrappedFetch = async (...args) => {
 				const id = "req-" + state.nextRequestId++;
@@ -19044,24 +19044,24 @@
 					throw error;
 				}
 			};
-			wrappedFetch.__piChromeWrapped = true;
+			wrappedFetch.__dshChromeWrapped = true;
 			window.fetch = wrappedFetch;
 		}
-		if (window.XMLHttpRequest && !XMLHttpRequest.prototype.open.__piChromeWrapped) {
+		if (window.XMLHttpRequest && !XMLHttpRequest.prototype.open.__dshChromeWrapped) {
 			const originalOpen = XMLHttpRequest.prototype.open;
 			const originalSend = XMLHttpRequest.prototype.send;
 			XMLHttpRequest.prototype.open = function(method, url, ...rest) {
-				this.__piChromeRequest = {
+				this.__dshChromeRequest = {
 					method: String(method || "GET").toUpperCase(),
 					url: String(url || "")
 				};
 				return originalOpen.call(this, method, url, ...rest);
 			};
-			XMLHttpRequest.prototype.open.__piChromeWrapped = true;
+			XMLHttpRequest.prototype.open.__dshChromeWrapped = true;
 			XMLHttpRequest.prototype.send = function(body) {
 				const id = "req-" + state.nextRequestId++;
 				const startedAt = Date.now();
-				const info = this.__piChromeRequest || {};
+				const info = this.__dshChromeRequest || {};
 				const entry = record({
 					id,
 					type: "xhr",
@@ -19481,7 +19481,7 @@
 			const message = errorText(error);
 			const tabSnapshot = await chrome.tabs.get(tabId).catch(() => null);
 			if (!tabSnapshot || (tabSnapshot.url || "").startsWith("chrome://") || (tabSnapshot.url || "").startsWith("chrome-extension://")) throw new Error(`Chrome can't attach the debugger to this tab (${tabSnapshot?.url ?? "unknown"}). Open a normal http(s) tab and try again.`);
-			if (/Another debugger|already attached/i.test(message)) throw new Error(`Another debugger is attached to tab ${tabId}; pi-chrome will not detach or replace it.`, { cause: error });
+			if (/Another debugger|already attached/i.test(message)) throw new Error(`Another debugger is attached to tab ${tabId}; dsh-chrome will not detach or replace it.`, { cause: error });
 			const meta = await describeInputTarget(tabId);
 			throw new Error(`Chrome debugger attach failed for tab ${tabId}: ${message}${targetMetaSuffix(meta)}`, { cause: error });
 		}
@@ -19627,7 +19627,7 @@
 				debuggerStates.delete(source.tabId);
 			} else if (state) state.detachedByEvent = true;
 		}
-		if (reason === "canceled_by_user") console.warn(`[pi-chrome] debugger canceled by user on tab ${source.tabId}; Chrome input will reattach on next call`);
+		if (reason === "canceled_by_user") console.warn(`[dsh-chrome] debugger canceled by user on tab ${source.tabId}; Chrome input will reattach on next call`);
 	}
 	function handleDebuggerEvent(source, method, params) {
 		if (source.tabId === void 0 || method !== "Page.lifecycleEvent" || !params) return;
@@ -19648,7 +19648,7 @@
 	}
 	function cdpRaw(tabId, method, params) {
 		const entry = attachedSession(tabId);
-		if (!entry) return Promise.reject(/* @__PURE__ */ new Error(`pi-chrome has no debugger ownership record for tab ${tabId}`));
+		if (!entry) return Promise.reject(/* @__PURE__ */ new Error(`dsh-chrome has no debugger ownership record for tab ${tabId}`));
 		entry.detachAt = Date.now() + INPUT_IDLE_DETACH_MS;
 		entry.activeCommands += 1;
 		const debuggee = entry.debuggee;
@@ -19838,8 +19838,8 @@
 		}
 	};
 	var DEFAULT_GROUP_COLOR = "blue";
-	var AUTOMATION_TARGETS_STORAGE_KEY = "piChromeAutomationTargets";
-	var BROWSER_EPOCH_STORAGE_KEY = "piChromeBrowserEpoch";
+	var AUTOMATION_TARGETS_STORAGE_KEY = "dshChromeAutomationTargets";
+	var BROWSER_EPOCH_STORAGE_KEY = "dshChromeBrowserEpoch";
 	var MAX_AUTOMATION_TARGETS_PER_SESSION = AUTOMATION_TARGET_LIMITS.perSession;
 	var MAX_AUTOMATION_TARGETS_PER_PROFILE = AUTOMATION_TARGET_LIMITS.perProfile;
 	var targetTurn = Promise.resolve();
@@ -20642,7 +20642,7 @@
 			},
 			world: "MAIN",
 			func: (selector, uid, x, y, preferInteractive, expectedVerb, interactiveSelector, blockedSelector) => {
-				let state = window.__PI_CHROME_STATE__;
+				let state = window.__DSH_CHROME_STATE__;
 				if (!state && selector) {
 					state = {
 						nextElementUid: 1,
@@ -20654,7 +20654,7 @@
 						instrumentationInstalled: false,
 						lastSnapshotDigest: null
 					};
-					window.__PI_CHROME_STATE__ = state;
+					window.__DSH_CHROME_STATE__ = state;
 				}
 				let el = null;
 				if (uid) {
@@ -20719,8 +20719,8 @@
 							break;
 						}
 						if (!resolvedUid) {
-							if (!el.__piChromeUid) el.__piChromeUid = `el-${state.nextElementUid++}`;
-							resolvedUid = el.__piChromeUid;
+							if (!el.__dshChromeUid) el.__dshChromeUid = `el-${state.nextElementUid++}`;
+							resolvedUid = el.__dshChromeUid;
 							state.refs.set(resolvedUid, {
 								kind: "element",
 								element: el,
@@ -20785,7 +20785,7 @@
 			},
 			world: "MAIN",
 			func: (targetUid, x, y) => {
-				const ref = window.__PI_CHROME_STATE__?.refs.get(targetUid);
+				const ref = window.__DSH_CHROME_STATE__?.refs.get(targetUid);
 				const expected = ref?.kind === "element" ? ref.element : null;
 				if (!expected || !expected.isConnected) return {
 					ok: false,
@@ -21323,7 +21323,7 @@
 		const expression = `(() => {
     const selector = ${JSON.stringify(params.selector ?? null)};
     const uid = ${JSON.stringify(params.uid ?? null)};
-    const state = window.__PI_CHROME_STATE__;
+    const state = window.__DSH_CHROME_STATE__;
     const ref = uid && state ? state.refs.get(uid) : null;
     if (uid && (ref?.kind !== "element" || !ref.verbs.has("upload"))) throw new Error("Action ref does not grant upload");
     const el = ref?.kind === "element" ? ref.element : (selector ? document.querySelector(selector) : null);
@@ -21333,7 +21333,7 @@
   })()`;
 		const evaluated = await cdp(tab.id, "Runtime.evaluate", {
 			expression,
-			objectGroup: "pi-chrome-upload",
+			objectGroup: "dsh-chrome-upload",
 			includeCommandLineAPI: false,
 			returnByValue: false
 		});
@@ -21605,7 +21605,7 @@
         const element = this;
         if (!(element instanceof Element) || !element.isConnected) return null;
         if (scopeUid) {
-          const scopeRef = globalThis.__PI_CHROME_STATE__?.refs.get(scopeUid);
+          const scopeRef = globalThis.__DSH_CHROME_STATE__?.refs.get(scopeUid);
           const root = scopeRef?.kind === "element" ? scopeRef.element : null;
           if (!root || (root !== element && !root.contains(element))) return null;
         }
@@ -21613,7 +21613,7 @@
         const rect = element.getBoundingClientRect();
         if (style.visibility === "hidden" || style.display === "none" || rect.width === 0 || rect.height === 0) return null;
         if (rect.bottom < 0 || rect.right < 0 || rect.top > innerHeight || rect.left > innerWidth) return null;
-        const remember = globalThis.__piChromeRememberElement;
+        const remember = globalThis.__dshChromeRememberElement;
         if (typeof remember !== "function") return null;
         const checked = "checked" in element ? Boolean(element.checked) : undefined;
         return {
@@ -21758,8 +21758,8 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 			world: "MAIN",
 			func: async (invocationArgs) => {
 				try {
-					const snapshotPage = globalThis.__piChromeSnapshotPage;
-					if (typeof snapshotPage !== "function") throw new Error("Snapshot bundle did not install __piChromeSnapshotPage");
+					const snapshotPage = globalThis.__dshChromeSnapshotPage;
+					if (typeof snapshotPage !== "function") throw new Error("Snapshot bundle did not install __dshChromeSnapshotPage");
 					return {
 						ok: true,
 						value: snapshotPage(...invocationArgs)
@@ -21850,9 +21850,9 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 			},
 			world: "MAIN",
 			func: (issuedActions, contextIds, frontierInputs) => {
-				const grant = globalThis.__piChromeGrantActionVerbs;
-				const markContext = globalThis.__piChromeMarkContextRef;
-				const register = globalThis.__piChromeRegisterFrontier;
+				const grant = globalThis.__dshChromeGrantActionVerbs;
+				const markContext = globalThis.__dshChromeMarkContextRef;
+				const register = globalThis.__dshChromeRegisterFrontier;
 				if (typeof grant !== "function" || typeof markContext !== "function" || typeof register !== "function") throw new Error("Snapshot bundle did not install observation ref helpers");
 				for (const action of issuedActions) grant(action.id, action.verbs);
 				for (const contextId of contextIds) markContext(contextId);
@@ -21907,8 +21907,8 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 			world: "MAIN",
 			func: (maxChars, view, query, ref) => {
 				try {
-					const readPage = globalThis.__piChromeReadPage;
-					if (typeof readPage !== "function") throw new Error("Snapshot bundle did not install __piChromeReadPage");
+					const readPage = globalThis.__dshChromeReadPage;
+					if (typeof readPage !== "function") throw new Error("Snapshot bundle did not install __dshChromeReadPage");
 					return {
 						ok: true,
 						value: readPage(maxChars, view, query, ref)
@@ -21962,8 +21962,8 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 			world: "MAIN",
 			func: async (invocationArgs) => {
 				try {
-					const inspectTarget = globalThis.__piChromeInspectTarget;
-					if (typeof inspectTarget !== "function") throw new Error("Snapshot bundle did not install __piChromeInspectTarget");
+					const inspectTarget = globalThis.__dshChromeInspectTarget;
+					if (typeof inspectTarget !== "function") throw new Error("Snapshot bundle did not install __dshChromeInspectTarget");
 					return {
 						ok: true,
 						value: inspectTarget(...invocationArgs)
@@ -22439,7 +22439,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 	} : void 0;
 	//#endregion
 	//#region src/browser/service-worker.ts
-	var KEEPALIVE_ALARM = "pi-chrome-runtime";
+	var KEEPALIVE_ALARM = "dsh-chrome-runtime";
 	var connectorIdentity = ConnectorIdentityOwner.makeUnsafe();
 	var effectRuntime = make$8(empty);
 	var BrowserRuntimeFailure = class extends TaggedError("BrowserRuntimeFailure") {};
@@ -22461,7 +22461,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 	var postResult = (result, connector) => encodeJsonTransport("Chrome wire result", WireResult, result).pipe(flatMap(({ json }) => connectorRequest("result", {
 		headers: { "content-type": "application/json" },
 		body: json
-	}, connector).pipe(flatMap((response) => classifyResultResponse(result, response)), tapError((error) => logWarning(`pi-chrome result ${result.id} is not acknowledged; command polling remains blocked`, messageOf(error))), retry({
+	}, connector).pipe(flatMap((response) => classifyResultResponse(result, response)), tapError((error) => logWarning(`dsh-chrome result ${result.id} is not acknowledged; command polling remains blocked`, messageOf(error))), retry({
 		schedule: sharedBridgeRetrySchedule,
 		while: (error) => error.status === void 0 || classifyResultDelivery(error.status) === "retry"
 	}))));
@@ -22491,14 +22491,14 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 		recordExecuting: (command) => persistUntilSuccess(recordCommandExecuting(command)),
 		executeCommand: (command) => settleBrowserCommand(command, dispatchBrowserCommand),
 		recordResult: (command, result) => persistUntilSuccess(recordCommandResult(command, result))
-	}).pipe(tapError((error) => logWarning("pi-chrome runtime step failed", messageOf(error))), retry({ schedule: sharedBridgeRetrySchedule }), forever), currentTimeMillis.pipe(flatMap((now) => tryPromise({
+	}).pipe(tapError((error) => logWarning("dsh-chrome runtime step failed", messageOf(error))), retry({ schedule: sharedBridgeRetrySchedule }), forever), currentTimeMillis.pipe(flatMap((now) => tryPromise({
 		try: () => detachExpiredDebuggers(now),
 		catch: (cause) => new BrowserRuntimeFailure({
 			code: "debugger-cleanup",
 			message: messageOf(cause),
 			cause
 		})
-	})), catch_((error) => logWarning("pi-chrome debugger cleanup failed", error.message)), repeat({ schedule: spaced("5 seconds") }))], {
+	})), catch_((error) => logWarning("dsh-chrome debugger cleanup failed", error.message)), repeat({ schedule: spaced("5 seconds") }))], {
 		concurrency: "unbounded",
 		discard: true
 	});
@@ -22533,11 +22533,11 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 				cause
 			})
 		})
-	], { discard: true }).pipe(catch_((error) => logWarning("pi-chrome initialization failed", error.message)));
+	], { discard: true }).pipe(catch_((error) => logWarning("dsh-chrome initialization failed", error.message)));
 	var launch = (effect) => {
 		effectRuntime.runCallback(effect, { onExit: () => void 0 });
 	};
-	var handleConnectorIdentityRequest = (request) => (request.type === "pi-chrome/connector/load" ? connectorIdentity.load : connectorIdentity.rename(request.label)).pipe(match({
+	var handleConnectorIdentityRequest = (request) => (request.type === "dsh-chrome/connector/load" ? connectorIdentity.load : connectorIdentity.rename(request.label)).pipe(match({
 		onFailure: (error) => ({
 			ok: false,
 			error: error.message
@@ -22561,7 +22561,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 			})))));
 			return true;
 		}
-		const response = handleChromeExtensionProbe(message, chrome.runtime, "75eedfbca349aa6afc2fff680af4569711c118b95888a3d783927fb75dc52907");
+		const response = handleChromeExtensionProbe(message, chrome.runtime, "593fb1f978e0ef1f0e3896f02cde26ac64ac647909a6c93aa7eb7fc4660cd501");
 		if (response === void 0) return false;
 		sendResponse(response);
 		return false;
@@ -22571,7 +22571,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 		startRuntime();
 	});
 	chrome.runtime.onStartup.addListener(() => {
-		launch(armKeepalive().pipe(catch_((error) => logWarning("pi-chrome keepalive alarm failed", error.message))));
+		launch(armKeepalive().pipe(catch_((error) => logWarning("dsh-chrome keepalive alarm failed", error.message))));
 		startRuntime();
 	});
 	chrome.alarms.onAlarm.addListener((alarm) => {
@@ -22591,7 +22591,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 				message: messageOf(cause),
 				cause
 			})
-		}).pipe(catch_((error) => logWarning("pi-chrome owned-tab removal reconciliation failed", error.message))));
+		}).pipe(catch_((error) => logWarning("dsh-chrome owned-tab removal reconciliation failed", error.message))));
 	});
 	launch(initialize);
 	startRuntime();

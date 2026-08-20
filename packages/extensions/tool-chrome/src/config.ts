@@ -14,7 +14,7 @@ export interface Config {
   port?: number
   /** Display version reported to the extension. Defaults to the package version. */
   displayVersion?: string
-  /** Owner credential reference in ctx.credentials. Defaults to PI_CHROME_OWNER_CREDENTIAL. */
+  /** Owner credential reference in ctx.credentials. Defaults to DSH_CHROME_OWNER_CREDENTIAL. */
   ownerCredentialRef?: string
   /** Per-command timeout in ms. Defaults to 30000. */
   commandTimeoutMs?: number

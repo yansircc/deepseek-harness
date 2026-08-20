@@ -92,7 +92,7 @@
 		capPiChromeRefs(state);
 	}
 	function getPiChromeState() {
-		const state = window.__PI_CHROME_STATE__ || {
+		const state = window.__DSH_CHROME_STATE__ || {
 			nextElementUid: 1,
 			nextFrontierUid: 1,
 			refs: /* @__PURE__ */ new Map(),
@@ -102,22 +102,22 @@
 			instrumentationInstalled: false,
 			lastSnapshotDigest: null
 		};
-		window.__PI_CHROME_STATE__ = state;
+		window.__DSH_CHROME_STATE__ = state;
 		return state;
 	}
 	function rememberElement(element) {
 		const state = getPiChromeState();
-		if (!element.__piChromeUid) element.__piChromeUid = "el-" + state.nextElementUid++;
-		const previous = state.refs.get(element.__piChromeUid);
-		state.refs.delete(element.__piChromeUid);
-		if (element.isConnected) state.refs.set(element.__piChromeUid, {
+		if (!element.__dshChromeUid) element.__dshChromeUid = "el-" + state.nextElementUid++;
+		const previous = state.refs.get(element.__dshChromeUid);
+		state.refs.delete(element.__dshChromeUid);
+		if (element.isConnected) state.refs.set(element.__dshChromeUid, {
 			kind: "element",
 			element,
 			verbs: previous?.kind === "element" ? previous.verbs : /* @__PURE__ */ new Set(),
 			context: previous?.kind === "element" ? previous.context : false
 		});
 		capPiChromeRefs(state);
-		return element.__piChromeUid;
+		return element.__dshChromeUid;
 	}
 	function lookupPiChromeElement(uid) {
 		const state = getPiChromeState();
@@ -1032,12 +1032,12 @@
 	}
 	//#endregion
 	//#region src/browser/injected/snapshot.ts
-	globalThis.__piChromeSnapshotPage = snapshotPage;
-	globalThis.__piChromeReadPage = readPage;
-	globalThis.__piChromeInspectTarget = inspectTarget;
-	globalThis.__piChromeRememberElement = rememberElement;
-	globalThis.__piChromeGrantActionVerbs = grantActionVerbs;
-	globalThis.__piChromeMarkContextRef = markContextRef;
-	globalThis.__piChromeRegisterFrontier = registerFrontier;
+	globalThis.__dshChromeSnapshotPage = snapshotPage;
+	globalThis.__dshChromeReadPage = readPage;
+	globalThis.__dshChromeInspectTarget = inspectTarget;
+	globalThis.__dshChromeRememberElement = rememberElement;
+	globalThis.__dshChromeGrantActionVerbs = grantActionVerbs;
+	globalThis.__dshChromeMarkContextRef = markContextRef;
+	globalThis.__dshChromeRegisterFrontier = registerFrontier;
 	//#endregion
 })();

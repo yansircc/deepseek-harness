@@ -1,9 +1,7 @@
 /**
  * Operation contracts for the 25 atomic chrome_* tools plus the system
  * operations, and the `operationResultProtocolContract` used by the protocol
- * fingerprint. Ported from the pi-chrome extension
- * (`src/protocol/operation-contract.ts` + `operation-schemas.ts`) as pure data
- * — no Effect Schema runtime.
+ * fingerprint. Pure data — no schema runtime.
  *
  * @module @deepseek-ai/dsh-tool-chrome/protocol/operations
  */

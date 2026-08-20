@@ -1,8 +1,7 @@
 /**
  * The bridge HTTP server: a local Node HTTP server that (a) accepts owner
  * commands from the DSH agent and (b) serves the Chrome extension's connector
- * handshake/poll/result routes. Ported from the pi-chrome extension
- * (`src/pi/node-bridge.ts`) with Effect replaced by plain async/await.
+ * handshake/poll/result routes.
  *
  * @module @deepseek-ai/dsh-tool-chrome/bridge/server
  */

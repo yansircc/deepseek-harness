@@ -3,10 +3,9 @@
  * substituting the configured bridge port, and serves it through the DSH web
  * server so the WebUI card can link users to a direct download.
  *
- * The extension assets live in `assets/browser-extension/` (built from the
- * pi-chrome source with a placeholder bridge origin). At request time the
- * port is substituted so the downloaded extension connects to THIS bridge,
- * not a hardcoded one.
+ * The extension assets live in `assets/browser-extension/` with a placeholder
+ * bridge origin. At request time the port is substituted so the downloaded
+ * extension connects to this bridge, not a hardcoded one.
  *
  * @module @deepseek-ai/dsh-tool-chrome/bridge/extension-download
  */

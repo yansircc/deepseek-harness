@@ -1,7 +1,6 @@
 /**
- * Wire protocol types for the pi-chrome bridge. Ported from the pi-chrome
- * extension (`src/protocol/schema.ts`) with Effect Schema replaced by plain
- * TypeScript types and hand-written JSON Schema projections.
+ * Wire protocol types for the DSH Chrome bridge. Plain TypeScript types and
+ * hand-written JSON Schema projections.
  *
  * The JSON Schema projections (`toJsonSchema`) feed the protocol fingerprint;
  * they are deliberately simple and deterministic. Because the Chrome

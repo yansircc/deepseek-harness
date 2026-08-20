@@ -1,7 +1,5 @@
 /**
- * Promise-based CommandBroker: the bridge's command mailbox. Ported from the
- * pi-chrome extension (`src/core/broker.ts`) with Effect primitives (Queue,
- * Deferred, Semaphore, SynchronizedRef) replaced by plain Promises.
+ * Promise-based CommandBroker: the bridge's command mailbox.
  *
  * Command lifecycle:
  *   owner sends → pending(queued) → connector polls → pending(executing)

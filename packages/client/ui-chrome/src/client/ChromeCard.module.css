@@ -440,7 +440,7 @@
   padding-top: 8px;
 }
 
-/* Connection status dot (pi-chrome style indicator). */
+/* Connection status dot. */
 .statusRow {
   display: flex;
   align-items: flex-start;

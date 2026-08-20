@@ -1,7 +1,6 @@
 /**
  * Chrome extension package identity: the extension id derived from the
- * packaged public key. Ported from the pi-chrome extension
- * (`src/pi/extension-package.ts`) with Effect replaced by plain functions.
+ * packaged public key.
  *
  * @module @deepseek-ai/dsh-tool-chrome/bridge/extension-package
  */
@@ -51,14 +50,14 @@ export const extensionPackageIdFromPublicKey = (encodedKey: string): string =>
 export const EXTENSION_PACKAGE_ID = extensionPackageIdFromPublicKey(EXTENSION_PUBLIC_KEY)
 
 /**
- * The protocol fingerprint the SHIPPED (prebuilt) Chrome extension speaks:
- * the pipee v1 fingerprint baked into `assets/browser-extension/`. The bridge
- * declares the same value so the connector handshake accepts the extension.
- * Once the extension is rebuilt from this codebase, the computed fingerprint
- * matches by construction and this override can be removed.
+ * The protocol fingerprint the shipped Chrome extension speaks: the v1
+ * fingerprint baked into `assets/browser-extension/`. The bridge declares the
+ * same value so the connector handshake accepts the extension. Once the
+ * extension is rebuilt from this codebase, the computed fingerprint matches
+ * by construction and this override can be removed.
  */
 export const EXTENSION_PROTOCOL_FINGERPRINT =
-  '75eedfbca349aa6afc2fff680af4569711c118b95888a3d783927fb75dc52907'
+  '593fb1f978e0ef1f0e3896f02cde26ac64ac647909a6c93aa7eb7fc4660cd501'
 
 const ASSETS_DIR = fileURLToPath(new URL('../../assets/browser-extension/', import.meta.url))
 

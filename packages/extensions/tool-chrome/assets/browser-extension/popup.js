@@ -13257,19 +13257,19 @@
 			"keyEncoding": "hex",
 			"proofEncoding": "hex",
 			"domains": {
-				"ownerServerProof": "pi-chrome/bridge-owner/server-proof/v1",
-				"ownerRequestProof": "pi-chrome/bridge-owner/request-proof/v1",
-				"connectorServerProof": "pi-chrome/connector/server-proof/v1",
-				"connectorRequestProof": "pi-chrome/connector/request-proof/v1"
+				"ownerServerProof": "dsh-chrome/bridge-owner/server-proof/v1",
+				"ownerRequestProof": "dsh-chrome/bridge-owner/request-proof/v1",
+				"connectorServerProof": "dsh-chrome/connector/server-proof/v1",
+				"connectorRequestProof": "dsh-chrome/connector/request-proof/v1"
 			}
 		},
 		headers: {
-			"ownerProtocolFingerprint": "x-pi-chrome-protocol-fingerprint",
-			"ownerClientNonce": "x-pi-chrome-owner-client-nonce",
-			"ownerBridgeEpoch": "x-pi-chrome-owner-bridge-epoch",
-			"ownerRequestNonce": "x-pi-chrome-owner-request-nonce",
-			"ownerBodySha256": "x-pi-chrome-owner-body-sha256",
-			"ownerProof": "x-pi-chrome-owner-proof"
+			"ownerProtocolFingerprint": "x-dsh-chrome-protocol-fingerprint",
+			"ownerClientNonce": "x-dsh-chrome-owner-client-nonce",
+			"ownerBridgeEpoch": "x-dsh-chrome-owner-bridge-epoch",
+			"ownerRequestNonce": "x-dsh-chrome-owner-request-nonce",
+			"ownerBodySha256": "x-dsh-chrome-owner-body-sha256",
+			"ownerProof": "x-dsh-chrome-owner-proof"
 		},
 		routes: {
 			"owner": {
@@ -14485,7 +14485,7 @@
 	var state = document.querySelector("#state");
 	var effectRuntime = make$7(empty);
 	var render = gen(function* () {
-		const connector = yield* requestConnectorIdentity({ type: "pi-chrome/connector/load" });
+		const connector = yield* requestConnectorIdentity({ type: "dsh-chrome/connector/load" });
 		yield* sync(() => {
 			identity.textContent = `${connector.label} · ${connector.connectorId.slice(0, 8)} · v${connector.extensionDisplayVersion}`;
 			state.textContent = "Connects to the local Pi bridge automatically while this Chrome profile is open.";

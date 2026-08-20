@@ -1,7 +1,5 @@
 /**
  * Owner-side client: authenticates to the bridge and forwards commands.
- * Ported from the pi-chrome extension (`src/pi/bridge-owner-client.ts` and
- * `src/pi/bridge-http.ts`) with Effect replaced by plain async/await.
  *
  * @module @deepseek-ai/dsh-tool-chrome/bridge/owner-client
  */

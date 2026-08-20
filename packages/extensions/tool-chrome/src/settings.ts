@@ -19,7 +19,7 @@ export const CHROME_SETTINGS_NAMESPACE = settingsNamespace('tool-chrome')
 export const DEFAULT_CHROME_PORT = 17318
 
 /** Default owner credential reference. */
-export const DEFAULT_OWNER_CREDENTIAL_REF = 'PI_CHROME_OWNER_CREDENTIAL'
+export const DEFAULT_OWNER_CREDENTIAL_REF = 'DSH_CHROME_OWNER_CREDENTIAL'
 
 /** Shape of the `tool-chrome` settings section. */
 export interface ChromeSettings {
