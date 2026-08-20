@@ -631,6 +631,9 @@ importers:
       '@deepseek-ai/dsh-subagent-codex':
         specifier: workspace:*
         version: link:../packages/subagent/subagent-codex
+      '@deepseek-ai/dsh-subagent-cursor':
+        specifier: workspace:*
+        version: link:../packages/subagent/subagent-cursor
       '@deepseek-ai/dsh-subagent-dsh-sdk':
         specifier: workspace:*
         version: link:../packages/subagent/subagent-dsh-sdk

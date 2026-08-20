@@ -20,7 +20,7 @@ provider 不声明任何可选的启动期能力，`inheritsParentContext: false
 
 | 键 | 默认 | 含义 |
 |---|---|---|
-| `providerName` | `cursor` | `ctx.subagents` 上的注册名。 |
+| `providerName` | `cursor` | `ctx.subagents` 上的非空注册名；每个挂载实例必须唯一。 |
 | `command` | 必填 | Cursor agent 可执行文件（如 `agent`）。 |
 | `model` | — | 可选模型键。缺省 → 子代理用 Cursor 自带模型；指定 → 按模型分池并启动 `--model <model> acp`，一个 provider 可服务多个模型。 |
 | `args` | `[]` | 放在 `acp` 之前的额外参数（如 `--trust`）。 |
@@ -49,7 +49,15 @@ provider 不声明任何可选的启动期能力，`inheritsParentContext: false
       ALL_PROXY: 'socks5://127.0.0.1:2080'
 ```
 
-该 provider 可选，base `dsh` 不挂载。Profile 显式安装 `@deepseek-ai/dsh-subagent-cursor` 并在 host 平面挂载，然后绑定委派工具：
+该包是可选 Profile Bundle。装进目标 Profile 后重启该 Profile；`cordis.patch.yml` 只注册休眠的 `cursor` Host provider，不拉起 Cursor 进程。卸包后下次启动撤回该 provider。
+
+```sh
+dsh plugin --profile <name> add @deepseek-ai/dsh-subagent-cursor
+dsh plugin --profile <name> remove @deepseek-ai/dsh-subagent-cursor
+dsh --profile <name>
+```
+
+安装只决定 Host 上有没有这个 provider，不决定模型能不能调用。Bundle 给出默认休眠的 `cursor` 行；Profile 可以整行替换 config，或再挂 `providerName` / `permission` / `env` 不同的实例。加载实例不会启动进程，直到有绑定工具调用它。每个 `dsh-tool-subagent` 行对应一个 provider，且需要自己的 `toolName`。完整 Agent Preset 若带产品工具行，应保持 `disabled: true`，复制一份再打开。
 
 ```yaml
 - id: tool-subagent-cursor
@@ -57,6 +65,43 @@ provider 不声明任何可选的启动期能力，`inheritsParentContext: false
   config:
     provider: cursor
     toolName: subagent_cursor
+    backgroundMode: one-shot
+    maxDepth: 3
+```
+
+多实例共用同一个包、不同策略：
+
+```yaml
+- id: subagent-cursor-safe
+  name: '@deepseek-ai/dsh-subagent-cursor'
+  config:
+    providerName: cursor-safe
+    command: /Users/you/.local/bin/agent
+    permission: deny
+
+- id: subagent-cursor-edits
+  name: '@deepseek-ai/dsh-subagent-cursor'
+  config:
+    providerName: cursor-edits
+    command: /Users/you/.local/bin/agent
+    args: ['--trust']
+    permission: allowEdits
+```
+
+```yaml
+- id: tool-subagent-cursor-safe
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: cursor-safe
+    toolName: subagent_cursor_safe
+    backgroundMode: one-shot
+    maxDepth: 3
+
+- id: tool-subagent-cursor-edits
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: cursor-edits
+    toolName: subagent_cursor_edits
     backgroundMode: one-shot
     maxDepth: 3
 ```

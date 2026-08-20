@@ -20,7 +20,7 @@ The provider advertises NO optional start-time capabilities and reports `inherit
 
 | Key | Default | Meaning |
 |---|---|---|
-| `providerName` | `cursor` | Registry name on `ctx.subagents`. |
+| `providerName` | `cursor` | Non-empty registry name on `ctx.subagents`; each mounted instance needs a unique value. |
 | `command` | required | The Cursor agent executable (e.g. `agent`). |
 | `model` | — | Optional model key. Absent → the child uses Cursor's own configured model; present → pools are keyed by it and spawn `--model <model> acp`, so one provider can serve several models. |
 | `args` | `[]` | Extra arguments placed before `acp` (e.g. `--trust`). |
@@ -49,7 +49,15 @@ The provider advertises NO optional start-time capabilities and reports `inherit
       ALL_PROXY: 'socks5://127.0.0.1:2080'
 ```
 
-The provider is optional and never mounted by base `dsh`. A Profile that opts in installs `@deepseek-ai/dsh-subagent-cursor` and mounts it on the host plane, then binds a delegation tool to it:
+This package is an optional Profile Bundle. Install it into the target Profile, then restart that Profile; the declared `cordis.patch.yml` layer registers only the dormant `cursor` Host provider and starts no Cursor process. Removing the package withdraws that provider on the next Profile start.
+
+```sh
+dsh plugin --profile <name> add @deepseek-ai/dsh-subagent-cursor
+dsh plugin --profile <name> remove @deepseek-ai/dsh-subagent-cursor
+dsh --profile <name>
+```
+
+Installation controls Host availability, not model permission. The Bundle supplies the dormant default `cursor` row; the Profile may replace that row's complete config or mount additional rows with distinct `providerName`, `permission`, and `env` values. Loading an instance starts no Cursor process until a bound tool calls it. Each `dsh-tool-subagent` row names one provider and needs its own `toolName`. Full Agent Presets that expose a matching product tool should keep that row `disabled: true` until a copied preset opts in.
 
 ```yaml
 - id: tool-subagent-cursor
@@ -57,6 +65,43 @@ The provider is optional and never mounted by base `dsh`. A Profile that opts in
   config:
     provider: cursor
     toolName: subagent_cursor
+    backgroundMode: one-shot
+    maxDepth: 3
+```
+
+Named instances keep the same provider package and different policies:
+
+```yaml
+- id: subagent-cursor-safe
+  name: '@deepseek-ai/dsh-subagent-cursor'
+  config:
+    providerName: cursor-safe
+    command: /Users/you/.local/bin/agent
+    permission: deny
+
+- id: subagent-cursor-edits
+  name: '@deepseek-ai/dsh-subagent-cursor'
+  config:
+    providerName: cursor-edits
+    command: /Users/you/.local/bin/agent
+    args: ['--trust']
+    permission: allowEdits
+```
+
+```yaml
+- id: tool-subagent-cursor-safe
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: cursor-safe
+    toolName: subagent_cursor_safe
+    backgroundMode: one-shot
+    maxDepth: 3
+
+- id: tool-subagent-cursor-edits
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: cursor-edits
+    toolName: subagent_cursor_edits
     backgroundMode: one-shot
     maxDepth: 3
 ```

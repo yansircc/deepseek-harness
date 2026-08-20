@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-subagent-cursor",
   "description": "First-class Cursor subagent backend: a persistent pooled `agent acp` server, one ACP session per delegation, configurable permission policy and model pools",
-  "version": "0.1.0-rc.7",
+  "version": "0.1.0-rc.8",
   "publishConfig": {
     "access": "public"
   },
@@ -28,9 +28,15 @@
   "files": [
     "lib/index.js",
     "lib/invariant.js",
+    "cordis.patch.yml",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
   "peerDependencies": {
     "@deepseek-ai/dsh-agent": "workspace:^",
     "@deepseek-ai/dsh-invariants": "workspace:^",

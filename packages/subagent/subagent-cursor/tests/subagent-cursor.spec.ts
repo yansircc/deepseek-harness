@@ -3,7 +3,7 @@ import { Context } from '@deepseek-ai/cordis'
 import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
 import type { Agent } from '@deepseek-ai/dsh-agent'
-import { existsSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -74,6 +74,21 @@ async function runOnce(ctx: Context, parent?: Agent): Promise<{ stopReason: stri
   await run.dispose()
   return { stopReason: result.stopReason, output: text(result.output) }
 }
+
+describe('Profile Bundle manifest', () => {
+  it('declares a dormant Host provider patch and does not start a Cursor process', () => {
+    const packageDir = fileURLToPath(new URL('..', import.meta.url))
+    const manifest = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8')) as {
+      files?: string[]
+      dsh?: { bundle?: { patch?: string } }
+    }
+    expect(manifest.dsh?.bundle?.patch).toBe('./cordis.patch.yml')
+    expect(manifest.files).toContain('cordis.patch.yml')
+    const patch = readFileSync(join(packageDir, manifest.dsh!.bundle!.patch!), 'utf8')
+    expect(patch).toContain('id: subagent-cursor')
+    expect(patch).toContain("name: '@deepseek-ai/dsh-subagent-cursor'")
+  })
+})
 
 describe('cursorStopReason', () => {
   it('maps each ACP stop reason to the harness vocabulary', () => {

@@ -1,0 +1,6 @@
+# Optional Profile Bundle: register the Cursor provider on the Host plane only.
+# Agent Presets grant the model-facing tool independently.
+
+- insert:
+    - id: subagent-cursor
+      name: '@deepseek-ai/dsh-subagent-cursor'
