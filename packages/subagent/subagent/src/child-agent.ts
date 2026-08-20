@@ -75,7 +75,10 @@ export function resolveChildDepth(parent: Agent, maxDepth: number | undefined): 
  * the deployment default and leave a per-session UI pick in the log only; a
  * child that preferred options would inherit a key the parent is not using.
  * Only when the parent has neither a logged route nor an option does the
- * live `agentDefaultModel` selection apply.
+ * live `agentDefaultModel` selection apply. Reasoning effort follows the
+ * active route when the child stays on that route; a provider/model override
+ * drops the inherited effort so the new model keeps its own default unless
+ * the request names one.
  * @param parent - the delegating parent whose route the child inherits.
  * @param requested - per-child overrides, if any.
  * @param childDepth - the resolved delegation depth to stamp.
@@ -89,23 +92,38 @@ export function resolveChildAgentOptions(
   const parentProvider = parent.options.provider
   const parentModel = parent.options.model
   const parentMaxTokens = parent.options.maxTokens
+  const parentEffort = parent.options.reasoningEffort
   const headerConfig = parent.session.requestHeader()?.config
   const activeProvider = headerConfig?.provider ?? parentProvider
   const activeModel = headerConfig?.model ?? parentModel
+  const activeEffort = headerConfig?.reasoningEffort ?? parentEffort
   const defaultSelection = activeModel === undefined
     ? (parent.ctx.get('agentDefaultModel') as { currentSelection(): DefaultModelSelection } | undefined)?.currentSelection()
     : undefined
+  const override = requested ?? {}
+  const routeChanged = (override.provider !== undefined && override.provider !== activeProvider)
+    || (override.model !== undefined && override.model !== activeModel)
+  const {
+    provider: _requestedProvider,
+    model: _requestedModel,
+    maxTokens: requestedMaxTokens,
+    reasoningEffort: requestedEffort,
+    ...requestedRest
+  } = override
+  const provider = override.provider ?? activeProvider ?? defaultSelection?.provider
+  const model = override.model ?? activeModel ?? defaultSelection?.model
+  const effort = requestedEffort !== undefined
+    ? requestedEffort
+    : routeChanged
+      ? undefined
+      : activeEffort
   return {
-    ...activeProvider !== undefined ? { provider: activeProvider } : {},
-    ...activeProvider === undefined && defaultSelection?.provider !== undefined
-      ? { provider: defaultSelection.provider }
-      : {},
-    ...activeModel !== undefined ? { model: activeModel } : {},
-    ...activeModel === undefined && defaultSelection?.model !== undefined
-      ? { model: defaultSelection.model }
-      : {},
+    ...provider !== undefined ? { provider } : {},
+    ...model !== undefined ? { model } : {},
     ...parentMaxTokens !== undefined ? { maxTokens: parentMaxTokens } : {},
-    ...requested,
+    ...requestedMaxTokens !== undefined ? { maxTokens: requestedMaxTokens } : {},
+    ...effort !== undefined ? { reasoningEffort: effort } : {},
+    ...requestedRest,
     subagentDepth: childDepth,
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-tool-subagent-control",
-  "description": "Globally named send_message, interrupt_agent, and list_agents tools over ctx.subagents continuations",
+  "description": "Globally named send_message, interrupt_agent, list_agents, and list_models tools over ctx.subagents continuations and the live LLM catalog",
   "version": "0.1.0-rc.8",
   "publishConfig": {
     "access": "public"
@@ -25,6 +25,10 @@
     "./list-agents": {
       "types": "./lib/types/list-agents.d.ts",
       "default": "./lib/types/list-agents.js"
+    },
+    "./list-models": {
+      "types": "./lib/types/list-models.d.ts",
+      "default": "./lib/types/list-models.js"
     },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
@@ -56,6 +60,7 @@
     "@deepseek-ai/dsh-session-projection": "workspace:^",
     "@deepseek-ai/dsh-subagent": "workspace:^",
     "@deepseek-ai/dsh-subagent-spawn-in-process": "workspace:^",
+    "@deepseek-ai/dsh-system-prompt": "workspace:^",
     "@deepseek-ai/dsh-tools": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"
   }

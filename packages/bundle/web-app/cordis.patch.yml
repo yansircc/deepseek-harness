@@ -421,6 +421,9 @@
 - id: tool-subagent-list-agents
   disabled: true
 
+- id: tool-subagent-list-models
+  disabled: true
+
 - id: tool-subagent
   disabled: true
 

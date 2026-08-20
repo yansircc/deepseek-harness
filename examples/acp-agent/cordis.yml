@@ -102,13 +102,17 @@
 
 # Continuable background children are selected per delegation tool. The
 # separately loaded control package registers the global `send_message`; its
-# list plugin registers `list_agents`, served through the sessionProjections
-# registry mounted above. `report` is installed only in continuable child scopes.
+# list plugins register `list_agents` (served through the sessionProjections
+# registry mounted above) and `list_models` (the live LLM catalog). `report`
+# is installed only in continuable child scopes.
 - id: tool-subagent-control
   name: '@deepseek-ai/dsh-tool-subagent-control'
 
 - id: tool-subagent-list-agents
   name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+
+- id: tool-subagent-list-models
+  name: '@deepseek-ai/dsh-tool-subagent-control/list-models'
 
 - id: tool-subagent-report
   name: '@deepseek-ai/dsh-tool-subagent-report'

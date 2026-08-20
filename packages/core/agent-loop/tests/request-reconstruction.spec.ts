@@ -111,6 +111,31 @@ describe('request stability across the loop', () => {
     expectPrefixExtension(adapter.requests[0]!, adapter.requests[1]!)
   })
 
+  it('uses create-time AgentOptions.reasoningEffort on the first request', async () => {
+    const reasoning = {
+      efforts: [
+        { id: ReasoningEffortId('high'), name: 'High' },
+        { id: ReasoningEffortId('max'), name: 'Max' },
+      ],
+      defaultEffort: ReasoningEffortId('high'),
+    }
+    const adapter = new MockAdapter([textResponse('seeded')], reasoning)
+    const ctx = await harness(adapter)
+    const agent = ctx.agentLoop.create(SessionId('seed-effort'), {
+      provider: 'mock',
+      model: 'mock',
+      reasoningEffort: ReasoningEffortId('max'),
+    })
+
+    send(agent, 'go')
+    await waitForIdle(ctx, agent)
+
+    expect(adapter.requests[0]?.reasoningEffort).toBe(ReasoningEffortId('max'))
+    const header = agent.session.events.filter(event => event.type === 'request/header').at(-1)
+    expect(header?.data.header.config.reasoningEffort).toBe(ReasoningEffortId('max'))
+    expect(header?.data.header.adapterDefaults).toBeUndefined()
+  })
+
   it('logs adapter defaults, supports per-turn effort changes, and restores the effective value', async () => {
     const reasoning = {
       efforts: [

@@ -274,6 +274,11 @@ interface ToolArgsMap {
     /** children (default) lists direct children only; descendants walks the complete tree below you. */
     scope?: "children" | "descendants";
   } & Record<string, JsonValue>;
+  /** List the live LLM provider routes and their catalog models. Call this before setting provider, model, or reasoning_effort on an in-process subagent or subagent_fork. Omit provider to list every registered route and its model ids. Pass provider to see that route's models, context windows, and supported reasoning efforts. This catalog does not include product subagent transports such as Cursor, Claude Code, or Codex. */
+  list_models: {
+    /** One registered LLM provider route. Omit to list every route; set it to inspect that route's models and reasoning efforts. */
+    provider?: string;
+  } & Record<string, JsonValue>;
   /** Run a foreground fresh-agent Ralph loop toward one immutable objective. Use only when the direct human explicitly asks for Ralph or fresh-agent iteration. Each round opens a new child with no parent conversation or prior child session; the shared workspace is long-term memory, and only a bounded structured report crosses rounds. The call returns when a worker reports completion or a concrete blocker, or at the round limit. Ordinary long-running same-session work belongs to goal tools. */
   ralph: {
     /** The immutable completion objective for every fresh Ralph round. */
@@ -302,7 +307,7 @@ interface ToolArgsMap {
     /** The exact skill name from the available skills list. */
     name: string;
   } & Record<string, JsonValue>;
-  /** Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. Give it a complete, standalone prompt: it does not see this conversation. This tool runs in the background by default, immediately returns a durable subagent id, and keeps the child conversation available for later turns. When that run settles, the runtime sends the parent a notice containing its outcome and any final assistant message; `send_message` starts a later turn in the same child conversation. Set `run_in_background: false` only when your next action depends on receiving the result. */
+  /** Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. Give it a complete, standalone prompt: it does not see this conversation. This tool runs in the background by default, immediately returns a durable subagent id, and keeps the child conversation available for later turns. When that run settles, the runtime sends the parent a notice containing its outcome and any final assistant message; `send_message` starts a later turn in the same child conversation. Set `run_in_background: false` only when your next action depends on receiving the result. Optional provider, model, and reasoning_effort select the child LLM route; omit them to inherit this conversation's active route. Call list_models before choosing a different route. A different provider requires model. A different provider or model drops inherited effort unless this call names one. */
   subagent: {
     /** A short (3-5 word) description of the delegated task, for display. */
     description: string;
@@ -310,13 +315,25 @@ interface ToolArgsMap {
     prompt: string;
     /** Whether to run in the background and return a durable subagent id immediately. Defaults to true. Set false to wait for the result when your next action depends on it. */
     run_in_background?: boolean;
+    /** LLM provider route for the child. Omit to inherit this conversation's active route. Call list_models first. A different provider also requires model. */
+    provider?: string;
+    /** Model id on the selected or inherited provider. Omit to inherit this conversation's active model. Call list_models first. An explicit model must appear in that provider's catalog. */
+    model?: string;
+    /** Reasoning effort for the child. Omit to inherit this conversation's effort when the route is unchanged; a different provider or model drops inherited effort and uses that model's default. Call list_models with the provider to see supported values. Unsupported values are rejected. */
+    reasoning_effort?: string;
   } & Record<string, JsonValue>;
-  /** Delegate a task to a subagent that inherits this conversation: a child agent seeded with all completed turns so far (it does not see the current in-flight turn). Use this when the subtask builds on this conversation's context — a follow-up analysis, a review, a continuation — without consuming this conversation's context for the work itself. You receive its result, not its intermediate steps. This call waits for the subagent and returns its result. */
+  /** Delegate a task to a subagent that inherits this conversation: a child agent seeded with all completed turns so far (it does not see the current in-flight turn). Use this when the subtask builds on this conversation's context — a follow-up analysis, a review, a continuation — without consuming this conversation's context for the work itself. You receive its result, not its intermediate steps. This call waits for the subagent and returns its result. Optional provider, model, and reasoning_effort select the child LLM route; omit them to inherit this conversation's active route. Call list_models before choosing a different route. A different provider requires model. A different provider or model drops inherited effort unless this call names one. */
   subagent_fork: {
     /** A short (3-5 word) description of the delegated task, for display. */
     description: string;
     /** The task for the subagent. It already sees this conversation's completed turns, so build on them freely and state only what is new. */
     prompt: string;
+    /** LLM provider route for the child. Omit to inherit this conversation's active route. Call list_models first. A different provider also requires model. */
+    provider?: string;
+    /** Model id on the selected or inherited provider. Omit to inherit this conversation's active model. Call list_models first. An explicit model must appear in that provider's catalog. */
+    model?: string;
+    /** Reasoning effort for the child. Omit to inherit this conversation's effort when the route is unchanged; a different provider or model drops inherited effort and uses that model's default. Call list_models with the provider to see supported values. Unsupported values are rejected. */
+    reasoning_effort?: string;
   } & Record<string, JsonValue>;
   /** Record and update a structured task list for the current work. Send the ENTIRE list every call — it REPLACES the previous list (there are no partial updates, no per-item edits). Use it to plan multi-step work and show progress: add one todo per concrete step before you start. Mark every todo being actively worked on `in_progress` — several at once when work genuinely runs in parallel (e.g. concurrent subagents or background commands), one for sequential work; while work remains, at least one task should be `in_progress`. Mark a todo `completed` the moment it is done (do not batch completions), and allow no `in_progress` item only once all work is complete. Skip the list for trivial single-step tasks. Statuses: `pending` (not started), `in_progress` (being worked on now), `completed` (finished). */
   todo_write: {
@@ -519,6 +536,24 @@ interface ToolOutputMap {
     parent?: string;
     depth?: number;
   })[];
+  list_models: {
+    providers: {
+      id: string;
+      name: string;
+      models: string[];
+    }[];
+  } | {
+    provider: {
+      id: string;
+      name: string;
+    };
+    models: {
+      id: string;
+      name: string;
+      contextWindow?: number;
+      reasoning_efforts?: string[];
+    }[];
+  };
   ralph: {
     runId: string;
     agentsStarted: number;

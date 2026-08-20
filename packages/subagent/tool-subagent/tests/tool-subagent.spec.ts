@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
-import { CallId } from '@deepseek-ai/dsh-llm'
+import { CallId, LlmAdapter, LlmRuntime, ReasoningEffortId, type LlmModelInfo, type LlmResolvedModelInfo, type StreamChunk } from '@deepseek-ai/dsh-llm'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime, { TOOL_ABORTED_BEFORE_DISPATCH } from '@deepseek-ai/dsh-tools'
 import { assembleContextFor, type Agent } from '@deepseek-ai/dsh-agent'
@@ -100,20 +100,34 @@ describe('dsh-tool-subagent', () => {
     expect(text(result)).toBe('child says hi')
   })
 
-  it('exposes description + prompt + run_in_background to the model (no provider/type parameter)', async () => {
+  it('exposes description + prompt + run_in_background and optional LLM route fields on in-process transports', async () => {
     const ctx = await setup({ provider: 'mock' })
     const schema = ctx.tools.schemas().find(s => s.name === 'subagent')
     expect(schema).toBeDefined()
     const props = (schema!.parameters as { properties?: Record<string, unknown> }).properties ?? {}
-    expect(Object.keys(props).sort()).toEqual(['description', 'prompt', 'run_in_background'])
+    expect(Object.keys(props).sort()).toEqual([
+      'description',
+      'model',
+      'prompt',
+      'provider',
+      'reasoning_effort',
+      'run_in_background',
+    ])
     expect(schema!.description).toContain('job_output')
+    expect(schema!.description).toContain('list_models')
   })
 
   it('omits run_in_background entirely when the instance disables it (schema and capability never disagree)', async () => {
     const ctx = await setup({ provider: 'mock', enableRunInBackground: false })
     const schema = ctx.tools.schemas().find(s => s.name === 'subagent')
     const props = (schema!.parameters as { properties?: Record<string, unknown> }).properties ?? {}
-    expect(Object.keys(props).sort()).toEqual(['description', 'prompt'])
+    expect(Object.keys(props).sort()).toEqual([
+      'description',
+      'model',
+      'prompt',
+      'provider',
+      'reasoning_effort',
+    ])
     expect(schema!.description).not.toContain('job_output')
   })
 
@@ -1365,5 +1379,70 @@ describe('depth budget configuration', () => {
     await callSubagent(ctx, { description: 'd', prompt: 'p' })
     expect(requests[0]?.maxDepth).toBeUndefined()
     expect(requests[0]?.toolFilter).toBeUndefined()
+  })
+
+  it('omits LLM route fields on a product transport and rejects them at execution', async () => {
+    const ctx = await setup({ provider: 'mock' }, {
+      capabilities: { persona: false, toolFilter: false },
+    })
+    const schema = ctx.tools.schemas().find(s => s.name === 'subagent')
+    const props = (schema!.parameters as { properties?: Record<string, unknown> }).properties ?? {}
+    expect(Object.keys(props).sort()).toEqual(['description', 'prompt', 'run_in_background'])
+    const result = await callSubagent(ctx, {
+      description: 'd',
+      prompt: 'p',
+      provider: 'kimi-coding',
+      model: 'kimi-k2',
+    })
+    expect(result.isError).toBe(true)
+    expect(text(result)).toContain('does not honor provider, model, or reasoning_effort')
+  })
+
+  it('forwards an explicit catalog route onto the child start request', async () => {
+    let seen: SubagentStartRequest | undefined
+    const ctx = await setup({ provider: 'mock' }, {
+      onStart: (request) => { seen = request },
+    })
+    await ctx.plugin(LlmRuntime)
+    ctx.llm.registerAdapter(['kimi-coding'], new class extends LlmAdapter {
+      override listModels(provider: string): Promise<readonly LlmModelInfo[]> {
+        return Promise.resolve([{ provider, id: 'kimi-k2', name: 'Kimi K2' }])
+      }
+
+      override resolveModel(provider: string, model: string): Promise<LlmResolvedModelInfo> {
+        return Promise.resolve({
+          provider,
+          id: model,
+          name: model,
+          reasoning: { efforts: [{ id: ReasoningEffortId('high'), name: 'High' }] },
+        })
+      }
+
+      async * stream(): AsyncIterable<StreamChunk> {
+        throw new Error('unused')
+      }
+    }())
+    const parent = {
+      id: SessionId('parent-1'),
+      options: { provider: 'zai-coding-cn', model: 'glm-5.3', reasoningEffort: ReasoningEffortId('max') },
+      session: {
+        requestHeader: () => ({
+          config: { provider: 'zai-coding-cn', model: 'glm-5.3', reasoningEffort: ReasoningEffortId('max') },
+        }),
+      },
+    } as unknown as Agent
+    const result = await callSubagent(ctx, {
+      description: 'd',
+      prompt: 'p',
+      provider: 'kimi-coding',
+      model: 'kimi-k2',
+      reasoning_effort: 'high',
+    }, { agent: parent })
+    expect(result.isError).toBe(false)
+    expect(seen?.agentOptions).toEqual({
+      provider: 'kimi-coding',
+      model: 'kimi-k2',
+      reasoningEffort: ReasoningEffortId('high'),
+    })
   })
 })

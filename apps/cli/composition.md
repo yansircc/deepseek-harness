@@ -118,6 +118,8 @@ flowchart LR
   cfg --> plugin_dsh_base_tool_subagent_control
   plugin_dsh_base_tool_subagent_list_agents["tool-subagent-list-agents<br/>@deepseek-ai/dsh-tool-subagent-control/list-agents"]
   cfg --> plugin_dsh_base_tool_subagent_list_agents
+  plugin_dsh_base_tool_subagent_list_models["tool-subagent-list-models<br/>@deepseek-ai/dsh-tool-subagent-control/list-models"]
+  cfg --> plugin_dsh_base_tool_subagent_list_models
   plugin_dsh_base_tool_subagent["tool-subagent<br/>@deepseek-ai/dsh-tool-subagent"]
   cfg --> plugin_dsh_base_tool_subagent
   plugin_dsh_base_tool_subagent_fork["tool-subagent-fork<br/>@deepseek-ai/dsh-tool-subagent"]
@@ -154,6 +156,10 @@ flowchart LR
   cfg --> plugin_dsh_base_web_search_deepseek
   plugin_dsh_base_tool_web["tool-web<br/>@deepseek-ai/dsh-tool-web"]
   cfg --> plugin_dsh_base_tool_web
+  plugin_dsh_base_tool_zeroy["tool-zeroy<br/>@deepseek-ai/dsh-tool-zeroy"]
+  cfg --> plugin_dsh_base_tool_zeroy
+  plugin_dsh_base_tool_chrome["tool-chrome<br/>@deepseek-ai/dsh-tool-chrome"]
+  cfg --> plugin_dsh_base_tool_chrome
   plugin_dsh_base_tools["tools<br/>@deepseek-ai/dsh-tools"]
   cfg --> plugin_dsh_base_tools
   plugin_dsh_base_system_prompt["system-prompt<br/>@deepseek-ai/dsh-system-prompt"]
@@ -223,6 +229,7 @@ flowchart LR
 | `subagent-fork-in-process` | `@deepseek-ai/dsh-subagent-fork-in-process` |
 | `tool-subagent-control` | `@deepseek-ai/dsh-tool-subagent-control` |
 | `tool-subagent-list-agents` | `@deepseek-ai/dsh-tool-subagent-control/list-agents` |
+| `tool-subagent-list-models` | `@deepseek-ai/dsh-tool-subagent-control/list-models` |
 | `tool-subagent` | `@deepseek-ai/dsh-tool-subagent` |
 | `tool-subagent-fork` | `@deepseek-ai/dsh-tool-subagent` |
 | `tool-subagent-report` | `@deepseek-ai/dsh-tool-subagent-report` |
@@ -241,6 +248,8 @@ flowchart LR
 | `web` | `@deepseek-ai/dsh-web` |
 | `web-search-deepseek` | `@deepseek-ai/dsh-web-search-deepseek` |
 | `tool-web` | `@deepseek-ai/dsh-tool-web` |
+| `tool-zeroy` | `@deepseek-ai/dsh-tool-zeroy` |
+| `tool-chrome` | `@deepseek-ai/dsh-tool-chrome` |
 | `tools` | `@deepseek-ai/dsh-tools` |
 | `system-prompt` | `@deepseek-ai/dsh-system-prompt` |
 | `agent-loop` | `@deepseek-ai/dsh-agent-loop` |

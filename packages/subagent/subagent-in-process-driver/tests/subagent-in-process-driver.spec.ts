@@ -1,4 +1,4 @@
-import { CallId, createUserMessage } from '@deepseek-ai/dsh-llm'
+import { CallId, createUserMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
 import { describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import { type Agent, type AgentOptions } from '@deepseek-ai/dsh-agent'
@@ -111,6 +111,50 @@ describe('startInProcessRun', () => {
     } as unknown as Agent
     expect(resolveChildAgentOptions(parent, undefined, 1))
       .toMatchObject({ provider: 'active-provider', model: 'active-model', subagentDepth: 1 })
+  })
+
+  it('inherits the parent active reasoning effort when the child stays on that route', () => {
+    const parent = {
+      options: { provider: 'mock', model: 'm', reasoningEffort: ReasoningEffortId('high') },
+      session: {
+        requestHeader: () => ({
+          config: { provider: 'mock', model: 'm', reasoningEffort: ReasoningEffortId('max') },
+        }),
+      },
+      ctx: { get: () => undefined },
+    } as unknown as Agent
+    expect(resolveChildAgentOptions(parent, undefined, 1)).toMatchObject({
+      provider: 'mock',
+      model: 'm',
+      reasoningEffort: ReasoningEffortId('max'),
+      subagentDepth: 1,
+    })
+  })
+
+  it('drops inherited reasoning effort when the request changes provider or model', () => {
+    const parent = {
+      options: { provider: 'mock', model: 'm', reasoningEffort: ReasoningEffortId('max') },
+      session: {
+        requestHeader: () => ({
+          config: { provider: 'mock', model: 'm', reasoningEffort: ReasoningEffortId('max') },
+        }),
+      },
+      ctx: { get: () => undefined },
+    } as unknown as Agent
+    expect(resolveChildAgentOptions(parent, { model: 'other' }, 1)).toEqual({
+      provider: 'mock',
+      model: 'other',
+      subagentDepth: 1,
+    })
+    expect(resolveChildAgentOptions(parent, {
+      provider: 'other',
+      model: 'm',
+      reasoningEffort: ReasoningEffortId('high'),
+    }, 1)).toMatchObject({
+      provider: 'other',
+      model: 'm',
+      reasoningEffort: ReasoningEffortId('high'),
+    })
   })
 
   it('falls back to agentDefaultModel only when the parent has neither an explicit model nor a logged route', () => {

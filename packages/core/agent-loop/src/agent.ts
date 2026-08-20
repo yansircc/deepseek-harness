@@ -443,6 +443,7 @@ export class ReactLoopAgent implements Agent {
       && persistedHeader?.adapterDefaults?.reasoningEffort !== true
       ? persistedConfig.reasoningEffort
       : undefined
+    const seedEffort = reasoningEffort ?? this.options.reasoningEffort
     const maxTokens = this.options.maxTokens
     const seedConfig = deepFreeze(structuredClone(
       this.requestHeaderLogged
@@ -450,7 +451,7 @@ export class ReactLoopAgent implements Agent {
         ? requestProposal(persistedHeader!)
         : {
           ...route,
-          ...reasoningEffort === undefined ? {} : { reasoningEffort },
+          ...seedEffort === undefined ? {} : { reasoningEffort: seedEffort },
           ...maxTokens === undefined ? {} : { maxTokens },
         },
     ))
