@@ -2216,6 +2216,19 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'workspaceGit',
+    summary: 'Host git sample for one cwd.',
+    description: 'Host git sample for one cwd. A missing git binary, a path that is not a work tree, or a timeout resolves `{ present: false }` rather than throwing.',
+    methods: [
+      {
+        signature: 'sample(cwd: string): Promise<WorkspaceGitSample>',
+        description: 'Sample one cwd. Empty cwd returns `{ present: false }` without spawning git.',
+        parameters: [{ name: 'cwd', description: 'directory to sample, usually a session cwd.' }],
+        returns: 'the sample for header chrome.',
+      },
+    ],
+  },
+  {
     key: 'workspaceRegistry',
     summary: 'Durable workspace registry.',
     description: 'Durable workspace registry. Startup waits for `sessionPersistence`, builds one canonical-cwd header index, and completes the one-time history bootstrap before the service becomes active. The persistence dependency is mandatory so an unavailable peer can never be mistaken for an empty history and commit the initialized marker.',
@@ -4831,6 +4844,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'WorkflowStopReason',
     declaration: 'export type WorkflowStopReason = \'completed\' | \'cancelled\' | \'error\';',
+  },
+  {
+    name: 'WorkspaceGitSample',
+    declaration: 'export type WorkspaceGitSample = {\n    present: false;\n} | {\n    present: true;\n    shortHead: string;\n    dirty: number;\n    insertions: number;\n    deletions: number;\n    branch?: string;\n    ahead?: number;\n    behind?: number;\n};',
   },
 ]
 

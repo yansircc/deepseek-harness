@@ -7,7 +7,7 @@
 import { z } from 'zod'
 import type { RequestPayload, ResponseValue } from './rpc-map.ts'
 import type { Wire } from './rpc.schema.ts'
-import type { WorkspaceView } from './workspace.ts'
+import type { WorkspaceGitStatus, WorkspaceView } from './workspace.ts'
 import { sessionIdSchema, workspaceIdSchema } from './sessions.schema.ts'
 
 export { workspaceIdSchema } from './sessions.schema.ts'
@@ -98,3 +98,23 @@ export const workspaceArchiveSessionRequestSchema = z.object({
 export const workspaceArchiveSessionValueSchema = z.object({
   archivedSessionIds: z.array(sessionIdSchema),
 }) satisfies z.ZodType<Wire<ResponseValue<'workspace.archiveSession'>>>
+
+/** workspace.gitStatus request payload: any directory the client already knows. */
+export const workspaceGitStatusRequestSchema = z.object({
+  path: z.string(),
+}) satisfies z.ZodType<Wire<RequestPayload<'workspace.gitStatus'>>>
+
+/** workspace.gitStatus response value. */
+export const workspaceGitStatusValueSchema = z.discriminatedUnion('present', [
+  z.object({ present: z.literal(false) }),
+  z.object({
+    present: z.literal(true),
+    shortHead: z.string(),
+    dirty: z.number().int().nonnegative(),
+    insertions: z.number().int().nonnegative(),
+    deletions: z.number().int().nonnegative(),
+    branch: z.string().optional(),
+    ahead: z.number().int().nonnegative().optional(),
+    behind: z.number().int().nonnegative().optional(),
+  }),
+]) satisfies z.ZodType<Wire<WorkspaceGitStatus>>

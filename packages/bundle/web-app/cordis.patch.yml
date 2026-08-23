@@ -73,6 +73,11 @@
     - id: workspace
       name: '@deepseek-ai/dsh-workspace'
 
+    # Cwd git sample for session-header chrome. Mounted before the gateway
+    # so workspace.gitStatus can resolve ctx.get('workspaceGit') at call time.
+    - id: workspace-git
+      name: '@deepseek-ai/dsh-workspace-git'
+
     - id: session-projection-cache
       name: '@deepseek-ai/dsh-session-projection-cache'
       config:

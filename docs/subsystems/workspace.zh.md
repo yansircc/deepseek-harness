@@ -2,7 +2,7 @@
 
 [English](workspace.md) | 中文
 
-工作区（workspace）是用户工作目录的持久记录：一个建立在规范路径之上的稳定 id、一个显示标题，以及归属于它的会话的有序账本。该子系统是单个包（package）（[dsh-workspace](../../packages/workspace/workspace)，`ctx.workspaceRegistry`）——一项宿主侧可选能力，不属于 agent loop（智能体循环）主干，并且对模型不可见（没有工具、没有提示词文本、没有会话事件）。它通过[存储领域数据形式](storage.md)存储自己的记录，并对照 [`SessionHeader.cwd`](persistence.md#sessionheader--metadata-beside-the-log) 校验会话成员资格，因此 `storageDomain` 与 `sessionPersistence` 是必需的启动依赖：持久化这一依赖不可用时，插件保持 pending，而不是把这种不可用误当作空历史。设计记录：[领域 KV 存储 Agent Note（agent 决策记录）](../../.agents/notes/proposed/architecture/2026-07-24-domain-kv-storage-and-workspace.md)；引导与 GUI 顺序：[Workspace UI 产品流程 Agent Note](../../.agents/notes/implemented/feature/2026-07-25-workspace-ui-product-flow.md)。
+工作区（workspace）是用户工作目录的持久记录：一个建立在规范路径之上的稳定 id、一个显示标题，以及归属于它的会话的有序账本。该子系统是两个包（package）：注册表（[dsh-workspace](../../packages/workspace/workspace)，`ctx.workspaceRegistry`）和供会话页头展示的 Host git 采样（[dsh-workspace-git](../../packages/workspace/workspace-git)，`ctx.workspaceGit`）。两者都是宿主侧可选能力，不属于 agent loop（智能体循环）主干，并且对模型不可见（没有工具、没有提示词文本、没有会话事件）。注册表通过[存储领域数据形式](storage.md)存储自己的记录，并对照 [`SessionHeader.cwd`](persistence.md#sessionheader--metadata-beside-the-log) 校验会话成员资格，因此 `storageDomain` 与 `sessionPersistence` 是必需的启动依赖：持久化这一依赖不可用时，插件保持 pending，而不是把这种不可用误当作空历史。git 采样是对一个 cwd 的 Host 读取，从不写入会话日志；由 `workspace.gitStatus` 对外提供。设计记录：[领域 KV 存储 Agent Note（agent 决策记录）](../../.agents/notes/proposed/architecture/2026-07-24-domain-kv-storage-and-workspace.md)；引导与 GUI 顺序：[Workspace UI 产品流程 Agent Note](../../.agents/notes/implemented/feature/2026-07-25-workspace-ui-product-flow.md)；展示开关：[会话展示开关](../../.agents/notes/implemented/feature/2026-08-20-conversation-display-toggles.md)。
 
 源码：[`packages/workspace/workspace/src/types.ts`](../../packages/workspace/workspace/src/types.ts)
 
@@ -121,9 +121,44 @@ interface Workspace {
 
 会话的 cwd 在创建时由创建者赋予，而不是由本注册表赋予——API 网关从所选工作区的 `path` 解析新会话的 cwd（回退到显式或默认 cwd），先创建会话使 cwd 落入其不可变的 [`SessionHeader`](persistence.md#sessionheader--metadata-beside-the-log)，再调用 `attachSession`，后者会把已存储的 header cwd 与工作区路径重新校验一遍。首次成功启动时，注册表仅凭已持久化的 header（`id`、`cwd`、`createdAt`——绝不读事件正文）引导历史：把规范 cwd 有效的会话按目录分组为工作区，最新的排在最前；「已初始化」标记最后写入，因此被中断的引导可以安全续跑。引导只发生这一次：没有 cwd 的历史遗留会话保持 Ungrouped，此后创建的会话只能通过 `attachSession` 加入工作区。
 
+## Host git 采样
+
+`WorkspaceGit`（`ctx.workspaceGit`）为一个 cwd 采样，供会话页头展示。采样是对宿主文件系统的读取，从不写入会话日志。`workspace.gitStatus` 提供结构相同的线协议类型（[会话展示开关](../../.agents/notes/implemented/feature/2026-08-20-conversation-display-toggles.md)）。
+
+源码：[`packages/workspace/workspace-git/src/sample.ts`](../../packages/workspace/workspace-git/src/sample.ts)
+
+```ts type-equiv
+/**
+ * One cwd's git facts for header chrome. Structurally matches the
+ * `workspace.gitStatus` wire type; this package never imports the browser
+ * contract. `present: false` when the path is empty, not a work tree, git is
+ * missing, or the sample timed out. Added and deleted lines are
+ * `git diff --shortstat HEAD`; untracked files raise `dirty` only.
+ */
+type WorkspaceGitSample =
+  | { present: false }
+  | {
+    present: true
+    /** Short HEAD SHA. */
+    shortHead: string
+    /** Porcelain v1 entry count, including untracked. */
+    dirty: number
+    /** Insertions versus HEAD. */
+    insertions: number
+    /** Deletions versus HEAD. */
+    deletions: number
+    /** Symbolic-ref short name when attached; omitted when detached. */
+    branch?: string
+    /** Commits ahead of upstream; omitted when no upstream. */
+    ahead?: number
+    /** Commits behind upstream; omitted when no upstream. */
+    behind?: number
+  }
+```
+
 ## 消费方
 
-[dsh-host-apiproxy](../../packages/host/apiproxy) 是产品消费方：它经 `ctx.workspaceRegistry` 向 GUI 客户端提供工作区的 CRUD，并执行上文「先建会话再 attach」的流程。[dsh-agent-instructions](../../packages/context/agent-instructions) 尽管名字如此，却**不是**消费方：它在 agent 自己的 cwd 下发现 AGENTS.md 风格的指令文件，从不触碰 `ctx.workspaceRegistry`——两者共用的这个词指的是用户的工作目录，而非本注册表的实体。
+[dsh-host-apiproxy](../../packages/host/apiproxy) 是产品消费方：它经 `ctx.workspaceRegistry` 向 GUI 客户端提供工作区的 CRUD，执行上文「先建会话再 attach」的流程，并在挂载了 `ctx.workspaceGit` 时提供 `workspace.gitStatus`。[dsh-client-ui-conversation](../../packages/client/ui-conversation) 把采样渲染为会话页头。[dsh-agent-instructions](../../packages/context/agent-instructions) 尽管名字如此，却**不是**消费方：它在 agent 自己的 cwd 下发现 AGENTS.md 风格的指令文件，从不触碰 `ctx.workspaceRegistry`——两者共用的这个词指的是用户的工作目录，而非本注册表的实体。
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
@@ -148,6 +183,23 @@ abstract capability(): DirectoryPickerCapability
 ```
 
 Source: [`packages/host/directory-picker/src/index.ts:131`](../../packages/host/directory-picker/src/index.ts)
+
+<a id="ctxworkspacegit--workspacegit"></a>
+
+### `ctx.workspaceGit` — `WorkspaceGit`
+
+Host git sample for one cwd. A missing git binary, a path that is not a work tree, or a timeout resolves `{ present: false }` rather than throwing.
+
+```ts cordis-catalog
+/**
+ * Sample one cwd. Empty cwd returns `{ present: false }` without spawning git.
+ * @param cwd - directory to sample, usually a session cwd.
+ * @returns the sample for header chrome.
+ */
+sample(cwd: string): Promise<WorkspaceGitSample>
+```
+
+Source: [`packages/workspace/workspace-git/src/index.ts:41`](../../packages/workspace/workspace-git/src/index.ts)
 
 <a id="ctxworkspaceregistry--workspaceregistry"></a>
 

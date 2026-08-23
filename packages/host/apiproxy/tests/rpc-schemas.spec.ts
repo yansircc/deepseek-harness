@@ -21,6 +21,7 @@ import {
 } from '../src/api/host.schema.ts'
 import {
   workspaceArchiveSessionRequestSchema, workspaceArchiveSessionValueSchema,
+  workspaceGitStatusRequestSchema, workspaceGitStatusValueSchema,
   workspaceCreateRequestSchema, workspaceCreateValueSchema, workspaceIdSchema,
   workspaceDeleteRequestSchema, workspaceDeleteValueSchema,
   workspaceInsertBeforeRequestSchema, workspaceInsertBeforeValueSchema,
@@ -361,6 +362,16 @@ describe('workspace domain schemas', () => {
     expect(workspaceListRequestSchema.parse({})).toEqual({})
     expect(workspaceListValueSchema.parse({ items: [view], archivedSessionIds: ['s1'] }).items).toHaveLength(1)
     expect(() => workspaceListValueSchema.parse({ items: [view] })).toThrow()
+  })
+
+  it('gitStatus request/value accept a path and the present discriminant', () => {
+    expect(workspaceGitStatusRequestSchema.parse({ path: '/p' }).path).toBe('/p')
+    expect(() => workspaceGitStatusRequestSchema.parse({})).toThrow()
+    expect(workspaceGitStatusValueSchema.parse({ present: false })).toEqual({ present: false })
+    expect(workspaceGitStatusValueSchema.parse({
+      present: true, shortHead: 'abc', dirty: 1, insertions: 2, deletions: 3, branch: 'main', ahead: 1,
+    })).toMatchObject({ present: true, branch: 'main', ahead: 1 })
+    expect(() => workspaceGitStatusValueSchema.parse({ present: true })).toThrow()
   })
 
   it('archiveSession request/value carry the id and the full updated set', () => {

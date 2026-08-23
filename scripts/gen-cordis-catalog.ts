@@ -108,6 +108,7 @@ export const SERVICE_PAGE: Record<string, string> = {
   web: 'web.md',
   workflowEngine: 'workflow.md',
   workspaceRegistry: 'workspace.md',
+  workspaceGit: 'workspace.md',
 }
 
 /**
@@ -488,6 +489,7 @@ export const LINK_MAP: Readonly<Record<string, string>> = {
   DomainFacility: 'storage.md',
   Workspace: 'workspace.md',
   WorkspaceId: 'workspace.md',
+  WorkspaceGitSample: 'workspace.md',
   WebBootGraph: 'client-modules.md',
   SessionTelemetryRecord: 'session-telemetry.md',
   WorkflowRunInfo: 'workflow.md',

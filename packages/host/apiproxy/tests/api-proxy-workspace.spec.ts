@@ -13,6 +13,7 @@ import UserQuestionService from '@deepseek-ai/dsh-user-questions'
 import { DirectoryPickerError } from '@deepseek-ai/dsh-host-directory-picker'
 import type { DirectoryPickerCapability } from '@deepseek-ai/dsh-host-directory-picker'
 import WorkspaceRegistry from '@deepseek-ai/dsh-workspace'
+import WorkspaceGit from '@deepseek-ai/dsh-workspace-git'
 import type { HostFrame, WorkspaceId } from '@deepseek-ai/dsh-host-apiproxy/api'
 import type { RpcRequest, RpcResponse } from '@deepseek-ai/dsh-host-apiproxy/api/rpc'
 import { RpcId } from '@deepseek-ai/dsh-host-apiproxy/api/rpc'
@@ -567,5 +568,29 @@ describe('Host Workspace increments', () => {
       error: { code: 'session-not-found', details: { sessionId: 'session-ghost' } },
     })
     abort.abort()
+  })
+
+  it('samples git status when workspace-git is mounted and refuses an empty path', async () => {
+    const { api, ctx, root } = await harness()
+    await ctx.plugin(WorkspaceGit)
+    const path = stageDir(root, 'not-a-repo')
+    expect(expectOk(await api.workspace.gitStatus(request({ path })))).toEqual({ present: false })
+    const empty = await api.workspace.gitStatus(request({ path: '' }))
+    expect(empty.result).toMatchObject({
+      ok: false,
+      error: { code: 'workspace-invalid-path', details: { path: '' } },
+    })
+  })
+
+  it('fails gitStatus with internal when workspace-git is not mounted', async () => {
+    const { api, root } = await harness()
+    const missing = await api.workspace.gitStatus(request({ path: stageDir(root, 'no-plugin') }))
+    expect(missing.result).toMatchObject({
+      ok: false,
+      error: {
+        code: 'internal',
+        message: 'workspace.gitStatus requires @deepseek-ai/dsh-workspace-git',
+      },
+    })
   })
 })

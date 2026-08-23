@@ -10,6 +10,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-test-runtime'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
+import { createSnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import type {
   ChatConversationViewNode, ConversationNode,
 } from '@deepseek-ai/dsh-client-runtime/client'
@@ -23,6 +24,7 @@ import {
 } from '../src/client/chat/MessageItem.tsx'
 import { AssistantMarkdown, type AssistantMarkdownProps } from '../src/client/chat/AssistantMarkdown.tsx'
 import { StatsLine, type StatsLineProps } from '../src/client/chat/StatsLine.tsx'
+import { DEFAULT_DISPLAY_FLAGS } from '../src/submission-settings.ts'
 import { zh } from '../src/client/locales.ts'
 import { chatSnapshotFixture } from './chat-snapshot-fixture.client.ts'
 
@@ -1037,8 +1039,9 @@ describe('small branch tails', () => {
         useProjection={(key: string) => key === 'tokenUsage'
           ? { uncachedInputTokens: 0, outputTokens: 10, cacheReadTokens: 0, cacheWriteTokens: 0 }
           : undefined}
+        useDisplay={bindSnapshotSelector(createSnapshotStore(DEFAULT_DISPLAY_FLAGS))}
       />,
     )
-    expect(view.container.textContent).toBe('1 轮 · 1 步| 输入 0 tok · 输出 10 tok')
+    expect(view.container.textContent).toBe('1 轮 · 1 步| 未缓存 0 · 输入 0 · 输出 10')
   })
 })

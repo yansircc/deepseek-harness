@@ -3299,6 +3299,23 @@ export interface Config {
 
 Source: [`packages/workflow/workflow-worker-thread/src/index.ts:32`](../packages/workflow/workflow-worker-thread/src/index.ts)
 
+<a id="deepseek-aidsh-workspace-git"></a>
+
+## `@deepseek-ai/dsh-workspace-git`
+
+```ts config-catalog
+/** Plugin config. All optional — `static Config` supplies the defaults. */
+export interface Config {
+  /**
+   * Per-sample budget for the git subprocesses, milliseconds. Covers every
+   * child in one `sample()` call.
+   */
+  timeoutMs?: number
+}
+```
+
+Source: [`packages/workspace/workspace-git/src/index.ts:18`](../packages/workspace/workspace-git/src/index.ts)
+
 ## Loadable plugins with no config
 
 These load from a `cordis.yml` entry with no `config:` block; they declare no configuration API.

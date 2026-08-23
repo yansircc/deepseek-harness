@@ -3301,6 +3301,23 @@ export interface Config {
 
 来源：[`packages/workflow/workflow-worker-thread/src/index.ts:32`](../packages/workflow/workflow-worker-thread/src/index.ts)
 
+<a id="deepseek-aidsh-workspace-git"></a>
+
+## `@deepseek-ai/dsh-workspace-git`
+
+```ts config-catalog
+/** Plugin config. All optional — `static Config` supplies the defaults. */
+export interface Config {
+  /**
+   * Per-sample budget for the git subprocesses, milliseconds. Covers every
+   * child in one `sample()` call.
+   */
+  timeoutMs?: number
+}
+```
+
+来源：[`packages/workspace/workspace-git/src/index.ts:18`](../packages/workspace/workspace-git/src/index.ts)
+
 ## 无配置的可加载插件
 
 这些插件通过 `cordis.yml` 中不含 `config:` 块的条目加载；它们未声明任何配置接口。

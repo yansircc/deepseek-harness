@@ -15,6 +15,7 @@ import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts
 import { createChatStore } from '../src/client/stores.ts'
 import { AssistantMarkdown, type AssistantMarkdownProps } from '../src/client/chat/AssistantMarkdown.tsx'
 import { StatsLine } from '../src/client/chat/StatsLine.tsx'
+import { DEFAULT_DISPLAY_FLAGS } from '../src/submission-settings.ts'
 import { DetailsPanel } from '../src/client/skeleton/DetailsPanel.tsx'
 import { zh } from '../src/client/locales.ts'
 import { chatSnapshotFixture } from './chat-snapshot-fixture.client.ts'
@@ -95,6 +96,7 @@ describe('render branch tails', () => {
         t={t}
         useSession={bindSnapshotSelector(source) as unknown as UseSession<ConversationSnapshot>}
         useProjection={() => undefined}
+        useDisplay={bindSnapshotSelector(createSnapshotStore(DEFAULT_DISPLAY_FLAGS))}
       />,
     )
     expect(view.container.textContent).toBe('2 轮 · 3 步')

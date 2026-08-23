@@ -4,12 +4,13 @@
 
 import { Fragment, memo, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { ConversationSnapshot, UseProjection } from '@deepseek-ai/dsh-client-runtime/client'
-import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
+import type { ConversationSnapshot, SnapshotStore, UseProjection } from '@deepseek-ai/dsh-client-runtime/client'
+import type { InjectFace, SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 // Type-only: merges the sessionStats key into SessionProjectionMap for useProjection.
 import type {} from '@deepseek-ai/dsh-session-stats/client'
 import type { ContextPressureProjection, TokenUsageProjection } from '@deepseek-ai/dsh-token-meter/client'
 import type { ComposerBarProps } from '../contract/slots.ts'
+import type { ConversationDisplayPreferences } from '../../submission-settings.ts'
 import { formatTokensPerSecond } from './message-chrome.ts'
 import { assistantStepReading } from './turn-metrics.ts'
 import css from './StatsLine.module.css'
@@ -21,6 +22,8 @@ interface WindowStats {
   llmMs: number
   /** Summed tool wall time (tool/call → tool/result); 0 when no pair is in-window. */
   toolMs: number
+  /** Matched tool call→result pairs that contributed to `toolMs`. */
+  toolCalls: number
   /** Summed first-token latency over `ttftSteps`; 0 when no step records it. */
   ttftMs: number
   /** Steps carrying a recorded TTFT. */
@@ -48,13 +51,17 @@ export function deriveStats(nodes: ConversationSnapshot['nodes']): WindowStats {
   let steps = 0
   let llmMs = 0
   let toolMs = 0
+  let toolCalls = 0
   let ttftMs = 0
   let ttftSteps = 0
   let decodeMs = 0
   let decodeTokens = 0
   for (const node of nodes) {
     if (node.kind === 'tool-result') {
-      if (node.callTime !== null) toolMs += Math.max(0, node.time - node.callTime)
+      if (node.callTime !== null) {
+        toolMs += Math.max(0, node.time - node.callTime)
+        toolCalls += 1
+      }
       continue
     }
     if (node.kind !== 'assistant') continue
@@ -73,7 +80,7 @@ export function deriveStats(nodes: ConversationSnapshot['nodes']): WindowStats {
       decodeTokens += reading.outputTokens
     }
   }
-  return { turns: turns.size, steps, llmMs, toolMs, ttftMs, ttftSteps, decodeMs, decodeTokens }
+  return { turns: turns.size, steps, llmMs, toolMs, toolCalls, ttftMs, ttftSteps, decodeMs, decodeTokens }
 }
 
 /**
@@ -152,17 +159,32 @@ export function contextOccupancy(
   }
 }
 
+/** Registration-side display-preference face. */
+export interface StatsLineInjected {
+  hooks: {
+    /** Persisted display flags bound as useDisplay. */
+    display: SnapshotStore<ConversationDisplayPreferences>
+  }
+}
+
 /** Props: the conversation-snapshot selector plus the projection read seat. */
 export interface StatsLineProps {
   useSession: SnapshotSelectorHook<ConversationSnapshot>
   useProjection: UseProjection
+  /** Persisted display flags; every group still hides itself when it has no data. */
+  useDisplay: SnapshotSelectorHook<ConversationDisplayPreferences>
   /** The owning dock's locale seat. */
   t: ComposerBarProps['t']
 }
 
-export const StatsLine = memo(function StatsLine({ useSession, useProjection, t }: StatsLineProps) {
+export type StatsLineSlotProps = StatsLineProps & InjectFace<StatsLineInjected>
+
+export const StatsLine = memo(function StatsLine({
+  useSession, useProjection, t, useDisplay,
+}: StatsLineSlotProps) {
   const settledNodes = useSession(s => s.chat.legacy.nodes)
   const usage = useProjection('tokenUsage')
+  const display = useDisplay(value => value)
   // Every figure rides the durable sessionStats projection, so paging and
   // compaction cannot change any of them; an assembly without the unit falls
   // back to the window-scoped fold wholesale (same field names), paid only
@@ -171,12 +193,21 @@ export const StatsLine = memo(function StatsLine({ useSession, useProjection, t 
   const stats = useMemo(() => projected ?? deriveStats(settledNodes), [projected, settledNodes])
   // Pipe-separated groups (figma stats strip); a group with no data drops out whole.
   const groups: string[] = []
-  if (stats.steps > 0) {
+  if (display.showStatsCounts && stats.steps > 0) {
     groups.push(t('stats.counts', { turns: stats.turns, steps: stats.steps }))
+  }
+  if (display.showStatsDurations && stats.steps > 0) {
     const durations: string[] = []
     if (stats.llmMs > 0) durations.push(t('stats.llm', { duration: formatDuration(stats.llmMs) }))
-    if (stats.toolMs > 0) durations.push(t('stats.toolCall', { duration: formatDuration(stats.toolMs) }))
+    if (stats.toolCalls > 0 || stats.toolMs > 0) {
+      durations.push(t('stats.toolCall', {
+        count: stats.toolCalls,
+        duration: formatDuration(stats.toolMs),
+      }))
+    }
     if (durations.length > 0) groups.push(durations.join(' · '))
+  }
+  if (display.showStatsLatency && stats.steps > 0) {
     const speeds: string[] = []
     if (stats.ttftSteps > 0) {
       speeds.push(t('stats.ttftAverage', { duration: formatDuration(stats.ttftMs / stats.ttftSteps) }))
@@ -197,11 +228,16 @@ export const StatsLine = memo(function StatsLine({ useSession, useProjection, t 
   if (usage !== undefined
     && (billedInputTokens(usage) > 0 || usage.outputTokens > 0)) {
     const cacheHit = cacheHitPercent(usage)
-    if (cacheHit !== null) groups.push(t('stats.cacheHit', { percent: cacheHit }))
-    groups.push(t('stats.tokens', {
-      input: formatTokens(billedInputTokens(usage)),
-      output: formatTokens(usage.outputTokens),
-    }))
+    if (display.showStatsCacheHit && cacheHit !== null) {
+      groups.push(t('stats.cacheHit', { percent: cacheHit }))
+    }
+    if (display.showStatsTokens) {
+      groups.push(t('stats.tokens', {
+        uncached: formatTokens(usage.uncachedInputTokens),
+        input: formatTokens(billedInputTokens(usage)),
+        output: formatTokens(usage.outputTokens),
+      }))
+    }
   }
   const line = groups.join(' | ')
   // The row elides with ellipsis when overlong; a delayed hover tooltip carries

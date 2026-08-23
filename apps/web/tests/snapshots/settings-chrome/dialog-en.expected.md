@@ -43,3 +43,14 @@
   - button "Queue":
     - text: Queue
     - img
+  - text: Stats line Choose which groups appear on the conversation stats line; empty groups still hide
+  - switch "Turns and steps" [checked]
+  - switch "Model and tool time" [checked]
+  - switch "Latency and throughput" [checked]
+  - switch "Cache hit" [checked]
+  - switch "Token account" [checked]
+  - text: Workspace Git Choose which workspace Git facts appear in the session header. Added and deleted lines are versus HEAD, not this conversation
+  - switch "Current branch" [checked]
+  - switch "Dirty file count" [checked]
+  - switch "Versus upstream" [checked]
+  - switch "Added and deleted lines" [checked]

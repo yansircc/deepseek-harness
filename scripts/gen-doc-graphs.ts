@@ -231,6 +231,14 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'Owns WorkspaceId-branded records over the domain facility; stable sessionIds accounts drive Host RPC and GUI projections.',
   },
   {
+    key: 'workspaceGit',
+    pkg: 'workspace-git',
+    title: 'Host cwd git sample',
+    mode: 'core',
+    consumers: ['apiproxy'],
+    note: 'Samples one cwd for session-header chrome; the sample is never written to a session log.',
+  },
+  {
     key: 'sessionQuery',
     pkg: 'session-query',
     title: 'Session reads, traces, filters, and search',

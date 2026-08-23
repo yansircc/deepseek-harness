@@ -35,6 +35,32 @@ export interface WorkspaceView {
   updatedAt: string
 }
 
+/**
+ * One cwd's git facts for header chrome. `present: false` when the path is
+ * not inside a work tree, git is missing, or the sample timed out. Added and
+ * deleted lines are `git diff --shortstat HEAD` (tracked vs HEAD); untracked
+ * files raise `dirty` only.
+ */
+export type WorkspaceGitStatus =
+  | { present: false }
+  | {
+    present: true
+    /** Short HEAD SHA. */
+    shortHead: string
+    /** Porcelain v1 entry count, including untracked. */
+    dirty: number
+    /** Insertions versus HEAD. */
+    insertions: number
+    /** Deletions versus HEAD. */
+    deletions: number
+    /** Symbolic-ref short name when attached; omitted when detached. */
+    branch?: string
+    /** Commits ahead of upstream; omitted when no upstream. */
+    ahead?: number
+    /** Commits behind upstream; omitted when no upstream. */
+    behind?: number
+  }
+
 /** Workspace-domain unary methods (the map keys workspace.* of RpcMethodMap). */
 export interface WorkspaceApi {
   /**
@@ -106,4 +132,12 @@ export interface WorkspaceApi {
    */
   archiveSession(request: RpcRequest<{ sessionId: SessionId }>):
   Promise<RpcResponse<{ archivedSessionIds: SessionId[] }>>
+
+  /**
+   * Samples git status for one existing directory. The path is the session
+   * cwd or any other directory the client already knows; this method does
+   * not create a workspace. A missing `@deepseek-ai/dsh-workspace-git`
+   * plugin fails with `internal`.
+   */
+  gitStatus(request: RpcRequest<{ path: string }>): Promise<RpcResponse<WorkspaceGitStatus>>
 }

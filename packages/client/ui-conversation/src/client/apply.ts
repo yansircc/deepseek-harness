@@ -4,6 +4,7 @@ import { resolveSlotLabel, type BoundActions } from '@deepseek-ai/dsh-client-ui-
 import {
   resolveWorkspacePath, type ISessions, type SessionId,
 } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ConnectionHandle, WorkspaceGitStatus } from '@deepseek-ai/dsh-client-connection/client'
 // Type-only: the ctx.settingsScope Context merge. Cross-plugin collaboration
 // goes through the service, never a value import (client bundle purity gate).
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
@@ -24,11 +25,16 @@ import { ComposerBlockRegistry } from './input/blocks.ts'
 import type { ComposerBlock } from './input/blocks.ts'
 import { InputHub } from './input/hub.ts'
 import { ComposerSubmissionPolicy } from './input/submission-policy.ts'
+import { ConversationDisplayPolicy } from './settings/display-policy.ts'
 import { InputBar } from './skeleton/InputBar.tsx'
 import { EnterBehaviorRow } from './settings/EnterBehaviorRow.tsx'
 import type { EnterBehaviorRowInjected } from './settings/EnterBehaviorRow.tsx'
+import { StatsDisplayRow } from './settings/StatsDisplayRow.tsx'
+import { GitDisplayRow } from './settings/GitDisplayRow.tsx'
+import type { DisplayPreferenceRowInjected } from './settings/StatsDisplayRow.tsx'
 import { ChatView } from './chat/ChatView.tsx'
 import { StatsLine } from './chat/StatsLine.tsx'
+import type { StatsLineInjected } from './chat/StatsLine.tsx'
 import { ApprovalPanel } from './skeleton/ApprovalPanel.tsx'
 import { todoDockEntry } from './skeleton/TodoPanel.tsx'
 import { queueDockEntry } from './queue/QueueDock.tsx'
@@ -39,6 +45,8 @@ import { en, NS, zh, type ConversationKey } from './locales.ts'
 import { registerConversationNodes } from './conversation-nodes/register.ts'
 import { registerChatNodeRenderers } from './chat/register-node-renderers.ts'
 import { CONVERSATION_SETTINGS_NAMESPACE, type ConversationSettings } from '../submission-settings.ts'
+import { WorkspaceGitChip } from './skeleton/WorkspaceGitChip.tsx'
+import type { WorkspaceGitChipInjected } from './skeleton/WorkspaceGitChip.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -130,9 +138,15 @@ export function apply(ctx: Context): void {
 
   // Apply-time construction keeps store identity bound to this fiber.
   const chatStore = createChatStore()
-  const submissionPolicy = new ComposerSubmissionPolicy(
-    ctx.settingsScope.bind<ConversationSettings>({ namespace: CONVERSATION_SETTINGS_NAMESPACE }),
-  )
+  const settingsScope = ctx.settingsScope.bind<ConversationSettings>({
+    namespace: CONVERSATION_SETTINGS_NAMESPACE,
+  })
+  const submissionPolicy = new ComposerSubmissionPolicy(settingsScope)
+  const displayPolicy = new ConversationDisplayPolicy(settingsScope)
+  const displayInject = (): DisplayPreferenceRowInjected => ({
+    hooks: { display: displayPolicy.prefs },
+    setDisplay: (field, value) => { displayPolicy.set(field, value) },
+  })
 
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({
     name: 'settings.general.item',
@@ -144,6 +158,30 @@ export function apply(ctx: Context): void {
       setBusyEnter: (behavior) => { submissionPolicy.setBusyEnter(behavior) },
     }),
   }, EnterBehaviorRow))
+
+  ctx.slots.inject('settings.general.item', () => ctx.slots.register({
+    name: 'settings.general.item',
+    id: 'stats-display',
+    order: 30,
+    locale: NS,
+    inject: displayInject,
+  }, StatsDisplayRow))
+
+  ctx.slots.inject('settings.general.item', () => ctx.slots.register({
+    name: 'settings.general.item',
+    id: 'git-display',
+    order: 40,
+    locale: NS,
+    inject: displayInject,
+  }, GitDisplayRow))
+
+  const connection = ctx.get('connection') as ConnectionHandle
+  const sampleGit = async (path: string, signal?: AbortSignal): Promise<WorkspaceGitStatus> => {
+    const { result } = signal === undefined
+      ? await connection.api.workspace.gitStatus({ path })
+      : await connection.api.workspace.gitStatus({ path }, signal)
+    return result.ok ? result.value : { present: false }
+  }
 
   // Chat semantic reader positions by session, surviving view switches and
   // width reflow when the tab ring remounts the view. Deliberately not
@@ -427,7 +465,26 @@ export function apply(ctx: Context): void {
   }, ChatView)
 
   // Session stats stick with the composer (composer.dock = stats-line family).
-  slots.register({ name: 'conversation.composer.dock', id: 'stats', order: 0, locale: NS }, StatsLine)
+  slots.register({
+    name: 'conversation.composer.dock',
+    id: 'stats',
+    order: 0,
+    locale: NS,
+    inject: (): StatsLineInjected => ({
+      hooks: { display: displayPolicy.prefs },
+    }),
+  }, StatsLine)
+
+  ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({
+    name: 'conversation.session.header.utilities',
+    id: 'workspace-git',
+    order: 0,
+    locale: NS,
+    inject: (): WorkspaceGitChipInjected => ({
+      hooks: { display: displayPolicy.prefs },
+      sampleGit,
+    }),
+  }, WorkspaceGitChip))
 
   // Class-plugin mount (packages/AGENTS.md service form): the service
   // registers itself as `conversation` and lives on its own child fiber.

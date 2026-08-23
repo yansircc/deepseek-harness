@@ -37,6 +37,8 @@ interface SessionStatsTotals {
   llmMs: number
   /** Summed matched tool call→result wall time, ms. */
   toolMs: number
+  /** Matched tool pairs that contributed to `toolMs`. */
+  toolCalls: number
   /** Summed first-token latency over `ttftSteps`, ms. */
   ttftMs: number
   /** Steps carrying a recorded first token. */
@@ -67,6 +69,7 @@ const sessionStatsSchema = z.object({
   steps: z.number().int().nonnegative(),
   llmMs: z.number().nonnegative(),
   toolMs: z.number().nonnegative(),
+  toolCalls: z.number().int().nonnegative(),
   ttftMs: z.number().nonnegative(),
   ttftSteps: z.number().int().nonnegative(),
   decodeMs: z.number().nonnegative(),
@@ -94,6 +97,7 @@ export const sessionStatsProjectionDefinition: ProjectionDefinition<'sessionStat
     steps: 0,
     llmMs: 0,
     toolMs: 0,
+    toolCalls: 0,
     ttftMs: 0,
     ttftSteps: 0,
     decodeMs: 0,
@@ -150,7 +154,12 @@ export const sessionStatsProjectionDefinition: ProjectionDefinition<'sessionStat
         const pendingCalls = Object.fromEntries(
           Object.entries(state.pendingCalls).filter(([id]) => id !== callId),
         )
-        return { ...state, toolMs: state.toolMs + Math.max(0, event.time - dispatched), pendingCalls }
+        return {
+          ...state,
+          toolMs: state.toolMs + Math.max(0, event.time - dispatched),
+          toolCalls: state.toolCalls + 1,
+          pendingCalls,
+        }
       }
       case 'step/end':
         return {
@@ -174,10 +183,11 @@ export const sessionStatsProjectionDefinition: ProjectionDefinition<'sessionStat
     steps: state.steps,
     llmMs: state.llmMs,
     toolMs: state.toolMs,
+    toolCalls: state.toolCalls,
     ttftMs: state.ttftMs,
     ttftSteps: state.ttftSteps,
     decodeMs: state.decodeMs,
     decodeTokens: state.decodeTokens,
   }),
-  stateVersion: 1,
+  stateVersion: 2,
 }

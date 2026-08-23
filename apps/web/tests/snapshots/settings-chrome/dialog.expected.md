@@ -43,3 +43,14 @@
   - button "排队发送":
     - text: 排队发送
     - img
+  - text: 统计行 控制对话底部统计行的分组；没有数据的分组仍会隐藏
+  - switch "轮次与步数" [checked]
+  - switch "模型与工具耗时" [checked]
+  - switch "延迟与吞吐" [checked]
+  - switch "缓存命中" [checked]
+  - switch "Token 账目" [checked]
+  - text: 工作区 Git 控制会话页头的工作区 Git 信息。增删行相对 HEAD，不是本会话的改动
+  - switch "当前分支" [checked]
+  - switch "脏文件数" [checked]
+  - switch "相对上游" [checked]
+  - switch "增删行" [checked]

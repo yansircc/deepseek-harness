@@ -1741,6 +1741,11 @@
       "source": "packages/workspace/workspace/src/types.ts"
     },
     {
+      "doc": "docs/subsystems/workspace.md",
+      "symbol": "WorkspaceGitSample",
+      "source": "packages/workspace/workspace-git/src/sample.ts"
+    },
+    {
       "doc": "docs/subsystems/client-modules.md",
       "symbol": "WebBootEntry",
       "source": "packages/client/modules/src/client/manifest.ts"

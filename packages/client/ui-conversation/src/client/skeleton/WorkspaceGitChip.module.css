@@ -1,0 +1,11 @@
+/* Session-header workspace git chips: muted, single line, no wrap. */
+
+.root {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-tertiary);
+}

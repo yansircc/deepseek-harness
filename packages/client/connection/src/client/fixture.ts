@@ -894,12 +894,16 @@ function sessionStatsOf(log: readonly SessionEvent[]): {
   steps: number
   llmMs: number
   toolMs: number
+  toolCalls: number
   ttftMs: number
   ttftSteps: number
   decodeMs: number
   decodeTokens: number
 } {
-  const value = { turns: 0, steps: 0, llmMs: 0, toolMs: 0, ttftMs: 0, ttftSteps: 0, decodeMs: 0, decodeTokens: 0 }
+  const value = {
+    turns: 0, steps: 0, llmMs: 0, toolMs: 0, toolCalls: 0,
+    ttftMs: 0, ttftSteps: 0, decodeMs: 0, decodeTokens: 0,
+  }
   let lastTurn: number | null = null
   let openStep: { turn: number; step: number; startTime: number; firstTokenTime: number | null } | null = null
   const pendingCalls = new Map<string, number>()
@@ -938,6 +942,7 @@ function sessionStatsOf(log: readonly SessionEvent[]): {
         if (dispatched === undefined) break
         pendingCalls.delete(callId)
         value.toolMs += Math.max(0, event.time - dispatched)
+        value.toolCalls += 1
         break
       }
       case 'step/end':
@@ -2788,6 +2793,7 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
         }
         return ok(request, { archivedSessionIds: [...archivedSessionIds] })
       },
+      gitStatus: request => ok(request, { present: false as const }),
     },
     agentPresets: {
       // Both trusts appear, because a surface must present a locally authored
@@ -3203,6 +3209,7 @@ export class FixtureApiClient extends AbstractApiClient {
       case 'workspace.insertBefore': return this.api.workspace.insertBefore(request)
       case 'workspace.insertSessionBefore': return this.api.workspace.insertSessionBefore(request)
       case 'workspace.archiveSession': return this.api.workspace.archiveSession(request)
+      case 'workspace.gitStatus': return this.api.workspace.gitStatus(request)
       case 'skill.list': return this.api.skills.list(request)
       case 'agentPreset.list': return this.api.agentPresets.list(request)
       case 'agentPreset.select': return this.api.agentPresets.select(request)

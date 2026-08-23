@@ -12,7 +12,9 @@ import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-test-runtime'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import { en as commonEn } from '@deepseek-ai/dsh-client-locale/src/locales/en.ts'
 import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
+import { createSnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import { StatsLine, contextOccupancy, deriveStats, formatDuration, formatTokens, type StatsLineProps } from '../src/client/chat/StatsLine.tsx'
+import { DEFAULT_DISPLAY_FLAGS, type ConversationDisplayPreferences } from '../src/submission-settings.ts'
 import { en, zh } from '../src/client/locales.ts'
 import { chatSnapshotFixture } from './chat-snapshot-fixture.client.ts'
 
@@ -104,7 +106,7 @@ describe('deriveStats', () => {
     // tokenUsage projection); decodeTokens is a throughput input, not a
     // billed total.
     expect(Object.keys(stats).sort()).toEqual(
-      ['decodeMs', 'decodeTokens', 'llmMs', 'steps', 'toolMs', 'ttftMs', 'ttftSteps', 'turns'],
+      ['decodeMs', 'decodeTokens', 'llmMs', 'steps', 'toolCalls', 'toolMs', 'ttftMs', 'ttftSteps', 'turns'],
     )
   })
 
@@ -134,6 +136,7 @@ describe('deriveStats', () => {
     const stats = deriveStats([timed, untimed, tool])
     expect(stats.llmMs).toBe(2_500)
     expect(stats.toolMs).toBe(3_000)
+    expect(stats.toolCalls).toBe(1)
   })
 
   it('sums ttft per recorded step and decode throughput inputs per usage-carrying step', () => {
@@ -174,7 +177,7 @@ describe('StatsLine', () => {
   /** A whole-log sessionStats value: zeros plus overrides. */
   function sessionStats(overrides: Record<string, number>): Record<string, number> {
     return {
-      turns: 0, steps: 0, llmMs: 0, toolMs: 0, ttftMs: 0, ttftSteps: 0, decodeMs: 0, decodeTokens: 0,
+      turns: 0, steps: 0, llmMs: 0, toolMs: 0, toolCalls: 0, ttftMs: 0, ttftSteps: 0, decodeMs: 0, decodeTokens: 0,
       ...overrides,
     }
   }
@@ -187,8 +190,14 @@ describe('StatsLine', () => {
   function props(
     source: { getSnapshot(): ConversationSnapshot; subscribe(fn: () => void): () => void },
     values: Record<string, unknown> = { tokenUsage: USAGE },
+    display: ConversationDisplayPreferences = DEFAULT_DISPLAY_FLAGS,
   ): StatsLineProps {
-    return { useSession: bindSnapshotSelector(source), useProjection: projections(values), t: tEn }
+    return {
+      useSession: bindSnapshotSelector(source),
+      useProjection: projections(values),
+      useDisplay: bindSnapshotSelector(createSnapshotStore(display)),
+      t: tEn,
+    }
   }
 
   it('renders the grouped stats row and hides a brand-new empty session', () => {
@@ -196,7 +205,7 @@ describe('StatsLine', () => {
     const view = render(<StatsLine {...props(source)} />)
     // No timing on the fixture: the duration group drops out whole. Tokens come
     // from the projection, so paging the window cannot change them.
-    expect(view.container.textContent).toBe('1 turns · 1 steps| Cache hit 90%| Input 100 tok · Output 5 tok')
+    expect(view.container.textContent).toBe('1 turns · 1 steps| Cache hit 90%| Uncached 10 · Input 100 · Output 5')
     const empty = makeSource()
     const emptyView = render(<StatsLine {...props(empty.source, {
       tokenUsage: { uncachedInputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
@@ -217,7 +226,7 @@ describe('StatsLine', () => {
     expect(view.container.querySelector('[role="tooltip"]')).toBeNull()
     act(() => { vi.advanceTimersByTime(1) })
     expect(view.container.querySelector('[role="tooltip"]')?.textContent)
-      .toBe('1 turns · 1 steps | Cache hit 90% | Input 100 tok · Output 5 tok')
+      .toBe('1 turns · 1 steps | Cache hit 90% | Uncached 10 · Input 100 · Output 5')
   })
 
   it('suppresses the tooltip while the row fits without truncation', () => {
@@ -247,7 +256,7 @@ describe('StatsLine', () => {
     const { source } = makeSource({ nodes: [timed] })
     const view = render(<StatsLine {...props(source)} t={t} />)
     expect(view.container.textContent)
-      .toBe('1 轮 · 1 步| LLM 3.8s| 首 token 平均 0.8s · 20 tok/s| 缓存命中 90%| 输入 100 tok · 输出 5 tok')
+      .toBe('1 轮 · 1 步| LLM 3.8s| 首 token 平均 0.8s · 20 tok/s| 缓存命中 90%| 未缓存 10 · 输入 100 · 输出 5')
   })
 
   it('renders without ResizeObserver support', () => {
@@ -264,7 +273,7 @@ describe('StatsLine', () => {
     })} />)
     // Context occupancy lives on the composer's ContextMeter ring, not here.
     expect(view.container.textContent)
-      .toBe('Cache hit 90%| Input 100 tok · Output 5 tok')
+      .toBe('Cache hit 90%| Uncached 10 · Input 100 · Output 5')
   })
 
   it('computes context occupancy only when both a numerator and capacity are known', () => {
@@ -300,7 +309,7 @@ describe('StatsLine', () => {
       sessionStats: sessionStats({ turns: 10, steps: 89 }),
     })} />)
     expect(view.container.textContent)
-      .toBe('10 turns · 89 steps| Cache hit 90%| Input 100 tok · Output 5 tok')
+      .toBe('10 turns · 89 steps| Cache hit 90%| Uncached 10 · Input 100 · Output 5')
   })
 
   it('treats a defined zero-count projection as empty, not as fallback', () => {
@@ -334,7 +343,7 @@ describe('StatsLine', () => {
       sessionStats: sessionStats({ turns: 7, steps: 44 }),
     })} />)
     expect(view.container.textContent)
-      .toBe('7 turns · 44 steps| Cache hit 90%| Input 100 tok · Output 5 tok')
+      .toBe('7 turns · 44 steps| Cache hit 90%| Uncached 10 · Input 100 · Output 5')
   })
 
   it('renders whole-log wall times and speeds from the projection, not the loaded window', () => {
@@ -345,12 +354,12 @@ describe('StatsLine', () => {
     const view = render(<StatsLine {...props(source, {
       tokenUsage: USAGE,
       sessionStats: sessionStats({
-        turns: 200, steps: 200, llmMs: 100_000, toolMs: 62_000,
+        turns: 200, steps: 200, llmMs: 100_000, toolMs: 62_000, toolCalls: 47,
         ttftMs: 1_600, ttftSteps: 2, decodeMs: 3_000, decodeTokens: 60,
       }),
     })} />)
     expect(view.container.textContent).toBe(
-      '200 turns · 200 steps| LLM 1m40s · Tool call 1m2s| TTFT avg 0.8s · 20 tok/s| Cache hit 90%| Input 100 tok · Output 5 tok',
+      '200 turns · 200 steps| LLM 1m40s · Tools 47× 1m2s| TTFT avg 0.8s · 20 tok/s| Cache hit 90%| Uncached 10 · Input 100 · Output 5',
     )
   })
 
@@ -359,7 +368,7 @@ describe('StatsLine', () => {
     const view = render(<StatsLine {...props(source, {
       tokenUsage: { uncachedInputTokens: 0, outputTokens: 7, cacheReadTokens: 0, cacheWriteTokens: 0 },
     })} />)
-    expect(view.container.textContent).toBe('1 turns · 1 steps| Input 0 tok · Output 7 tok')
+    expect(view.container.textContent).toBe('1 turns · 1 steps| Uncached 0 · Input 0 · Output 7')
   })
 
   it('includes cache writes in billed input and the cache-hit denominator', () => {
@@ -373,7 +382,7 @@ describe('StatsLine', () => {
       },
     })} />)
     expect(view.container.textContent)
-      .toBe('1 turns · 1 steps| Cache hit 45%| Input 200 tok · Output 7 tok')
+      .toBe('1 turns · 1 steps| Cache hit 45%| Uncached 10 · Input 200 · Output 7')
   })
 
   it('renders ZERO times during streaming chunk frames (RFC hard acceptance)', () => {
@@ -390,5 +399,27 @@ describe('StatsLine', () => {
     act(() => { set({ partial: { turn: 1, step: 2, blocks: [{ kind: 'text', text: 'ab' }] } }) })
     act(() => { set({ running: true }) })
     expect(renders).toBe(before)
+  })
+
+  it('hides the whole line when every stats flag is off', () => {
+    const { source } = makeSource({ nodes: [assistant(1, 1)] })
+    const view = render(<StatsLine {...props(source, { tokenUsage: USAGE, sessionStats: sessionStats({ turns: 1, steps: 1 }) }, {
+      ...DEFAULT_DISPLAY_FLAGS,
+      showStatsCounts: false,
+      showStatsDurations: false,
+      showStatsLatency: false,
+      showStatsCacheHit: false,
+      showStatsTokens: false,
+    })} />)
+    expect(view.container.textContent).toBe('')
+  })
+
+  it('drops one group when its flag is off', () => {
+    const { source } = makeSource({ nodes: [assistant(1, 1)] })
+    const view = render(<StatsLine {...props(source, { tokenUsage: USAGE, sessionStats: sessionStats({ turns: 1, steps: 1 }) }, {
+      ...DEFAULT_DISPLAY_FLAGS,
+      showStatsCacheHit: false,
+    })} />)
+    expect(view.container.textContent).toBe('1 turns · 1 steps| Uncached 10 · Input 100 · Output 5')
   })
 })

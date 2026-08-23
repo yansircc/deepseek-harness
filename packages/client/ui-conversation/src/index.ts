@@ -6,7 +6,10 @@ import { CONVERSATION_SETTINGS_NAMESPACE, ConversationSettingsSchema } from './s
 
 export {
   BUSY_ENTER_BEHAVIORS, BUSY_ENTER_FIELD, CONVERSATION_SETTINGS_NAMESPACE,
-  DEFAULT_BUSY_ENTER_BEHAVIOR, type BusyEnterBehavior, type ConversationSettings,
+  DEFAULT_BUSY_ENTER_BEHAVIOR, DEFAULT_DISPLAY_FLAGS, DISPLAY_FLAG_FIELDS,
+  GIT_DISPLAY_FIELDS, STATS_DISPLAY_FIELDS, displayFlagsOf,
+  type BusyEnterBehavior, type ConversationDisplayField,
+  type ConversationDisplayPreferences, type ConversationSettings,
 } from './submission-settings.ts'
 
 /**
