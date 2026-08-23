@@ -9,8 +9,13 @@ export type ChromeLocaleKey =
   | 'statusTitle' | 'statusReady' | 'statusNotConfigured'
   | 'statusChecking' | 'statusConnected' | 'statusConnectedHint'
   | 'statusWaiting' | 'statusWaitingHint'
+  | 'statusStale' | 'statusStaleHint'
+  | 'statusMismatch' | 'statusMismatchHint'
   | 'statusOffline' | 'statusOfflineHint'
   | 'statusUnknown' | 'statusUnknownHint'
+  | 'expectedTitle' | 'expectedId' | 'expectedVersion' | 'expectedFingerprint'
+  | 'liveTitle' | 'liveId' | 'liveVersion' | 'liveFingerprint' | 'liveLabel'
+  | 'reloadGuidance'
   | 'guideTitle' | 'guideLine1' | 'guideLine2' | 'guideLine3'
   | 'installTitle' | 'downloadButton' | 'downloadHint' | 'installStep1' | 'installStep2' | 'installStep3'
   | 'openExtensions' | 'openExtensionsHint'
@@ -30,12 +35,26 @@ export const en: Record<ChromeLocaleKey, string> = {
   statusChecking: 'Checking connection…',
   statusConnected: 'Connected',
   statusConnectedHint: 'The extension is connected — the agent can drive your Chrome now.',
-  statusWaiting: 'Not connected',
-  statusWaitingHint: 'Download and load the extension below; it connects automatically.',
-  statusOffline: 'Local service is not running',
-  statusOfflineHint: 'Restart the dsh service and try again.',
+  statusWaiting: 'Waiting for extension',
+  statusWaitingHint: 'Download and load the extension below, or reload it from chrome://extensions if it is already installed.',
+  statusStale: 'Extension disconnected',
+  statusStaleHint: 'The bridge last saw this extension, but it is not connected now. Reload it from chrome://extensions.',
+  statusMismatch: 'Extension identity does not match',
+  statusMismatchHint: 'The connected extension does not match what this bridge expects. Reload the unpacked build from chrome://extensions, or download a fresh package below.',
+  statusOffline: 'Local Chrome bridge is unreachable',
+  statusOfflineHint: 'The host could not authenticate to the local Chrome bridge.',
   statusUnknown: 'Status unavailable',
   statusUnknownHint: 'This service version is outdated — restart it and try again.',
+  expectedTitle: 'Expected by this bridge',
+  expectedId: 'ID {id}',
+  expectedVersion: 'Version {version}',
+  expectedFingerprint: 'Fingerprint {prefix}…',
+  liveTitle: 'Connected extension',
+  liveId: 'ID {id}',
+  liveVersion: 'Version {version}',
+  liveFingerprint: 'Fingerprint {prefix}…',
+  liveLabel: 'Label {label}',
+  reloadGuidance: 'This web page cannot reload Chrome or the extension Service Worker. Open chrome://extensions, find this extension, and click Reload. The unpacked filesystem path is only visible on that page.',
   guideTitle: 'What can the agent do?',
   guideLine1: 'The agent can open, switch, and close your Chrome tabs, click and type on pages, fill forms, take screenshots, and more — using your logged-in sessions, so sites that need sign-in just work.',
   guideLine2: 'The agent works in its own browser space, so your own browsing is not disturbed.',
@@ -47,7 +66,7 @@ export const en: Record<ChromeLocaleKey, string> = {
   installStep2: 'Open chrome://extensions and turn on "Developer mode" (top right).',
   installStep3: 'Drag the downloaded ZIP directly onto the page, or extract it and use "Load unpacked".',
   openExtensions: 'Open chrome://extensions',
-  openExtensionsHint: 'Opens in a new tab so you can check the extension is loaded.',
+  openExtensionsHint: 'Opens in a new tab. After an update, click Reload on the extension card there — this page cannot do that for you.',
   credentialAuto: 'Connection is automatic: the secret is generated and stored for you — nothing to configure.',
   settingsTitle: 'Advanced',
   portLabel: 'Local service port',
@@ -72,12 +91,26 @@ export const zh: Record<ChromeLocaleKey, string> = {
   statusChecking: '检测连接中…',
   statusConnected: '已连接',
   statusConnectedHint: '扩展已连接，agent 可以直接操作你的 Chrome。',
-  statusWaiting: '未连接',
-  statusWaitingHint: '下载并加载下方扩展后会自动连接。',
-  statusOffline: '本地服务未运行',
-  statusOfflineHint: '重启 dsh 服务后重试。',
+  statusWaiting: '等待扩展连接',
+  statusWaitingHint: '下载并加载下方扩展；若已安装，请到 chrome://extensions 点击“重新加载”。',
+  statusStale: '扩展已断开',
+  statusStaleHint: '桥接曾见过此扩展，但当前未连接。请到 chrome://extensions 点击“重新加载”。',
+  statusMismatch: '扩展身份不匹配',
+  statusMismatchHint: '已连接的扩展与本桥期望不一致。请到 chrome://extensions 重新加载已解压的扩展，或在下方重新下载安装包。',
+  statusOffline: '无法使用本地 Chrome 桥',
+  statusOfflineHint: '宿主未能向本地 Chrome 桥证明 owner 身份。',
   statusUnknown: '无法获取状态',
   statusUnknownHint: '当前服务版本较旧，重启 dsh 服务后重试。',
+  expectedTitle: '本桥期望的扩展',
+  expectedId: 'ID {id}',
+  expectedVersion: '版本 {version}',
+  expectedFingerprint: '指纹 {prefix}…',
+  liveTitle: '当前连接的扩展',
+  liveId: 'ID {id}',
+  liveVersion: '版本 {version}',
+  liveFingerprint: '指纹 {prefix}…',
+  liveLabel: '标签 {label}',
+  reloadGuidance: '此网页无法替你重新加载 Chrome 或扩展的 Service Worker。请打开 chrome://extensions，找到该扩展并点击“重新加载”。已解压扩展的文件系统路径只在该页面可见。',
   guideTitle: 'agent 能做什么？',
   guideLine1: 'agent 可以打开、切换和关闭你的 Chrome 标签页，在页面上点击、输入、填写表单、截图等——使用你已登录的会话，需要登录的网站也能直接操作。',
   guideLine2: 'agent 在独立的浏览器空间工作，不会打扰你自己的浏览。',
@@ -89,7 +122,7 @@ export const zh: Record<ChromeLocaleKey, string> = {
   installStep2: '打开 chrome://extensions 并开启右上角的“开发者模式”。',
   installStep3: '把下载的 ZIP 直接拖到页面，或解压后用“加载已解压的扩展程序”。',
   openExtensions: '打开 chrome://extensions',
-  openExtensionsHint: '在新标签页中打开，检查扩展是否已加载。',
+  openExtensionsHint: '在新标签页中打开。更新后请在该页的扩展卡片上点击“重新加载”——此页面无法代为操作。',
   credentialAuto: '连接是自动的：密钥已为你生成并安全存储，无需任何配置。',
   settingsTitle: '高级',
   portLabel: '本地服务端口',

@@ -11,6 +11,14 @@
       <h1>DSH Chrome Connector</h1>
       <p id="identity" class="muted">Loading connector identity…</p>
       <p id="state" role="status">Inspecting local status…</p>
+      <section class="recovery" aria-labelledby="recovery-heading">
+        <h2 id="recovery-heading">Stale ownership</h2>
+        <p class="muted">
+          Clears proved-stale automation ownership records only. Tabs are never closed or adopted.
+        </p>
+        <button type="button" id="clear-stale">Clear stale ownership</button>
+        <p id="recovery" class="muted" role="status"></p>
+      </section>
     </main>
     <script src="popup.js"></script>
   </body>

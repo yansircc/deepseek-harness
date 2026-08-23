@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-08-21-chrome-live-connector-slot.md
+2026-08-21-chrome-live-connector-slot.md: 2c7289669241d50ab481c746b1634dd1cbcbe053
+2026-08-21-chrome-live-connector-slot.zh.md: a3360578a0f0a5c060a7248a0b1f664ddc4b43c6

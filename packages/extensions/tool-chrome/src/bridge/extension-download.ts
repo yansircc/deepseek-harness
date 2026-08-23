@@ -12,11 +12,9 @@
 
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { join, relative } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import type { Context } from '@deepseek-ai/cordis'
 import { Zip, ZipDeflate } from 'fflate'
-
-const ASSETS_DIR = fileURLToPath(new URL('../../assets/browser-extension/', import.meta.url))
+import { EXTENSION_ASSETS_DIR } from '../extension-assets.ts'
 
 /** The placeholder bridge origin baked into the template assets. */
 const PLACEHOLDER_ORIGIN = 'http://127.0.0.1:17401'
@@ -49,7 +47,7 @@ async function listFiles(root: string): Promise<string[]> {
  */
 export async function buildExtensionZip(port: number): Promise<Uint8Array> {
   const origin = `http://127.0.0.1:${port}`
-  const files = await listFiles(ASSETS_DIR)
+  const files = await listFiles(EXTENSION_ASSETS_DIR)
   const chunks: Uint8Array[] = []
   let finished = false
 
@@ -60,7 +58,7 @@ export async function buildExtensionZip(port: number): Promise<Uint8Array> {
   })
 
   for (const file of files) {
-    let content = await readFile(join(ASSETS_DIR, file))
+    let content = await readFile(join(EXTENSION_ASSETS_DIR, file))
     // Substitute the placeholder bridge origin in text assets.
     if (/\.(js|html|json|css)$/.test(file)) {
       const text = content.toString('utf8')
@@ -97,7 +95,7 @@ export async function buildExtensionZip(port: number): Promise<Uint8Array> {
  */
 export async function assetsReady(): Promise<boolean> {
   try {
-    const info = await stat(ASSETS_DIR)
+    const info = await stat(EXTENSION_ASSETS_DIR)
     return info.isDirectory()
   } catch {
     // Missing assets directory or a failed stat; the card falls back to hints.

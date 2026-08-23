@@ -8,6 +8,7 @@
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import { CommandBroker } from './broker.ts'
+import { ConnectorOwner, liveConnector } from './connector-registry.ts'
 import {
   BridgeBindFailed,
   BridgeUnavailable,
@@ -71,34 +72,6 @@ import { toWireBridgeFailure } from './codec.ts'
 // ---------------------------------------------------------------------------
 // Connector owner registry
 // ---------------------------------------------------------------------------
-
-class ConnectorOwner {
-  private readonly connectors = new Map<string, ProfileConnector>()
-
-  /** Adopt a presented connector identity (handshake). */
-  adopt(presented: ProfileConnector): ProfileConnector {
-    const existing = this.connectors.get(presented.connectorId)
-    if (existing !== undefined) {
-      // Same connectorId re-handshaking is allowed (extension reload).
-      this.connectors.set(presented.connectorId, presented)
-      return presented
-    }
-    this.connectors.set(presented.connectorId, presented)
-    return presented
-  }
-
-  authorizedConnector(connectorId: string): ProfileConnector | undefined {
-    return this.connectors.get(connectorId)
-  }
-
-  drop(connectorId: string): void {
-    this.connectors.delete(connectorId)
-  }
-
-  list(): ProfileConnector[] {
-    return [...this.connectors.values()]
-  }
-}
 
 // ---------------------------------------------------------------------------
 // HTTP helpers
@@ -364,23 +337,20 @@ export class BridgeServer {
   private statusOfConnector(): ConnectorStatus | undefined {
     const broker = this.broker
     if (!broker) return undefined
-    for (const profile of this.connectors.list()) {
-      const status = broker.status(profile.connectorId)
-      if (status.connected) {
-        return {
-          connectorId: status.connectorId,
-          extensionId: profile.extensionId,
-          extensionDisplayVersion: profile.extensionDisplayVersion,
-          protocolFingerprint: profile.protocolFingerprint,
-          label: profile.label,
-          connected: true,
-          ...(status.lastSeenAt === undefined ? {} : { lastSeenAt: status.lastSeenAt }),
-          queuedCommands: status.queuedCommands,
-          pendingCommands: status.pendingCommands,
-        }
-      }
+    const profile = liveConnector(this.connectors.list(), id => broker.status(id).connected)
+    if (!profile) return undefined
+    const status = broker.status(profile.connectorId)
+    return {
+      connectorId: status.connectorId,
+      extensionId: profile.extensionId,
+      extensionDisplayVersion: profile.extensionDisplayVersion,
+      protocolFingerprint: profile.protocolFingerprint,
+      label: profile.label,
+      connected: true,
+      ...(status.lastSeenAt === undefined ? {} : { lastSeenAt: status.lastSeenAt }),
+      queuedCommands: status.queuedCommands,
+      pendingCommands: status.pendingCommands,
     }
-    return undefined
   }
 
   // -------------------------------------------------------------------------
@@ -587,7 +557,10 @@ export class BridgeServer {
   ): Promise<unknown> {
     const broker = this.broker
     if (!broker) throw new BridgeUnavailable('Chrome bridge is not started')
-    const connector = this.connectors.list()[0]
+    const connector = liveConnector(
+      this.connectors.list(),
+      id => broker.status(id).connected,
+    )
     if (!connector) {
       throw new BridgeUnavailable('Chrome extension is not connected. Load the unpacked extension and retry.')
     }
@@ -617,10 +590,6 @@ export class BridgeServer {
       writeJson(response, 400, { ok: false, error: 'connector metadata is malformed' }, headers)
       return
     }
-    const profile = this.connectors.adopt(presented)
-    await this.broker?.register(profile.connectorId)
-    const identified = this.identifyAuthorizedConnector(request, response, headers)
-    if (!identified) return
     const clientNonce = String(request.headers[CONNECTOR_CLIENT_NONCE_HEADER] ?? '')
     if (!isHex256(clientNonce)) {
       writeJson(response, 400, { ok: false, error: 'connector client nonce is missing or malformed' }, headers)
@@ -631,10 +600,43 @@ export class BridgeServer {
       writeJson(response, 503, { ok: false, error: 'bridge authentication epoch is not initialized' }, headers)
       return
     }
+    const headerConnectorId = String(request.headers[CONNECTOR_ID_HEADER] ?? '')
+    const headerExtensionId = String(request.headers[CONNECTOR_EXTENSION_ID_HEADER] ?? '')
+    if (headerConnectorId !== presented.connectorId || headerExtensionId !== presented.extensionId) {
+      writeJson(response, 401, { ok: false, error: 'connector is not authenticated' }, headers)
+      return
+    }
+    // Refuse connectors whose protocol fingerprint does not match this bridge
+    // before adopting them. Otherwise a second browser profile or an older
+    // extension build can handshake with a different protocol version and
+    // evict the live connector, flipping the single bind slot between two
+    // connectors and orphaning every in-flight command.
+    if (presented.protocolFingerprint !== this.fingerprint) {
+      writeJson(response, 403, {
+        ok: false,
+        error:
+          `connector protocol fingerprint ${presented.protocolFingerprint.slice(0, 12)} does not match bridge ${this.fingerprint.slice(0, 12)}; ` +
+          'only one Chrome extension build may bind this bridge',
+      }, headers)
+      return
+    }
+    const evicted = this.connectors.adopt(presented)
+    const broker = this.broker
+    if (broker) {
+      for (const connectorId of evicted) await broker.drop(connectorId)
+      await broker.register(presented.connectorId)
+    }
+    const connector = {
+      connectorId: presented.connectorId,
+      extensionId: presented.extensionId,
+      extensionDisplayVersion: presented.extensionDisplayVersion,
+      protocolFingerprint: presented.protocolFingerprint,
+      label: presented.label,
+    }
     const challenge = authentication.issue('connector', Date.now())
     const message = connectorServerProofMessage(
       'connectorServerProof',
-      identified.connector,
+      connector,
       clientNonce,
       challenge,
       this.fingerprint,
@@ -646,7 +648,7 @@ export class BridgeServer {
         bridgeDisplayVersion: this.options.displayVersion(),
         protocolFingerprint: this.fingerprint,
         ...challenge,
-        proof: nodeHmacProof(identified.profile.secret, message),
+        proof: nodeHmacProof(presented.secret, message),
       },
       headers,
     )

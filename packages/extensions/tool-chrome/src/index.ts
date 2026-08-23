@@ -2,7 +2,7 @@
  * DSH plugin: control a real signed-in Chrome profile through a local bridge
  * and browser extension.
  *
- * Registers 25 atomic `chrome_*` tools plus `chrome_status`. The plugin owns a
+ * Registers 27 atomic `chrome_*` tools plus `chrome_status`. The plugin owns a
  * BridgeServer (local HTTP server) that the Chrome extension connects to.
  * Owner credentials are resolved from `ctx.credentials`.
  *
@@ -10,9 +10,8 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import { defineTool } from '@deepseek-ai/dsh-tools'
+import { defineTool, type ToolRunContext } from '@deepseek-ai/dsh-tools'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
-import { randomBytes } from 'node:crypto'
 import { BridgeServer } from './bridge/server.ts'
 import {
   EXTENSION_DOWNLOAD_PATH,
@@ -33,25 +32,35 @@ import {
 import { ATOMIC_TOOL_DESCRIPTORS } from './protocol/operations.ts'
 import { BRIDGE_HOST, BRIDGE_PORT } from './protocol/bridge-contract.ts'
 import { registerChromeSettings, getChromeSettings } from './settings.ts'
+import {
+  LEGACY_OWNER_CREDENTIAL_REF,
+  mintOwnerSecret,
+  pinOwnerSecret,
+  resolveOwnerSecret,
+} from './owner-credential.ts'
 import { Config } from './config.ts'
 import type { BridgeOwnerIdentity } from './protocol/auth.ts'
 import type { SessionContext, WireDomainRequest } from './protocol/schema.ts'
 
 export { Config } from './config.ts'
+export { LEGACY_OWNER_CREDENTIAL_REF, OWNER_CREDENTIAL_REF } from './owner-credential.ts'
 
 /** Cordis plugin name used by loader diagnostics. */
 export const name = 'tool-chrome'
 
-/** Services required by this plugin. Credentials are resolved at call time. */
+/** Services required by this plugin. The owner secret is resolved once per process. */
 export const inject = ['tools']
 
-/** Default owner credential reference. */
-export const OWNER_CREDENTIAL_REF = 'DSH_CHROME_OWNER_CREDENTIAL'
-
-/** The session context this DSH session uses for bridge commands. */
-function sessionContextFor(ctx: Context): SessionContext {
-  // DSH sessions are identified by the agent's id when available.
-  const agent = (ctx as { agent?: { id?: string } }).agent
+/**
+ * Session context for a Chrome bridge command.
+ * Prefers the calling agent's id from {@link ToolRunContext}; falls back when
+ * no agent is present (e.g. direct registry execute without an initiator).
+ * @param agent - `exec.agent` from tool execution, or `undefined`.
+ * @returns the session envelope attached to forwarded owner commands.
+ */
+export function sessionContextFor(
+  agent: { readonly id?: string } | undefined,
+): SessionContext {
   return {
     key: agent?.id ? `session:${agent.id}` : 'session:dsh',
     groupTitle: 'DSH session',
@@ -76,43 +85,53 @@ export function apply(ctx: Context, config: Config): void {
     host,
     port,
     displayVersion: extensionDisplayVersion,
-    // The shipped extension speaks the v1 protocol fingerprint; the
-    // bridge declares the same value so the handshake accepts it.
+    // The shipped extension speaks the evidence.json protocol fingerprint; the
+    // bridge declares the same pin so the handshake accepts only matching builds.
     protocolFingerprint: EXTENSION_PROTOCOL_FINGERPRINT,
   })
 
-  // Resolve the owner credential from ctx.credentials (or env fallback). If
-  // none is configured, generate one automatically and store it — the user
-  // never has to set a secret by hand.
-  const credentials = ctx.get('credentials')
-  const loadCredential = async (): Promise<string | undefined> => {
-    if (credentials !== undefined) {
-      try {
-        const resolved = await credentials.resolve(credentialRef(ownerCredentialRef))
-        if (resolved !== undefined) return resolved.value
-      } catch {
-        // Missing or unreadable stored secret; env is the remaining source.
-      }
-    }
-    return process.env[ownerCredentialRef]
-  }
-
-  const ensureCredential = async (): Promise<string> => {
-    const existing = await loadCredential()
+  // Resolve the owner secret once and pin it. The listening bridge HMAC-signs
+  // with that value; a later resolve that returns a different secret would
+  // make every owner status poll fail.
+  const ensureCredential = pinOwnerSecret(async () => {
+    const credentials = ctx.get('credentials')
+    const existing = await resolveOwnerSecret(
+      {
+        resolve: async (ref) => {
+          if (credentials === undefined) return undefined
+          try {
+            const resolved = await credentials.resolve(credentialRef(ref))
+            return resolved === undefined ? undefined : resolved.value
+          } catch {
+            // Missing or unreadable stored secret; env is the remaining source.
+            return undefined
+          }
+        },
+        ...(credentials === undefined
+          ? {}
+          : {
+            store: async (ref: string, value: string) => {
+              await credentials.set(credentialRef(ref), value)
+            },
+          }),
+      },
+      process.env,
+      ownerCredentialRef,
+      LEGACY_OWNER_CREDENTIAL_REF,
+    )
     if (existing !== undefined) return existing
-    const generated = randomBytes(32).toString('hex')
+    const generated = mintOwnerSecret()
     if (credentials !== undefined) {
       try {
         await credentials.set(credentialRef(ownerCredentialRef), generated)
         ctx.logger.info('tool-chrome: generated and stored owner credential %s', ownerCredentialRef)
-        return generated
       } catch {
         // Credential store rejected the write; keep the generated secret in
         // this process only.
       }
     }
     return generated
-  }
+  })
 
   const getIdentity = async (): Promise<BridgeOwnerIdentity | undefined> => {
     const credential = await ensureCredential()
@@ -214,7 +233,7 @@ export function apply(ctx: Context, config: Config): void {
     },
   } as never))
 
-  // ---- 25 atomic chrome_* tools ----
+  // ---- 27 atomic chrome_* tools ----
   for (const descriptor of ATOMIC_TOOL_DESCRIPTORS) {
     ctx.tools.register(defineTool({
       name: descriptor.name,
@@ -227,7 +246,7 @@ export function apply(ctx: Context, config: Config): void {
         ],
       },
       isConcurrencySafe: () => false,
-      async execute(args: Record<string, unknown>): Promise<unknown> {
+      async execute(args: Record<string, unknown>, exec: ToolRunContext): Promise<unknown> {
         const identity = await getIdentity()
         if (identity === undefined) {
           throw new Error(
@@ -244,7 +263,7 @@ export function apply(ctx: Context, config: Config): void {
             server.url,
             identity,
             request,
-            sessionContextFor(ctx),
+            sessionContextFor(exec.agent),
             config.commandTimeoutMs ?? 30_000,
           )
           // Screenshots are saved into the workspace; everything else passes through.

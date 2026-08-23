@@ -9,17 +9,63 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { statusFromOwner } from './owner-client.ts'
 import type { BridgeOwnerIdentity } from '../protocol/auth.ts'
+import type { ConnectorStatus } from '../protocol/schema.ts'
 
 /** Status route path registered on the web server. */
 export const CHROME_STATUS_PATH = '/api/chrome/status'
+
+/** Extension identity the bridge requires of a connector. */
+export interface ChromeExtensionExpectation {
+  extensionId: string
+  displayVersion: string
+  protocolFingerprint: string
+}
+
+/**
+ * Public connector summary for the WebUI card.
+ * Omits `connectorId` and any shared secret.
+ */
+export interface ChromePublicConnectorSummary {
+  extensionId: string
+  extensionDisplayVersion: string
+  protocolFingerprint: string
+  connected: boolean
+  label: string
+  lastSeenAt?: number
+  queuedCommands: number
+  pendingCommands: number
+}
 
 /** Public status payload the card renders. */
 export interface ChromeStatusPayload {
   /** ready = extension connected; waiting-for-extension = bridge up, no connector yet. */
   state: 'ready' | 'waiting-for-extension' | 'offline' | 'unconfigured'
   url: string
-  connector: unknown
+  /** Expected extension identity from the bridge, or `null` when unavailable. */
+  extensionExpectation: ChromeExtensionExpectation | null
+  /** Live or last-reported connector summary, or `null` when none is bound. */
+  connector: ChromePublicConnectorSummary | null
   error: string | null
+}
+
+/**
+ * Project a bridge connector status into the public card summary.
+ * @param connector - owner `/status` connector record (no secret on the wire).
+ * @returns the secret-free summary the WebUI may render.
+ */
+export function publicConnectorSummary(
+  connector: ConnectorStatus,
+): ChromePublicConnectorSummary {
+  return {
+    extensionId: connector.extensionId,
+    extensionDisplayVersion: connector.extensionDisplayVersion,
+    protocolFingerprint: connector.protocolFingerprint,
+    connected: connector.connected,
+    label: connector.label,
+    ...(connector.lastSeenAt === undefined ? {} : { lastSeenAt: connector.lastSeenAt }),
+    queuedCommands: connector.queuedCommands,
+    pendingCommands: connector.pendingCommands,
+  }
 }
 
 /**
@@ -39,6 +85,7 @@ export async function computeChromeStatus(
     return {
       state: 'unconfigured',
       url,
+      extensionExpectation: null,
       connector: null,
       error: 'Owner credential is not configured',
     }
@@ -49,12 +96,53 @@ export async function computeChromeStatus(
     return {
       state: connector !== undefined && connector.connected ? 'ready' : 'waiting-for-extension',
       url,
-      connector: connector ?? null,
+      extensionExpectation: status.extensionExpectation,
+      connector: connector === undefined ? null : publicConnectorSummary(connector),
       error: null,
     }
   } catch (error) {
-    return { state: 'offline', url, connector: null, error: String(error) }
+    return {
+      state: 'offline',
+      url,
+      extensionExpectation: null,
+      connector: null,
+      error: String(error),
+    }
   }
+}
+
+/**
+ * Remember the last live public connector summary and surface it as disconnected
+ * when the bridge reports waiting with no live connector. Retention is process
+ * memory only; never persisted and never includes connector ids or secrets.
+ * @param payload - fresh status from {@link computeChromeStatus}.
+ * @param lastLive - previously retained summary, or null before any live connector.
+ * @returns the payload to serve plus the updated retention.
+ */
+export function retainPublicConnector(
+  payload: ChromeStatusPayload,
+  lastLive: ChromePublicConnectorSummary | null,
+): {
+  payload: ChromeStatusPayload
+  lastLive: ChromePublicConnectorSummary | null
+} {
+  if (payload.connector !== null && payload.connector.connected) {
+    return { payload, lastLive: payload.connector }
+  }
+  if (
+    payload.state === 'waiting-for-extension'
+    && payload.connector === null
+    && lastLive !== null
+  ) {
+    return {
+      payload: {
+        ...payload,
+        connector: { ...lastLive, connected: false },
+      },
+      lastLive,
+    }
+  }
+  return { payload, lastLive }
 }
 
 /**
@@ -80,16 +168,21 @@ export function registerChromeStatus(
     }) => void | Promise<void>
   }): () => void }).register.bind(webServer)
 
+  /** Last live public connector summary for this process; not durable. */
+  let lastLive: ChromePublicConnectorSummary | null = null
+
   return register({
     kind: 'exact',
     path: CHROME_STATUS_PATH,
     handler: async (_req, res) => {
-      const payload = await computeChromeStatus(url, getIdentity)
+      const computed = await computeChromeStatus(url, getIdentity)
+      const retained = retainPublicConnector(computed, lastLive)
+      lastLive = retained.lastLive
       res.writeHead(200, {
         'content-type': 'application/json; charset=utf-8',
         'cache-control': 'no-store',
       })
-      res.end(JSON.stringify(payload))
+      res.end(JSON.stringify(retained.payload))
     },
   })
 }

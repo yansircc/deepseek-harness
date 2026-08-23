@@ -17118,23 +17118,23 @@
 	};
 	var PageCalls = {
 		snapshot: Struct({
-			kind: Literal("snapshot"),
+			op: Literal("snapshot"),
 			...SnapshotFields
 		}),
 		read: Struct({
-			kind: Literal("read"),
+			op: Literal("read"),
 			ref: optional$2(ObservationRefId),
 			view: optional$2(Literals(["content", "outline"])),
 			query: optional$2(String$1),
 			maxChars: optional$2(ReadTextLimit)
 		}),
 		inspect: Struct({
-			kind: Literal("inspect"),
+			op: Literal("inspect"),
 			element: ElementTarget,
 			scrollIntoView: optional$2(Boolean$1)
 		}),
 		navigate: Struct({
-			kind: Literal("navigate"),
+			op: Literal("navigate"),
 			url: NonBlankString$1,
 			waitUntilLoad: optional$2(Boolean$1),
 			timeoutMs: optional$2(OperationTimeoutMs),
@@ -17142,12 +17142,12 @@
 			snapshot: optional$2(SnapshotOptions)
 		}),
 		evaluate: Struct({
-			kind: Literal("evaluate"),
+			op: Literal("evaluate"),
 			expression: NonBlankString$1,
 			awaitPromise: optional$2(Boolean$1)
 		}),
 		wait: Struct({
-			kind: Literal("wait"),
+			op: Literal("wait"),
 			condition: Union([
 				Struct({
 					by: Literal("selector"),
@@ -17170,70 +17170,70 @@
 			intervalMs: optional$2(WaitIntervalMs)
 		}),
 		console: Struct({
-			kind: Literal("console"),
+			op: Literal("console"),
 			clear: optional$2(Boolean$1)
 		}),
 		"network-list": Struct({
-			kind: Literal("network-list"),
+			op: Literal("network-list"),
 			includePreserved: optional$2(Boolean$1),
 			clear: optional$2(Boolean$1)
 		}),
 		"network-get": Struct({
-			kind: Literal("network-get"),
+			op: Literal("network-get"),
 			requestId: NonBlankString$1
 		}),
 		screenshot: ScreenshotCall
 	};
 	var InputCalls = {
 		click: Struct({
-			kind: Literal("click"),
+			op: Literal("click"),
 			at: PointerTarget,
 			...SnapshotVerification
 		}),
 		type: Struct({
-			kind: Literal("type"),
+			op: Literal("type"),
 			text: InputText,
 			into: optional$2(ElementTarget),
 			pressEnter: optional$2(Boolean$1),
 			...SnapshotVerification
 		}),
 		fill: Struct({
-			kind: Literal("fill"),
+			op: Literal("fill"),
 			text: InputText,
 			into: ElementTarget,
 			submit: optional$2(Boolean$1),
 			...SnapshotVerification
 		}),
 		key: Struct({
-			kind: Literal("key"),
+			op: Literal("key"),
 			key: NonBlankString$1,
 			at: optional$2(ElementTarget),
 			modifiers: optional$2(Modifiers),
 			...SnapshotVerification
 		}),
 		hover: Struct({
-			kind: Literal("hover"),
+			op: Literal("hover"),
 			at: PointerTarget
 		}),
 		drag: Struct({
-			kind: Literal("drag"),
+			op: Literal("drag"),
 			from: PointerTarget,
 			to: PointerTarget,
 			steps: optional$2(InputSteps)
 		}),
 		tap: Struct({
-			kind: Literal("tap"),
+			op: Literal("tap"),
 			at: PointerTarget
 		}),
 		scroll: Struct({
-			kind: Literal("scroll"),
+			op: Literal("scroll"),
 			within: optional$2(ElementTarget),
 			deltaY: optional$2(FiniteNumber),
 			deltaX: optional$2(FiniteNumber),
 			steps: optional$2(ScrollSteps)
 		}),
 		upload: Struct({
-			kind: Literal("upload"),
+			op: Literal("upload"),
 			into: ElementTarget,
 			paths: UploadPaths
 		})
@@ -17241,6 +17241,7 @@
 	var SystemCalls = {
 		version: Struct({ op: Literal("version") }),
 		"automation-status": Struct({ op: Literal("automation-status") }),
+		"clear-stale": Struct({ op: Literal("clear-stale") }),
 		cleanup: Struct({ op: Literal("cleanup") }),
 		"cleanup-all": Struct({ op: Literal("cleanup-all") }),
 		probe: Struct({
@@ -17333,6 +17334,8 @@
 			permissionGranted: Boolean$1
 		})
 	});
+	var ClearStaleResult = Struct({ staleOwnershipsCleared: SessionAutomationTargetCount });
+	var ClearStaleAllResult = Struct({ staleOwnershipsCleared: ProfileAutomationTargetCount });
 	var WaitResult = Struct({
 		satisfied: Boolean$1,
 		elapsedMs: NonNegativeInt$1,
@@ -17501,11 +17504,11 @@
 	};
 	var OPERATION_CONTRACTS = {
 		tab: {
-			list: defineOperation(TabCalls.list, result(ArraySchema(FormattedTabResult)), Deadline.default, atomicTool("chrome_tab_list", "List Chrome tabs visible to this Pi session.", "List Chrome tabs and their exact ids.")),
+			list: defineOperation(TabCalls.list, result(ArraySchema(FormattedTabResult)), Deadline.default, atomicTool("chrome_tab_list", "List Chrome tabs visible to this DSH session.", "List Chrome tabs and their exact ids.")),
 			new: defineOperation(TabCalls.new, result(FormattedTabResult), Deadline.default, atomicTool("chrome_tab_new", "Create another session-owned Chrome tab.", "Create a session-owned Chrome tab.")),
 			activate: defineOperation(TabCalls.activate, result(FormattedTabResult), Deadline.default, atomicTool("chrome_tab_activate", "Activate one exact Chrome tab.", "Activate an exact Chrome tab.")),
 			close: defineOperation(TabCalls.close, result(Struct({ closed: Int })), Deadline.default, atomicTool("chrome_tab_close", "Close one exact Chrome tab.", "Close an exact Chrome tab.")),
-			group: defineOperation(TabCalls.group, result(FormattedTabResult), Deadline.default, atomicTool("chrome_tab_group", "Place one exact Chrome tab in the Pi session group.", "Group an exact Chrome tab under the Pi session.")),
+			group: defineOperation(TabCalls.group, result(FormattedTabResult), Deadline.default, atomicTool("chrome_tab_group", "Place one exact Chrome tab in the DSH session group.", "Group an exact Chrome tab under the DSH session.")),
 			ungroup: defineOperation(TabCalls.ungroup, result(FormattedTabResult), Deadline.default, atomicTool("chrome_tab_ungroup", "Remove one exact Chrome tab from its group.", "Ungroup an exact Chrome tab."))
 		},
 		page: {
@@ -17553,13 +17556,14 @@
 				extensionDisplayVersion: NonEmptyString,
 				userAgent: String$1
 			})), Deadline.default),
-			"automation-status": defineOperation(SystemCalls["automation-status"], result(AutomationStatusResult), Deadline.default),
+			"automation-status": defineOperation(SystemCalls["automation-status"], result(AutomationStatusResult), Deadline.default, atomicTool("chrome_automation_status", "Report this DSH session's Chrome automation ownership targets (owned, allocating, or stale).", "Inspect session automation ownership without changing it.")),
+			"clear-stale": defineOperation(SystemCalls["clear-stale"], result(ClearStaleResult), Deadline.default, atomicTool("chrome_automation_clear_stale", "Remove proved-stale Chrome automation ownership records for this DSH session without closing or adopting tabs.", "Clear proved-stale automation ownership records only; never close or adopt tabs.")),
 			cleanup: defineOperation(SystemCalls.cleanup, result(CleanupResult), Deadline.default),
 			"cleanup-all": defineOperation(SystemCalls["cleanup-all"], result(CleanupAllResult), Deadline.default),
 			probe: defineOperation(SystemCalls.probe, opaque("probe payload is page-defined"), Deadline.default)
 		}
 	};
-	Object.keys(OPERATION_CONTRACTS.tab), Object.keys(OPERATION_CONTRACTS.page), Object.keys(OPERATION_CONTRACTS.input);
+	Object.keys(OPERATION_CONTRACTS.tab), Object.keys(OPERATION_CONTRACTS.page), Object.keys(OPERATION_CONTRACTS.input), Object.keys(OPERATION_CONTRACTS.system);
 	var callsOf = (contracts, field) => Object.values(contracts).map((contract) => contract[field]);
 	var EmptyToolParameters = Record(String$1, Never);
 	var operationMembers = (schema) => "members" in schema ? schema.members : [schema];
@@ -17595,10 +17599,12 @@
 	var ATOMIC_TOOL_DESCRIPTORS = [
 		"tab",
 		"page",
-		"input"
-	].flatMap((domain) => Object.entries(OPERATION_CONTRACTS[domain]).map(([operation, contract]) => {
+		"input",
+		"system"
+	].flatMap((domain) => Object.entries(OPERATION_CONTRACTS[domain]).flatMap(([operation, contract]) => {
 		const metadata = contract.atomicTool;
-		return {
+		if (metadata === void 0) return [];
+		return [{
 			name: metadata.name,
 			label: metadata.name.slice(7).split("_").map((part) => part[0].toUpperCase() + part.slice(1)).join(" "),
 			domain,
@@ -17611,7 +17617,7 @@
 				...metadata.project?.(input) ?? input,
 				op: operation
 			})
-		};
+		}];
 	}));
 	Object.fromEntries(ATOMIC_TOOL_DESCRIPTORS.flatMap(({ actionVerb, name }) => actionVerb === void 0 ? [] : [[actionVerb, name]]));
 	var flatToolCallsOf = (contracts) => Object.entries(contracts).flatMap(([op, contract]) => operationMembers(contract.toolCall).map((operation) => {
@@ -17644,12 +17650,9 @@
 			}
 		};
 	};
-	var TabCall = Union(callsOf(OPERATION_CONTRACTS.tab, "call")).annotate(description("Manage Chrome tabs owned by this Pi session or explicitly selected tabs. Omitted targets require an unambiguous owned set."));
+	var TabCall = Union(callsOf(OPERATION_CONTRACTS.tab, "call")).annotate(description("Manage Chrome tabs owned by this DSH session or explicitly selected tabs. Omitted targets require an unambiguous owned set."));
 	var PageOperation = Union(callsOf(OPERATION_CONTRACTS.page, "call"));
-	var PageCall = Struct({
-		target: optional$1(Target),
-		operation: PageOperation
-	}).annotate(description("Observe, navigate, evaluate, wait for, diagnose, or capture one Chrome page."));
+	var PageCall = Union(flatToolCallsOf(OPERATION_CONTRACTS.page)).annotate(description("Observe, navigate, evaluate, wait for, diagnose, or capture one Chrome page."));
 	var ToolPageOperation = Union(callsOf(OPERATION_CONTRACTS.page, "toolCall"));
 	var NestedToolPageCall = Struct({
 		target: optional$1(Target),
@@ -17661,10 +17664,7 @@
 		encode: transform$1((call) => flattenToolCall(call))
 	}), annotate(description("Observe, navigate, evaluate, wait for, diagnose, or capture one Chrome page.")));
 	var InputOperation = Union(callsOf(OPERATION_CONTRACTS.input, "call"));
-	var InputCall = Struct({
-		target: optional$1(Target),
-		operation: InputOperation
-	}).annotate(description("Drive Chrome's real pointer, keyboard, touch, wheel, drag, and file-input layers."));
+	var InputCall = Union(flatToolCallsOf(OPERATION_CONTRACTS.input)).annotate(description("Drive Chrome's real pointer, keyboard, touch, wheel, drag, and file-input layers."));
 	var NestedToolInputCall = Struct({
 		target: optional$1(Target),
 		background: optional$1(Boolean$1),
@@ -17681,7 +17681,7 @@
 			case "tab":
 			case "system": return command.call.op;
 			case "page":
-			case "input": return command.call.operation.kind;
+			case "input": return command.call.op;
 		}
 	};
 	var screenshotResultSchemaFor = (operation) => {
@@ -17704,7 +17704,7 @@
 		switch (contract._tag) {
 			case "Opaque": return JsonValue;
 			case "Schema": return contract.schema;
-			case "ScreenshotByCaptureAndFormat": return command.domain === "page" && command.call.operation.kind === "screenshot" ? screenshotResultSchemaFor(command.call.operation) : Never;
+			case "ScreenshotByCaptureAndFormat": return command.domain === "page" && command.call.op === "screenshot" ? screenshotResultSchemaFor(command.call) : Never;
 		}
 	};
 	var validateOperationSuccess = (command, value) => gen(function* () {
@@ -17725,7 +17725,7 @@
 			};
 			case "ScreenshotByCaptureAndFormat": return {
 				mode: "by-call-fields",
-				selectors: ["call.operation.capture.kind", "call.operation.format"],
+				selectors: ["call.capture.kind", "call.format"],
 				variants: {
 					viewport: {
 						png: toJsonSchemaDocument(contract.schemas.viewport.png).schema,
@@ -17958,6 +17958,84 @@
 	var decodeJson = (label, schema, text) => decodeUnknownEffect(fromJsonString(schema), { onExcessProperty: "error" })(text).pipe(mapError(failDecode(label)));
 	var decodePollResponseJson = (text) => decodeJson("poll response", PollResponse, text);
 	var decodeBridgeAuthenticationHandshakeJson = (text) => decodeJson("bridge authentication handshake", BridgeAuthenticationHandshake, text);
+	var POLL_DIAGNOSTIC_LIMIT_CHARS = 2048;
+	var POLL_RESPONSE_INVALID_CODE = "poll-response-invalid";
+	var recoverPollCommandId = (value) => {
+		if (typeof value !== "object" || value === null || Array.isArray(value)) return;
+		if (value.type !== "command") return;
+		const command = value.command;
+		if (typeof command !== "object" || command === null || Array.isArray(command)) return;
+		return typeof command.id === "string" && command.id.length > 0 ? command.id : void 0;
+	};
+	var summarizePollBodyForDiagnostic = (value) => {
+		if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+		const summary = {};
+		if (typeof value.type === "string") summary.type = value.type;
+		const command = value.command;
+		if (typeof command === "object" && command !== null && !Array.isArray(command)) {
+			const commandSummary = {};
+			if (typeof command.id === "string") commandSummary.id = command.id;
+			if (typeof command.domain === "string") commandSummary.domain = command.domain;
+			const call = command.call;
+			if (typeof call === "object" && call !== null && !Array.isArray(call) && typeof call.op === "string") commandSummary.call = { op: call.op };
+			if (Object.keys(commandSummary).length > 0) summary.command = commandSummary;
+		}
+		return summary;
+	};
+	var formatDiagnosticPathSegment = (segment) => typeof segment === "string" ? segment : typeof segment === "number" && Number.isFinite(segment) ? String(segment) : typeof segment === "symbol" ? segment.description ?? "symbol" : "_";
+	var formatDiagnosticFieldPath = (path) => path.length === 0 ? "root" : path.map(formatDiagnosticPathSegment).join(".");
+	var secretFreeSchemaLeafMessage = (tag) => {
+		switch (tag) {
+			case "InvalidType": return "Invalid type";
+			case "InvalidValue": return "Invalid value";
+			case "MissingKey": return "Missing key";
+			case "UnexpectedKey": return "Unexpected key";
+			case "Forbidden": return "Forbidden";
+			case "OneOf": return "Expected exactly one member to match";
+			case "Filter": return "Failed filter";
+			default: return tag.length > 0 ? tag : "Schema issue";
+		}
+	};
+	var collectSecretFreeSchemaIssues = (issue, path = []) => {
+		switch (issue._tag) {
+			case "Filter": {
+				const nested = collectSecretFreeSchemaIssues(issue.issue, path);
+				return nested.length > 0 ? nested : [{
+					path,
+					message: secretFreeSchemaLeafMessage("Filter")
+				}];
+			}
+			case "Encoding": return collectSecretFreeSchemaIssues(issue.issue, path);
+			case "Pointer": return collectSecretFreeSchemaIssues(issue.issue, [...path, ...issue.path]);
+			case "Composite":
+			case "AnyOf": return issue.issues.flatMap((child) => collectSecretFreeSchemaIssues(child, path));
+			default: return [{
+				path,
+				message: secretFreeSchemaLeafMessage(issue._tag)
+			}];
+		}
+	};
+	var boundDiagnosticText = (text, limit = POLL_DIAGNOSTIC_LIMIT_CHARS) => text.length <= limit ? text : limit <= 1 ? "…" : `${text.slice(0, limit - 1)}…`;
+	var formatPollDecodeDiagnostic = (issues, summary) => {
+		const lines = issues.map((issue) => `${formatDiagnosticFieldPath(issue.path)}: ${issue.message}`);
+		if (lines.length === 0) lines.push("root: Invalid poll response");
+		lines.push(`summary: ${JSON.stringify(summary)}`);
+		return boundDiagnosticText(lines.join("\n"));
+	};
+	var tryParsePollJson = (text) => {
+		try {
+			return {
+				_tag: "ok",
+				value: JSON.parse(text)
+			};
+		} catch {
+			return { _tag: "invalid" };
+		}
+	};
+	var protocolFailureSchemaIssue = (error) => {
+		const cause = error.cause;
+		if (cause !== void 0 && typeof cause === "object" && cause !== null && "_tag" in cause) return cause;
+	};
 	var toWireCommandTerminalFailure = (error) => {
 		switch (error._tag) {
 			case "CommandRejected": return {
@@ -18581,48 +18659,28 @@
 			return response.body ? cancelResponseBody(response.body).pipe(andThen(fail(failure))) : fail(failure);
 		}
 		if (!response.body) return succeed("");
+		const body = response.body;
 		return callback((resume) => {
-			const reader = response.body.getReader();
-			const chunks = [];
-			let receivedBytes = 0;
 			let finished = false;
 			const finish = (effect) => {
 				if (finished) return;
 				finished = true;
 				resume(effect);
 			};
-			const read = () => {
-				reader.read().then(({ done, value }) => {
-					if (finished) return;
-					if (done) {
-						const body = new Uint8Array(receivedBytes);
-						let offset = 0;
-						for (const chunk of chunks) {
-							body.set(chunk, offset);
-							offset += chunk.byteLength;
-						}
-						finish(succeed(new TextDecoder().decode(body)));
-						return;
-					}
-					receivedBytes += value.byteLength;
-					if (receivedBytes > limitBytes) {
-						chunks.length = 0;
-						const failure = responseTooLarge(limitBytes);
-						reader.cancel().then(() => finish(fail(failure)), (cause) => finish(logWarning("dsh-chrome failed to cancel oversized bridge response", String(cause)).pipe(andThen(fail(failure)))));
-						return;
-					}
-					chunks.push(value);
-					read();
-				}, (cause) => finish(fail(new ConnectorHttpFailure({
-					code: "bridge-response-read",
-					message: "Could not read bridge response body",
-					cause
-				}))));
-			};
-			read();
+			response.text().then((text) => {
+				if (text.length > limitBytes) {
+					finish(fail(responseTooLarge(limitBytes)));
+					return;
+				}
+				finish(succeed(text));
+			}, (cause) => finish(fail(new ConnectorHttpFailure({
+				code: "bridge-response-read",
+				message: "Could not read bridge response body",
+				cause
+			}))));
 			return sync(() => {
 				finished = true;
-			}).pipe(andThen(promise(() => reader.cancel())), catch_((cause) => logWarning("dsh-chrome failed to cancel bridge response reader", String(cause))));
+			}).pipe(andThen(cancelResponseBody(body)), catch_((cause) => logWarning("dsh-chrome failed to cancel bridge response body", String(cause))));
 		});
 	};
 	var bridgeRequest = (routeName, init, connector, authentication, timeoutMs) => {
@@ -18699,6 +18757,10 @@
 		if (value.type === "dsh-chrome/connector/load") return true;
 		return value.type === "dsh-chrome/connector/rename" && "label" in value && typeof value.label === "string";
 	};
+	var isAutomationRecoveryRequest = (value) => {
+		if (typeof value !== "object" || value === null || !("type" in value)) return false;
+		return value.type === "dsh-chrome/automation/stale-status" || value.type === "dsh-chrome/automation/clear-stale";
+	};
 	//#endregion
 	//#region src/browser/connector-identity.ts
 	var ConnectorIdentityFailure = class extends TaggedError("ConnectorIdentityFailure") {};
@@ -18732,7 +18794,7 @@
 		...identity,
 		extensionId: chrome.runtime.id,
 		extensionDisplayVersion: chrome.runtime.getManifest().version,
-		protocolFingerprint: "593fb1f978e0ef1f0e3896f02cde26ac64ac647909a6c93aa7eb7fc4660cd501"
+		protocolFingerprint: "5cdf33d5c0f5594efe5917af839023d6b06fd3e59d05924bbc62ed204de4d0ce"
 	}).pipe(flatMap(decodeUnknownEffect(ProfileConnector)), mapError((cause) => cause instanceof ConnectorIdentityFailure ? cause : new ConnectorIdentityFailure({
 		message: "Live connector metadata is invalid",
 		cause
@@ -19351,6 +19413,19 @@
 	var debuggerStates = /* @__PURE__ */ new Map();
 	var navigationTurns = /* @__PURE__ */ new Map();
 	var INPUT_IDLE_DETACH_MS = 15e3;
+	var DEBUGGER_ATTACH_TIMEOUT_MS = 5e3;
+	var DEBUGGER_DETACH_TIMEOUT_MS = 5e3;
+	var CDP_COMMAND_TIMEOUT_MS = 10e3;
+	var EXECUTE_SCRIPT_TIMEOUT_MS = 8e3;
+	var withTimeout = (promise, ms, message) => {
+		let timer;
+		return Promise.race([
+			promise.finally(() => clearTimeout(timer)),
+			new Promise((_, reject) => {
+				timer = setTimeout(() => reject(new Error(message)), ms);
+			})
+		]);
+	};
 	var MAX_BUFFERED_NAVIGATION_EVENTS = 256;
 	var CDP_VERSION = "1.3";
 	var deferred = () => {
@@ -19469,7 +19544,18 @@
 	}
 	async function debuggerAttachRaw(tabId) {
 		const debuggee = { tabId };
-		await chrome.debugger.attach(debuggee, CDP_VERSION);
+		const attach = chrome.debugger.attach(debuggee, CDP_VERSION);
+		try {
+			await withTimeout(
+				attach,
+				DEBUGGER_ATTACH_TIMEOUT_MS,
+				`Chrome debugger attach timed out after ${DEBUGGER_ATTACH_TIMEOUT_MS}ms for tab ${tabId}`
+			);
+		} catch (error) {
+			// Cleanup must not block: Chrome may serialize detach behind the timed-out attach; a late successful attach is detached in background.
+			void Promise.resolve(attach).then(() => chrome.debugger.detach(debuggee)).catch(() => {});
+			throw error;
+		}
 		return debuggee;
 	}
 	var completeDebuggerAttach = async (tabId, transition) => {
@@ -19577,8 +19663,13 @@
 	}
 	var completeDebuggerDetach = async (tabId, transition) => {
 		try {
-			await chrome.debugger.detach(transition.session.debuggee);
+			await withTimeout(
+				chrome.debugger.detach(transition.session.debuggee),
+				DEBUGGER_DETACH_TIMEOUT_MS,
+				`Chrome debugger detach timed out after ${DEBUGGER_DETACH_TIMEOUT_MS}ms for tab ${tabId}`
+			);
 		} catch (error) {
+			console.warn(`[dsh-chrome] debugger detach failed for tab ${tabId}:`, error);
 			if (debuggerStates.get(tabId) === transition) {
 				if (transition.detachedByEvent || isDebuggerSessionLost(error)) {
 					debuggerStates.delete(tabId);
@@ -19653,20 +19744,35 @@
 		entry.activeCommands += 1;
 		const debuggee = entry.debuggee;
 		return new Promise((resolve, reject) => {
+			let settled = false;
+			const finish = (error, result) => {
+				if (settled) return;
+				settled = true;
+				clearTimeout(timer);
+				entry.activeCommands -= 1;
+				if (error) reject(error);
+				else resolve(result);
+			};
+			const timer = setTimeout(() => {
+				console.warn(`[dsh-chrome] CDP ${method} on tab ${tabId} did not answer within ${CDP_COMMAND_TIMEOUT_MS}ms; assuming the debugger session is lost`, { params });
+				finish(/* @__PURE__ */ new Error(`${method}: dsh-chrome CDP sendCommand timed out after ${CDP_COMMAND_TIMEOUT_MS}ms; the debugger session is likely lost on tab ${tabId}`));
+			}, CDP_COMMAND_TIMEOUT_MS);
 			try {
 				chrome.debugger.sendCommand(debuggee, method, params || {}, (result) => {
-					entry.activeCommands -= 1;
-					if (chrome.runtime.lastError) reject(/* @__PURE__ */ new Error(`${method}: ${chrome.runtime.lastError.message}`));
-					else resolve(result);
+					if (chrome.runtime.lastError) finish(/* @__PURE__ */ new Error(`${method}: ${chrome.runtime.lastError.message}`));
+					else finish(void 0, result);
 				});
 			} catch (error) {
-				entry.activeCommands -= 1;
-				reject(error);
+				finish(error);
 			}
 		});
 	}
 	function executeScript(options) {
-		return chrome.scripting.executeScript(options);
+		return withTimeout(
+			chrome.scripting.executeScript(options),
+			EXECUTE_SCRIPT_TIMEOUT_MS,
+			`chrome.scripting.executeScript timed out after ${EXECUTE_SCRIPT_TIMEOUT_MS}ms`
+		);
 	}
 	async function findForeignExtensionTargets(tabId) {
 		try {
@@ -19694,7 +19800,7 @@
 			return await cdpRaw(tabId, method, params);
 		} catch (error) {
 			const message = errorText(error);
-			if (session && attachedSession(tabId) === session && isDebuggerSessionLost(error)) await detachDebugger(tabId);
+			if (session && attachedSession(tabId) === session && (isDebuggerSessionLost(error) || /did not answer within/i.test(message))) await detachDebugger(tabId);
 			if (/Cannot access a chrome-extension:\/\/ URL of different extension/i.test(message) && method.startsWith("Input.")) {
 				const extensionId = extractForeignExtId(await findForeignExtensionTargets(tabId)) || "unknown";
 				throw new Error(`Another Chrome extension (${extensionId}) blocked input on this page. The input command was not replayed because its outcome is unknown; close the overlay before issuing a new command.`, { cause: error });
@@ -19850,7 +19956,7 @@
 	});
 	var invalidAutomationTargetState = (message) => rejected("invalid-automation-target-state", message);
 	function sessionKeyOf(params) {
-		if (typeof params.sessionKey !== "string" || params.sessionKey.length === 0) throw rejected("missing-session-key", "Chrome automation requires a Pi session key");
+		if (typeof params.sessionKey !== "string" || params.sessionKey.length === 0) throw rejected("missing-session-key", "Chrome automation requires a DSH session key");
 		return params.sessionKey;
 	}
 	async function readBrowserEpoch() {
@@ -19872,14 +19978,14 @@
 	var assertAutomationTargetQuotas = (targets) => {
 		let profileCount = 0;
 		for (const [sessionKey, sessionTargets] of Object.entries(targets)) {
-			if (sessionTargets.length === 0) throw invalidAutomationTargetState(`Chrome automation target storage contains an empty target set for Pi session ${sessionKey}`);
-			if (sessionTargets.length > MAX_AUTOMATION_TARGETS_PER_SESSION) throw invalidAutomationTargetState(`Pi session ${sessionKey} stores ${sessionTargets.length} automation targets; maximum is ${MAX_AUTOMATION_TARGETS_PER_SESSION}`);
+			if (sessionTargets.length === 0) throw invalidAutomationTargetState(`Chrome automation target storage contains an empty target set for DSH session ${sessionKey}`);
+			if (sessionTargets.length > MAX_AUTOMATION_TARGETS_PER_SESSION) throw invalidAutomationTargetState(`DSH session ${sessionKey} stores ${sessionTargets.length} automation targets; maximum is ${MAX_AUTOMATION_TARGETS_PER_SESSION}`);
 			profileCount += sessionTargets.length;
 		}
 		if (profileCount > MAX_AUTOMATION_TARGETS_PER_PROFILE) throw invalidAutomationTargetState(`Chrome automation target storage contains ${profileCount} targets; profile maximum is ${MAX_AUTOMATION_TARGETS_PER_PROFILE}`);
 	};
 	function decodeAutomationTarget(target, sessionKey) {
-		if (typeof target !== "object" || target === null) throw invalidAutomationTargetState(`Invalid Chrome automation target state for Pi session ${sessionKey}`);
+		if (typeof target !== "object" || target === null) throw invalidAutomationTargetState(`Invalid Chrome automation target state for DSH session ${sessionKey}`);
 		const candidate = target;
 		const commonValid = typeof candidate.epoch === "string" && candidate.epoch.length > 0 && typeof candidate.label === "string" && candidate.label.length > 0 && candidate.label.length <= 80;
 		const allocatingValid = candidate.state === "allocating" && typeof candidate.nonce === "string" && candidate.nonce.length > 0 && hasExactKeys(candidate, [
@@ -19894,7 +20000,7 @@
 			"tabId",
 			"label"
 		]);
-		if (!commonValid || !allocatingValid && !ownedValid) throw invalidAutomationTargetState(`Invalid Chrome automation target state for Pi session ${sessionKey}`);
+		if (!commonValid || !allocatingValid && !ownedValid) throw invalidAutomationTargetState(`Invalid Chrome automation target state for DSH session ${sessionKey}`);
 		return target;
 	}
 	var targetIdentity = (target) => target.state === "allocating" ? `allocation:${target.nonce}` : `tab:${target.tabId}`;
@@ -19903,10 +20009,10 @@
 		if (stored === void 0) return {};
 		if (typeof stored !== "object" || stored === null || Array.isArray(stored)) throw invalidAutomationTargetState("Invalid Chrome automation targets state");
 		const decoded = Object.fromEntries(Object.entries(stored).map(([sessionKey, value]) => {
-			if (!Array.isArray(value) || value.length === 0) throw invalidAutomationTargetState(`Invalid Chrome automation target set for Pi session ${sessionKey}`);
+			if (!Array.isArray(value) || value.length === 0) throw invalidAutomationTargetState(`Invalid Chrome automation target set for DSH session ${sessionKey}`);
 			const sessionTargets = value.map((target) => decodeAutomationTarget(target, sessionKey));
 			const identities = sessionTargets.map(targetIdentity);
-			if (new Set(identities).size !== identities.length) throw invalidAutomationTargetState(`Pi session ${sessionKey} contains duplicate Chrome automation targets`);
+			if (new Set(identities).size !== identities.length) throw invalidAutomationTargetState(`DSH session ${sessionKey} contains duplicate Chrome automation targets`);
 			return [sessionKey, sessionTargets];
 		}));
 		assertAutomationTargetQuotas(decoded);
@@ -19921,7 +20027,7 @@
 		const targets = await readAutomationTargets();
 		const sessionTargets = targets[sessionKey] ?? [];
 		const profileCount = Object.values(targets).reduce((count, entries) => count + entries.length, 0);
-		if (sessionTargets.length >= MAX_AUTOMATION_TARGETS_PER_SESSION) throw rejected("automation-target-limit", `Pi session ${sessionKey} already owns ${sessionTargets.length} Chrome automation targets; maximum is ${MAX_AUTOMATION_TARGETS_PER_SESSION}. Close an owned tab before creating another.`, {
+		if (sessionTargets.length >= MAX_AUTOMATION_TARGETS_PER_SESSION) throw rejected("automation-target-limit", `DSH session ${sessionKey} already owns ${sessionTargets.length} Chrome automation targets; maximum is ${MAX_AUTOMATION_TARGETS_PER_SESSION}. Close an owned tab before creating another.`, {
 			scope: "session",
 			limit: MAX_AUTOMATION_TARGETS_PER_SESSION,
 			current: sessionTargets.length
@@ -19940,7 +20046,7 @@
 		const targets = await readAutomationTargets();
 		const sessionTargets = targets[sessionKey] ?? [];
 		const identity = targetIdentity(previous);
-		if (!sessionTargets.some((target) => targetIdentity(target) === identity)) throw invalidAutomationTargetState(`Pi session ${sessionKey} lost automation target ${identity} during allocation`);
+		if (!sessionTargets.some((target) => targetIdentity(target) === identity)) throw invalidAutomationTargetState(`DSH session ${sessionKey} lost automation target ${identity} during allocation`);
 		await persistAutomationTargets({
 			...targets,
 			[sessionKey]: sessionTargets.map((target) => targetIdentity(target) === identity ? replacement : target)
@@ -19988,7 +20094,7 @@
 		target,
 		reason
 	});
-	var ownershipLost = (sessionKey, target, reason) => new AutomationOwnershipLost(reason === "epoch-changed" ? `Pi session ${sessionKey} has automation ownership from a previous browser epoch. Run /chrome cleanup before creating a replacement; no existing tab was adopted or closed.` : reason === "tab-missing" ? `Pi session ${sessionKey} lost its exact automation tab. Run /chrome cleanup before creating a replacement; no other tab was adopted or closed.` : `Pi session ${sessionKey}'s automation tab left the active profile's regular windows. Run /chrome cleanup before creating a replacement; no other tab was adopted or closed.`, reason, target.state === "owned" ? target.tabId : null);
+	var ownershipLost = (sessionKey, target, reason) => new AutomationOwnershipLost(reason === "epoch-changed" ? `DSH session ${sessionKey} has automation ownership from a previous browser epoch. Clear the stale automation target before creating a replacement; no existing tab was adopted or closed.` : reason === "tab-missing" ? `DSH session ${sessionKey} lost its exact automation tab. Clear the stale automation target before creating a replacement; no other tab was adopted or closed.` : `DSH session ${sessionKey}'s automation tab left the active profile's regular windows. Call chrome_automation_clear_stale to remove the stale ownership record before creating a replacement; no other tab was adopted or closed.`, reason, target.state === "owned" ? target.tabId : null);
 	var resolutionDetails = (resolutions) => resolutions.map((resolution) => {
 		switch (resolution.state) {
 			case "owned": return {
@@ -20008,7 +20114,7 @@
 			};
 		}
 	});
-	var ambiguousAutomationTarget = (sessionKey, resolutions) => rejected("ambiguous-owned-target", `Pi session ${sessionKey} owns ${resolutions.length} Chrome automation targets. Pass one exact target id.`, { ownedTargets: resolutionDetails(resolutions) });
+	var ambiguousAutomationTarget = (sessionKey, resolutions) => rejected("ambiguous-owned-target", `DSH session ${sessionKey} owns ${resolutions.length} Chrome automation targets. Pass one exact target id.`, { ownedTargets: resolutionDetails(resolutions) });
 	var resolveAutomationTargets = async (sessionKey, recoverAllocation = true) => {
 		const targets = (await readAutomationTargets())[sessionKey] ?? [];
 		if (targets.length === 0) return [];
@@ -20031,7 +20137,7 @@
 					continue;
 				}
 				const allocating = tabs.filter((candidate) => typeof candidate.id === "number" && normalWindowIds.has(candidate.windowId) && candidate.incognito !== true && candidate.url === allocationUrl(target));
-				if (allocating.length > 1) throw invalidAutomationTargetState(`Pi session ${sessionKey} has multiple tabs carrying allocation nonce ${target.nonce}`);
+				if (allocating.length > 1) throw invalidAutomationTargetState(`DSH session ${sessionKey} has multiple tabs carrying allocation nonce ${target.nonce}`);
 				const candidate = allocating[0];
 				if (!candidate || typeof candidate.id !== "number") {
 					resolutions.push({
@@ -20114,17 +20220,19 @@
 	}
 	async function getOwnedAutomationTarget(sessionKey) {
 		return withTargetTurn(async () => {
+			await autoReconcileSafeStaleAutomationTargets(sessionKey);
 			const current = await resolveAutomationTargets(sessionKey, false);
 			if (current.length === 0) return null;
 			if (current.length > 1) throw ambiguousAutomationTarget(sessionKey, current);
 			const resolution = (await resolveAutomationTargets(sessionKey))[0];
 			if (resolution.state === "owned") return resolution.tab;
 			if (resolution.state === "stale") throw ownershipLost(sessionKey, resolution.target, resolution.reason);
-			throw rejected("automation-target-allocation-pending", `Pi session ${sessionKey} has an unfinished Chrome automation target allocation. Run /chrome cleanup before retrying.`);
+			throw rejected("automation-target-allocation-pending", `DSH session ${sessionKey} has an unfinished Chrome automation target allocation. Clear the stale automation target before retrying.`);
 		});
 	}
 	async function getOrCreateAutomationTarget(sessionKey, groupTitle) {
 		return withTargetTurn(async () => {
+			await autoReconcileSafeStaleAutomationTargets(sessionKey);
 			const label = cleanGroupTitle(groupTitle);
 			const current = await resolveAutomationTargets(sessionKey, false);
 			if (current.length > 1) throw ambiguousAutomationTarget(sessionKey, current);
@@ -20152,11 +20260,12 @@
 	}
 	async function createNewAutomationTarget(sessionKey, groupTitle, groupColor) {
 		return withTargetTurn(async () => {
+			await autoReconcileSafeStaleAutomationTargets(sessionKey);
 			const label = cleanGroupTitle(groupTitle);
 			const resolutions = await resolveAutomationTargets(sessionKey, false);
 			const stale = resolutions.find((resolution) => resolution.state === "stale");
 			if (stale?.state === "stale") throw ownershipLost(sessionKey, stale.target, stale.reason);
-			if (resolutions.some((resolution) => resolution.state === "allocation-needed")) throw rejected("automation-target-allocation-pending", `Pi session ${sessionKey} has an unfinished Chrome automation target allocation. Run /chrome cleanup before creating another tab.`);
+			if (resolutions.some((resolution) => resolution.state === "allocation-needed")) throw rejected("automation-target-allocation-pending", `DSH session ${sessionKey} has an unfinished Chrome automation target allocation. Clear the stale automation target before creating another tab.`);
 			const normalWindows = await regularNormalWindows();
 			if (normalWindows.length === 0) throw rejected("chrome-window-required", "No regular Chrome window is open in the bound Chrome profile. Open the bound Chrome profile and try again.");
 			const target = {
@@ -20188,6 +20297,56 @@
 			})) };
 		});
 	}
+	var AUTO_RECONCILE_STALE_REASONS = new Set([
+		"epoch-changed",
+		"tab-missing"
+	]);
+	var clearProvedStaleAutomationTargets = async (sessionKey, reasons) => {
+		const resolutions = await resolveAutomationTargets(sessionKey, false);
+		let staleOwnershipsCleared = 0;
+		for (const resolution of resolutions) {
+			if (resolution.state !== "stale") continue;
+			if (reasons !== void 0 && !reasons.has(resolution.reason)) continue;
+			await removeAutomationTarget(sessionKey, resolution.target);
+			staleOwnershipsCleared += 1;
+		}
+		return { staleOwnershipsCleared };
+	};
+	var autoReconcileSafeStaleAutomationTargets = async (sessionKey) => clearProvedStaleAutomationTargets(sessionKey, AUTO_RECONCILE_STALE_REASONS);
+	async function clearStaleAutomationTargets(sessionKey) {
+		return withTargetTurn(async () => clearProvedStaleAutomationTargets(sessionKey));
+	}
+	async function clearAllStaleAutomationTargets() {
+		return withTargetTurn(async () => {
+			const targets = await readAutomationTargets();
+			let staleOwnershipsCleared = 0;
+			for (const sessionKey of Object.keys(targets)) {
+				staleOwnershipsCleared += (await clearProvedStaleAutomationTargets(sessionKey)).staleOwnershipsCleared;
+			}
+			return { staleOwnershipsCleared };
+		});
+	}
+	async function profileStaleAutomationStatus() {
+		return withTargetTurn(async () => {
+			const targets = await readAutomationTargets();
+			const staleTargets = [];
+			for (const sessionKey of Object.keys(targets)) {
+				const resolutions = await resolveAutomationTargets(sessionKey, false);
+				for (const resolution of resolutions) {
+					if (resolution.state !== "stale") continue;
+					staleTargets.push({
+						sessionKey,
+						reason: resolution.reason,
+						recordedTabId: resolution.target.state === "owned" ? resolution.target.tabId : null
+					});
+				}
+			}
+			return {
+				staleCount: staleTargets.length,
+				staleTargets
+			};
+		});
+	}
 	async function cleanupAutomationTarget(sessionKey) {
 		return withTargetTurn(async () => {
 			return executeAutomationTargetCleanup(await planAutomationTargetCleanup(sessionKey));
@@ -20214,7 +20373,7 @@
 			}
 			if (target.state === "allocating") {
 				const candidates = allocatingTabs.filter((candidate) => typeof candidate.id === "number" && normalWindowIds.has(candidate.windowId) && candidate.incognito !== true && candidate.url === allocationUrl(target));
-				if (candidates.length > 1) throw invalidAutomationTargetState(`Pi session ${sessionKey} has multiple tabs carrying allocation nonce ${target.nonce}`);
+				if (candidates.length > 1) throw invalidAutomationTargetState(`DSH session ${sessionKey} has multiple tabs carrying allocation nonce ${target.nonce}`);
 				const candidate = candidates[0];
 				cleanup.push({
 					sessionKey,
@@ -20279,7 +20438,7 @@
 		await releaseAutomationTargetTab(tabId);
 	}
 	function cleanGroupTitle(value) {
-		return value.replace(/\s+/g, " ").trim().slice(0, 80) || "Pi";
+		return value.replace(/\s+/g, " ").trim().slice(0, 80) || "DSH";
 	}
 	async function groupRecord(groupId) {
 		if (typeof groupId !== "number" || groupId < 0 || !chrome.tabGroups) return null;
@@ -20369,7 +20528,7 @@
 		} else {
 			const sessionKey = sessionKeyOf(params);
 			tab = createOwnedTarget ? await getOrCreateAutomationTarget(sessionKey, params.sessionGroupTitle) : await getOwnedAutomationTarget(sessionKey);
-			if (!tab) throw rejected("automation-target-required", "No target tab specified and this Pi session has no automation tab yet. Pass selectedTabId/urlFragment/titleFragment, or run chrome_navigate first.");
+			if (!tab) throw rejected("automation-target-required", "No target tab specified and this DSH session has no automation tab yet. Pass selectedTabId/urlFragment/titleFragment, or run chrome_navigate first.");
 		}
 		if (typeof tab?.id !== "number" || typeof tab.windowId !== "number") throw rejected("tab-not-found", "No matching Chrome tab found");
 		const url = tab.url || "";
@@ -20378,15 +20537,31 @@
 		return tab;
 	}
 	async function joinSessionGroup(tab, title) {
-		if (typeof tab.id !== "number") throw new Error("No tab to join to the Pi session group");
+		if (typeof tab.id !== "number") throw new Error("No tab to join to the DSH session group");
 		if (typeof tab.groupId === "number" && tab.groupId >= 0) return tab;
 		await groupTab(tab, title);
 		return chrome.tabs.get(tab.id);
 	}
 	async function bringToFront(tab) {
 		if (typeof tab.id !== "number" || typeof tab.windowId !== "number") throw new Error("Chrome tab cannot be focused without tab and window ids");
-		await chrome.windows.update(tab.windowId, { focused: true });
-		await chrome.tabs.update(tab.id, { active: true });
+		try {
+			await withTimeout(
+				chrome.windows.update(tab.windowId, { focused: true }),
+				2e3,
+				`chrome.windows.update timed out after 2000ms for window ${tab.windowId}`
+			);
+		} catch (error) {
+			console.warn("[dsh-chrome] window focus failed:", error);
+		}
+		try {
+			await withTimeout(
+				chrome.tabs.update(tab.id, { active: true }),
+				2e3,
+				`chrome.tabs.update timed out after 2000ms for tab ${tab.id}`
+			);
+		} catch (error) {
+			console.warn("[dsh-chrome] tab activation failed:", error);
+		}
 	}
 	//#endregion
 	//#region src/browser/key-layout.ts
@@ -22099,7 +22274,16 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 	});
 	var waitProjectionExpression = (conditionBy, conditionValue) => {
 		const value = JSON.stringify(conditionValue);
-		return `(async()=>{const bodyText=document.body?.innerText??"";${conditionBy === "selector" ? `const matchCount=document.querySelectorAll(${value}).length;const satisfied=matchCount>0;` : conditionBy === "urlIncludes" ? `const satisfied=location.href.includes(${value});` : conditionBy === "textContains" ? `const satisfied=bodyText.includes(${value});` : `const satisfied=Boolean(await (${conditionValue}));`}return {satisfied,observation:{url:location.href,title:document.title,readyState:document.readyState,bodyTextLength:bodyText.length${conditionBy === "selector" ? ",matchCount" : ""}}}})()`;
+		if (conditionBy === "selector") {
+			return `(async()=>{const matchCount=document.querySelectorAll(${value}).length;return {satisfied:matchCount>0,observation:{url:location.href,title:document.title,readyState:document.readyState,matchCount}}})()`;
+		}
+		if (conditionBy === "urlIncludes") {
+			return `(async()=>{const satisfied=location.href.includes(${value});return {satisfied,observation:{url:location.href,title:document.title,readyState:document.readyState}}})()`;
+		}
+		if (conditionBy === "textContains") {
+			return `(async()=>{const bodyText=document.body?.innerText??"";const satisfied=bodyText.includes(${value});return {satisfied,observation:{url:location.href,title:document.title,readyState:document.readyState,bodyTextLength:bodyText.length}}})()`;
+		}
+		return `(async()=>{const satisfied=Boolean(await (${conditionValue}));return {satisfied,observation:{url:location.href,title:document.title,readyState:document.readyState}}})()`;
 	};
 	var interpretTabCommand = (command) => {
 		const call = command.call;
@@ -22149,22 +22333,22 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 		}
 	};
 	var interpretPageCommand = (command) => {
-		const operation = command.call.operation;
+		const operation = command.call;
 		const context = commandContext(command, command.call.target);
-		switch (operation.kind) {
+		switch (operation.op) {
 			case "snapshot": {
 				const params = {
 					...context,
 					...operation
 				};
-				return browserProgram("may-mutate", "page", operation.kind, params, (operationParams) => withExactTab(operationParams, snapshotInTab));
+				return browserProgram("may-mutate", "page", operation.op, params, (operationParams) => withExactTab(operationParams, snapshotInTab));
 			}
 			case "read": {
 				const params = {
 					...context,
 					...operation
 				};
-				return browserProgram("may-mutate", "page", operation.kind, params, (operationParams) => withExactTab(operationParams, readInTab));
+				return browserProgram("may-mutate", "page", operation.op, params, (operationParams) => withExactTab(operationParams, readInTab));
 			}
 			case "inspect": {
 				const params = {
@@ -22172,14 +22356,14 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 					...operation,
 					...elementParams(operation.element)
 				};
-				return browserProgram("may-mutate", "page", operation.kind, params, (operationParams) => withExactTab(operationParams, inspectInTab));
+				return browserProgram("may-mutate", "page", operation.op, params, (operationParams) => withExactTab(operationParams, inspectInTab));
 			}
 			case "navigate": {
 				const params = {
 					...context,
 					...operation
 				};
-				return browserProgram("may-mutate", "page", operation.kind, params, async (operationParams) => {
+				return browserProgram("may-mutate", "page", operation.op, params, async (operationParams) => {
 					return withExactTab(operationParams, async (exactParams) => {
 						const { tab } = exactParams;
 						if (exactParams.foreground) await bringToFront(tab);
@@ -22208,7 +22392,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 					...context,
 					...operation
 				};
-				return browserProgram("may-mutate", "page", operation.kind, params, (operationParams) => withExactTab(operationParams, evaluateInTab));
+				return browserProgram("may-mutate", "page", operation.op, params, (operationParams) => withExactTab(operationParams, evaluateInTab));
 			}
 			case "wait": {
 				const params = {
@@ -22217,7 +22401,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 					conditionBy: operation.condition.by,
 					conditionValue: operation.condition.value
 				};
-				return browserProgram("may-mutate", "page", operation.kind, params, async (operationParams) => {
+				return browserProgram("may-mutate", "page", operation.op, params, async (operationParams) => {
 					return withExactTab(operationParams, async (exactParams) => {
 						if (exactParams.foreground) await bringToFront(exactParams.tab);
 						const timeoutMs = exactParams.timeoutMs ?? COMMAND_DEADLINES_MS.waitDefault;
@@ -22256,28 +22440,28 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 					...context,
 					...operation
 				};
-				return browserProgram("may-mutate", "page", operation.kind, params, (operationParams) => withExactTab(operationParams, (exactParams) => executeInTab(exactParams, listConsoleMessages, [exactParams.clear === true])));
+				return browserProgram("may-mutate", "page", operation.op, params, (operationParams) => withExactTab(operationParams, (exactParams) => executeInTab(exactParams, listConsoleMessages, [exactParams.clear === true])));
 			}
 			case "network-list": {
 				const params = {
 					...context,
 					...operation
 				};
-				return browserProgram("may-mutate", "page", operation.kind, params, (operationParams) => withExactTab(operationParams, (exactParams) => executeInTab(exactParams, listNetworkRequests, [exactParams.includePreserved === true, exactParams.clear === true])));
+				return browserProgram("may-mutate", "page", operation.op, params, (operationParams) => withExactTab(operationParams, (exactParams) => executeInTab(exactParams, listNetworkRequests, [exactParams.includePreserved === true, exactParams.clear === true])));
 			}
 			case "network-get": {
 				const params = {
 					...context,
 					...operation
 				};
-				return browserProgram("may-mutate", "page", operation.kind, params, (operationParams) => withExactTab(operationParams, (exactParams) => executeInTab(exactParams, getNetworkRequest, [exactParams.requestId])));
+				return browserProgram("may-mutate", "page", operation.op, params, (operationParams) => withExactTab(operationParams, (exactParams) => executeInTab(exactParams, getNetworkRequest, [exactParams.requestId])));
 			}
 			case "screenshot": {
 				const params = {
 					...context,
 					...operation
 				};
-				return browserProgram("may-mutate", "page", operation.kind, params, (operationParams) => withExactTab(operationParams, takeScreenshot));
+				return browserProgram("may-mutate", "page", operation.op, params, (operationParams) => withExactTab(operationParams, takeScreenshot));
 			}
 			default: return assertNever(operation);
 		}
@@ -22289,16 +22473,16 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 		metaKey: modifiers.meta
 	};
 	var interpretInputCommand = (command) => {
-		const operation = command.call.operation;
+		const operation = command.call;
 		const context = commandContext(command, command.call.target);
-		switch (operation.kind) {
+		switch (operation.op) {
 			case "click": {
 				const params = {
 					...context,
 					...operation,
 					...pointerParams(operation.at)
 				};
-				return browserProgram("may-mutate", "input", operation.kind, params, (operationParams) => withExactTab(operationParams, (exactParams) => withPostActionVerification(exactParams, chromeInputClick)));
+				return browserProgram("may-mutate", "input", operation.op, params, (operationParams) => withExactTab(operationParams, (exactParams) => withPostActionVerification(exactParams, chromeInputClick)));
 			}
 			case "type": {
 				const params = {
@@ -22306,7 +22490,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 					...operation,
 					...elementParams(operation.into)
 				};
-				return browserProgram("may-mutate", "input", operation.kind, params, (operationParams) => withExactTab(operationParams, (exactParams) => withPostActionVerification(exactParams, chromeInputType)));
+				return browserProgram("may-mutate", "input", operation.op, params, (operationParams) => withExactTab(operationParams, (exactParams) => withPostActionVerification(exactParams, chromeInputType)));
 			}
 			case "fill": {
 				const params = {
@@ -22314,7 +22498,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 					...operation,
 					...elementParams(operation.into)
 				};
-				return browserProgram("may-mutate", "input", operation.kind, params, (operationParams) => withExactTab(operationParams, (exactParams) => withPostActionVerification(exactParams, chromeInputFill)));
+				return browserProgram("may-mutate", "input", operation.op, params, (operationParams) => withExactTab(operationParams, (exactParams) => withPostActionVerification(exactParams, chromeInputFill)));
 			}
 			case "key": {
 				const params = {
@@ -22323,7 +22507,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 					...elementParams(operation.at),
 					modifiers: modifiersFor(operation.modifiers)
 				};
-				return browserProgram("may-mutate", "input", operation.kind, params, (operationParams) => withExactTab(operationParams, (exactParams) => withPostActionVerification(exactParams, chromeInputKey)));
+				return browserProgram("may-mutate", "input", operation.op, params, (operationParams) => withExactTab(operationParams, (exactParams) => withPostActionVerification(exactParams, chromeInputKey)));
 			}
 			case "hover": {
 				const params = {
@@ -22331,7 +22515,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 					...operation,
 					...pointerParams(operation.at)
 				};
-				return browserProgram("may-mutate", "input", operation.kind, params, (operationParams) => withExactTab(operationParams, chromeInputHover));
+				return browserProgram("may-mutate", "input", operation.op, params, (operationParams) => withExactTab(operationParams, chromeInputHover));
 			}
 			case "drag": {
 				const from = operation.from.by === "coordinate" ? {
@@ -22348,7 +22532,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 					...to,
 					...operation.steps === void 0 ? {} : { steps: operation.steps }
 				};
-				return browserProgram("may-mutate", "input", operation.kind, params, (operationParams) => withExactTab(operationParams, chromeInputDrag));
+				return browserProgram("may-mutate", "input", operation.op, params, (operationParams) => withExactTab(operationParams, chromeInputDrag));
 			}
 			case "tap": {
 				const params = {
@@ -22356,7 +22540,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 					...operation,
 					...pointerParams(operation.at)
 				};
-				return browserProgram("may-mutate", "input", operation.kind, params, (operationParams) => withExactTab(operationParams, chromeInputTap));
+				return browserProgram("may-mutate", "input", operation.op, params, (operationParams) => withExactTab(operationParams, chromeInputTap));
 			}
 			case "scroll": {
 				const params = {
@@ -22364,7 +22548,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 					...operation,
 					...elementParams(operation.within)
 				};
-				return browserProgram("may-mutate", "input", operation.kind, params, (operationParams) => withExactTab(operationParams, chromeInputScroll));
+				return browserProgram("may-mutate", "input", operation.op, params, (operationParams) => withExactTab(operationParams, chromeInputScroll));
 			}
 			case "upload": {
 				const params = {
@@ -22372,7 +22556,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 					...operation,
 					...elementParams(operation.into)
 				};
-				return browserProgram("may-mutate", "input", operation.kind, params, (operationParams) => withExactTab(operationParams, chromeInputUpload));
+				return browserProgram("may-mutate", "input", operation.op, params, (operationParams) => withExactTab(operationParams, chromeInputUpload));
 			}
 			default: return assertNever(operation);
 		}
@@ -22395,6 +22579,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 					input: inputStatus()
 				};
 			});
+			case "clear-stale": return browserProgram("may-mutate", "system", call.op, params, () => clearStaleAutomationTargets(command.session.key));
 			case "cleanup": return browserProgram("may-mutate", "system", call.op, params, () => cleanupAutomationTarget(command.session.key));
 			case "cleanup-all": return browserProgram("may-mutate", "system", call.op, params, cleanupAllAutomationTargets);
 			case "probe": return browserProgram("may-mutate", "system", call.op, params, (operationParams) => withExactTab(operationParams, (exactParams) => executeInTab(exactParams, probePage, [])));
@@ -22481,7 +22666,28 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 		}));
 		return succeed(response.type === "none" ? void 0 : response.command);
 	};
-	var receiveCommand = (connector) => connectorRequest("poll", {}, connector).pipe(flatMap(requireConnectorSuccess), flatMap(decodePollResponseJson), flatMap((response) => commandFromPollResponse(response, connector)));
+	var rejectInvalidPollCommand = (commandId, diagnostic, connector) => postResult(makeWireFailureResult(commandId, new CommandRejected({
+		code: POLL_RESPONSE_INVALID_CODE,
+		message: diagnostic
+	})), connector).pipe(as(void 0), tapError((error) => logWarning(`dsh-chrome poll-response-invalid rejection for ${commandId} was not acknowledged`, messageOf(error))));
+	var handleInvalidPollBody = (text, error, connector) => gen(function* () {
+		const parsed = tryParsePollJson(text);
+		const value = parsed._tag === "ok" ? parsed.value : void 0;
+		const issue = protocolFailureSchemaIssue(error);
+		const issues = issue === void 0 ? [{
+			path: [],
+			message: "Invalid poll response"
+		}] : collectSecretFreeSchemaIssues(issue);
+		const diagnostic = formatPollDecodeDiagnostic(issues, summarizePollBodyForDiagnostic(value));
+		const commandId = recoverPollCommandId(value);
+		if (commandId !== void 0) {
+			yield* rejectInvalidPollCommand(commandId, diagnostic, connector);
+			return;
+		}
+		yield* logWarning("dsh-chrome poll response is invalid and command id is not recoverable", diagnostic);
+		return yield* fail(error);
+	});
+	var receiveCommand = (connector) => connectorRequest("poll", {}, connector).pipe(flatMap(requireConnectorSuccess), flatMap((text) => decodePollResponseJson(text).pipe(catch_((error) => error._tag === "ProtocolFailure" ? handleInvalidPollBody(text, error, connector) : fail(error)), flatMap((decoded) => decoded === void 0 ? succeed(void 0) : commandFromPollResponse(decoded, connector)))));
 	var runtime = all([connectorRuntimeStep({
 		loadConnector: connectorIdentity.load,
 		loadJournal: persistUntilSuccess(loadCommandJournal),
@@ -22498,7 +22704,14 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 			message: messageOf(cause),
 			cause
 		})
-	})), catch_((error) => logWarning("dsh-chrome debugger cleanup failed", error.message)), repeat({ schedule: spaced("5 seconds") }))], {
+	})), catch_((error) => logWarning("dsh-chrome debugger cleanup failed", error.message)), repeat({ schedule: spaced("5 seconds") })), currentTimeMillis.pipe(flatMap((now) => tryPromise({
+		try: () => chrome.runtime.getPlatformInfo(),
+		catch: (cause) => new BrowserRuntimeFailure({
+			code: "keepalive",
+			message: messageOf(cause),
+			cause
+		})
+	})), catch_((error) => logWarning("dsh-chrome keepalive heartbeat failed", error.message)), repeat({ schedule: spaced("20000 millis") }))], {
 		concurrency: "unbounded",
 		discard: true
 	});
@@ -22547,21 +22760,45 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 			connector
 		})
 	}));
+	var AutomationRecoveryFailure = class extends TaggedError("AutomationRecoveryFailure") {};
+	var handleAutomationRecoveryRequest = (request) => tryPromise({
+		try: () => request.type === "dsh-chrome/automation/stale-status" ? profileStaleAutomationStatus() : clearAllStaleAutomationTargets(),
+		catch: (cause) => new AutomationRecoveryFailure({
+			message: messageOf(cause),
+			cause
+		})
+	}).pipe(match({
+		onFailure: (error) => ({
+			ok: false,
+			error: error.message
+		}),
+		onSuccess: (result) => ({
+			ok: true,
+			result
+		})
+	}));
 	chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-		if (sender.id !== chrome.runtime.id || !isConnectorIdentityRequest(message)) return false;
-		launch(handleConnectorIdentityRequest(message).pipe(tap((response) => sync(() => sendResponse(response)))));
-		return true;
+		if (sender.id !== chrome.runtime.id) return false;
+		if (isConnectorIdentityRequest(message)) {
+			launch(handleConnectorIdentityRequest(message).pipe(tap((response) => sync(() => sendResponse(response)))));
+			return true;
+		}
+		if (isAutomationRecoveryRequest(message)) {
+			launch(handleAutomationRecoveryRequest(message).pipe(tap((response) => sync(() => sendResponse(response)))));
+			return true;
+		}
+		return false;
 	});
 	chrome.runtime.onMessageExternal.addListener((message, _sender, sendResponse) => {
 		if (isBrowserCompanionWakeRequest(message)) {
-			launch(runtimeOwner.restart.pipe(andThen(sync(() => sendResponse({
+			launch(runtimeOwner.start.pipe(andThen(sync(() => sendResponse({
 				kind: BROWSER_COMPANION_WAKE_KIND,
 				version: 2,
 				accepted: true
 			})))));
 			return true;
 		}
-		const response = handleChromeExtensionProbe(message, chrome.runtime, "593fb1f978e0ef1f0e3896f02cde26ac64ac647909a6c93aa7eb7fc4660cd501");
+		const response = handleChromeExtensionProbe(message, chrome.runtime, "5cdf33d5c0f5594efe5917af839023d6b06fd3e59d05924bbc62ed204de4d0ce");
 		if (response === void 0) return false;
 		sendResponse(response);
 		return false;

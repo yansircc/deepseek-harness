@@ -1,16 +1,19 @@
 /**
  * Wire protocol types for the DSH Chrome bridge. Plain TypeScript types and
- * hand-written JSON Schema projections.
+ * JSON Schema projections for the protocol fingerprint.
  *
- * The JSON Schema projections (`toJsonSchema`) feed the protocol fingerprint;
- * they are deliberately simple and deterministic. Because the Chrome
- * extension is rebuilt from this same codebase, fingerprint consistency is
- * internal to the DSH tool-chrome package.
+ * `wireCommand` / `forwardRequest` / `pollResponse` call unions come from
+ * {@link ./wire-call-contract.ts} (tool descriptors + explicit system ops).
  *
  * @module @deepseek-ai/dsh-tool-chrome/protocol/schema
  */
 
 import { MAX_ADMITTED_COMMANDS_PER_CONNECTOR } from './bridge-contract.ts'
+import {
+  forwardRequestProtocolSchema,
+  pollResponseProtocolSchema,
+  wireCommandProtocolSchema,
+} from './wire-call-contract.ts'
 
 // ---------------------------------------------------------------------------
 // Primitive constraints
@@ -217,6 +220,8 @@ export type JsonSchemaNode = {
   additionalProperties?: boolean
 }
 
+const wireCommandSchema = wireCommandProtocolSchema()
+
 /** JSON Schema projections mixed into the protocol fingerprint for each wire payload. */
 export const WireProtocolContractSchema: Record<string, JsonSchemaNode> = {
   bridgeStatus: {
@@ -236,24 +241,7 @@ export const WireProtocolContractSchema: Record<string, JsonSchemaNode> = {
     },
     required: ['url', 'mode', 'extensionExpectation'],
   },
-  wireCommand: {
-    type: 'object',
-    properties: {
-      id: { type: 'string' },
-      session: {
-        type: 'object',
-        properties: {
-          key: { type: 'string' },
-          groupTitle: { type: 'string' },
-          foreground: { type: 'boolean' },
-        },
-        required: ['key', 'groupTitle', 'foreground'],
-      },
-      domain: { type: 'string' },
-      call: { type: 'object' },
-    },
-    required: ['id', 'session', 'domain', 'call'],
-  },
+  wireCommand: wireCommandSchema,
   wireResult: {
     oneOf: [
       {
@@ -268,24 +256,7 @@ export const WireProtocolContractSchema: Record<string, JsonSchemaNode> = {
       },
     ],
   },
-  forwardRequest: {
-    type: 'object',
-    properties: {
-      session: {
-        type: 'object',
-        properties: {
-          key: { type: 'string' },
-          groupTitle: { type: 'string' },
-          foreground: { type: 'boolean' },
-        },
-        required: ['key', 'groupTitle', 'foreground'],
-      },
-      timeoutMs: { type: 'integer' },
-      domain: { type: 'string' },
-      call: { type: 'object' },
-    },
-    required: ['session', 'timeoutMs', 'domain', 'call'],
-  },
+  forwardRequest: forwardRequestProtocolSchema(),
   forwardResponse: {
     oneOf: [
       { type: 'object', properties: { ok: { const: true } }, required: ['ok'] },
@@ -309,25 +280,7 @@ export const WireProtocolContractSchema: Record<string, JsonSchemaNode> = {
       'proof',
     ],
   },
-  pollResponse: {
-    oneOf: [
-      {
-        type: 'object',
-        properties: { type: { const: 'incompatible' } },
-        required: ['type'],
-      },
-      {
-        type: 'object',
-        properties: { type: { const: 'command' } },
-        required: ['type'],
-      },
-      {
-        type: 'object',
-        properties: { type: { const: 'none' } },
-        required: ['type'],
-      },
-    ],
-  },
+  pollResponse: pollResponseProtocolSchema(wireCommandSchema),
 }
 
 /**

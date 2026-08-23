@@ -43,7 +43,7 @@
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`、`owning Agent session` | `tool/call`、`todo/write`、`tool/result` | - | todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为检查清单。`allowParallelInProgress` 是没有默认值的必填项，因此本目录明确选择 `true`，对应描述允许同时存在多个 `in_progress` 项。选择 `false` 的部署会获得同一工具，但描述会要求只能有 1 个活动任务。 |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`、`ctx.workflowEngine`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents the script children)` | `tool/call`、`tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`、`web_search` | `ctx.tools`、`ctx.web`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可见 schema 在更换后端时保持稳定。 |
-| `@deepseek-ai/dsh-tool-chrome` | `chrome_click`、`chrome_console`、`chrome_drag`、`chrome_evaluate`、`chrome_fill`、`chrome_hover`、`chrome_inspect`、`chrome_navigate`、`chrome_network_get`、`chrome_network_list`、`chrome_press`、`chrome_read`、`chrome_screenshot`、`chrome_scroll`、`chrome_snapshot`、`chrome_status`、`chrome_tab_activate`、`chrome_tab_close`、`chrome_tab_group`、`chrome_tab_list`、`chrome_tab_new`、`chrome_tab_ungroup`、`chrome_tap`、`chrome_type`、`chrome_upload`、`chrome_wait` | `ctx.tools`、`ctx.credentials at call time` | `tool/call`、`tool/result`、`local Chrome-bridge HTTP server` | - | chrome_status 与原子 chrome_* 工具共用一个插件；这些调用成功前必须在真实 Chrome 配置里加载扩展。 |
+| `@deepseek-ai/dsh-tool-chrome` | `chrome_automation_clear_stale`、`chrome_automation_status`、`chrome_click`、`chrome_console`、`chrome_drag`、`chrome_evaluate`、`chrome_fill`、`chrome_hover`、`chrome_inspect`、`chrome_navigate`、`chrome_network_get`、`chrome_network_list`、`chrome_press`、`chrome_read`、`chrome_screenshot`、`chrome_scroll`、`chrome_snapshot`、`chrome_status`、`chrome_tab_activate`、`chrome_tab_close`、`chrome_tab_group`、`chrome_tab_list`、`chrome_tab_new`、`chrome_tab_ungroup`、`chrome_tap`、`chrome_type`、`chrome_upload`、`chrome_wait` | `ctx.tools`、`ctx.credentials at call time` | `tool/call`、`tool/result`、`local Chrome-bridge HTTP server` | - | chrome_status 与原子 chrome_* 工具共用一个插件；这些调用成功前必须在真实 Chrome 配置里加载扩展。 |
 | `@deepseek-ai/dsh-tool-zeroy` | `zeroy_checkout`、`zeroy_inspect`、`zeroy_pair`、`zeroy_push`、`zeroy_unpair` | `ctx.tools`、`ctx.systemPrompt`、`ctx.credentials and ctx.settings at call time` | `tool/call`、`tool/result`、`zeroy-sites settings`、`credential grants` | - | inspect、checkout、push 和 pairing 是彼此独立的 config 开关；pairing 同时注册 zeroy_pair 与 zeroy_unpair。默认采集会启用全部开关。 |
 
 <a id="deepseek-aidsh-tool-ask-user"></a>
@@ -2416,6 +2416,32 @@ web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可�
 
 ## `@deepseek-ai/dsh-tool-chrome`
 
+### `chrome_automation_clear_stale`
+
+Remove proved-stale Chrome automation ownership records for this DSH session without closing or adopting tabs.
+
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_automation_status`
+
+Report this DSH session's Chrome automation ownership targets (owned, allocating, or stale).
+
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
 ### `chrome_click`
 
 Click a fresh Action Graph ref, selector, or viewport coordinate with real Chrome input.
@@ -3080,7 +3106,15 @@ Activate one exact Chrome tab.
           ]
         },
         "value": {
-          "type": "string"
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "Tab id from chrome_tab_list (integer or digits), or a URL / title fragment."
         }
       }
     }
@@ -3112,7 +3146,15 @@ Close one exact Chrome tab.
           ]
         },
         "value": {
-          "type": "string"
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "Tab id from chrome_tab_list (integer or digits), or a URL / title fragment."
         }
       }
     }
@@ -3124,7 +3166,7 @@ Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/
 
 ### `chrome_tab_group`
 
-Place one exact Chrome tab in the Pi session group.
+Place one exact Chrome tab in the DSH session group.
 
 ```json
 {
@@ -3144,7 +3186,15 @@ Place one exact Chrome tab in the Pi session group.
           ]
         },
         "value": {
-          "type": "string"
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "Tab id from chrome_tab_list (integer or digits), or a URL / title fragment."
         }
       }
     },
@@ -3171,7 +3221,7 @@ Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/
 
 ### `chrome_tab_list`
 
-List Chrome tabs visible to this Pi session.
+List Chrome tabs visible to this DSH session.
 
 ```json
 {
@@ -3237,7 +3287,15 @@ Remove one exact Chrome tab from its group.
           ]
         },
         "value": {
-          "type": "string"
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "Tab id from chrome_tab_list (integer or digits), or a URL / title fragment."
         }
       }
     }
@@ -3378,7 +3436,7 @@ Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/
 
 ### `chrome_wait`
 
-Wait for one typed page condition.
+Wait for one typed page condition. After chrome_tab_new or chrome_navigate, prefer chrome_read; do not wait on a site-specific selector just to confirm the first paint.
 
 ```json
 {

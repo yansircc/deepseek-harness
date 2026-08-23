@@ -13794,6 +13794,7 @@
 	var SystemCalls = {
 		version: Struct({ op: Literal("version") }),
 		"automation-status": Struct({ op: Literal("automation-status") }),
+		"clear-stale": Struct({ op: Literal("clear-stale") }),
 		cleanup: Struct({ op: Literal("cleanup") }),
 		"cleanup-all": Struct({ op: Literal("cleanup-all") }),
 		probe: Struct({
@@ -13886,6 +13887,7 @@
 			permissionGranted: Boolean
 		})
 	});
+	var ClearStaleResult = Struct({ staleOwnershipsCleared: SessionAutomationTargetCount });
 	var WaitResult = Struct({
 		satisfied: Boolean,
 		elapsedMs: NonNegativeInt$1,
@@ -14054,11 +14056,11 @@
 	};
 	var OPERATION_CONTRACTS = {
 		tab: {
-			list: defineOperation(TabCalls.list, result(ArraySchema(FormattedTabResult)), Deadline.default, atomicTool("chrome_tab_list", "List Chrome tabs visible to this Pi session.", "List Chrome tabs and their exact ids.")),
+			list: defineOperation(TabCalls.list, result(ArraySchema(FormattedTabResult)), Deadline.default, atomicTool("chrome_tab_list", "List Chrome tabs visible to this DSH session.", "List Chrome tabs and their exact ids.")),
 			new: defineOperation(TabCalls.new, result(FormattedTabResult), Deadline.default, atomicTool("chrome_tab_new", "Create another session-owned Chrome tab.", "Create a session-owned Chrome tab.")),
 			activate: defineOperation(TabCalls.activate, result(FormattedTabResult), Deadline.default, atomicTool("chrome_tab_activate", "Activate one exact Chrome tab.", "Activate an exact Chrome tab.")),
 			close: defineOperation(TabCalls.close, result(Struct({ closed: Int })), Deadline.default, atomicTool("chrome_tab_close", "Close one exact Chrome tab.", "Close an exact Chrome tab.")),
-			group: defineOperation(TabCalls.group, result(FormattedTabResult), Deadline.default, atomicTool("chrome_tab_group", "Place one exact Chrome tab in the Pi session group.", "Group an exact Chrome tab under the Pi session.")),
+			group: defineOperation(TabCalls.group, result(FormattedTabResult), Deadline.default, atomicTool("chrome_tab_group", "Place one exact Chrome tab in the DSH session group.", "Group an exact Chrome tab under the DSH session.")),
 			ungroup: defineOperation(TabCalls.ungroup, result(FormattedTabResult), Deadline.default, atomicTool("chrome_tab_ungroup", "Remove one exact Chrome tab from its group.", "Ungroup an exact Chrome tab."))
 		},
 		page: {
@@ -14106,7 +14108,8 @@
 				extensionDisplayVersion: NonEmptyString,
 				userAgent: String$1
 			})), Deadline.default),
-			"automation-status": defineOperation(SystemCalls["automation-status"], result(AutomationStatusResult), Deadline.default),
+			"automation-status": defineOperation(SystemCalls["automation-status"], result(AutomationStatusResult), Deadline.default, atomicTool("chrome_automation_status", "Report this DSH session's Chrome automation ownership targets (owned, allocating, or stale).", "Inspect session automation ownership without changing it.")),
+			"clear-stale": defineOperation(SystemCalls["clear-stale"], result(ClearStaleResult), Deadline.default, atomicTool("chrome_automation_clear_stale", "Remove proved-stale Chrome automation ownership records for this DSH session without closing or adopting tabs.", "Clear proved-stale automation ownership records only; never close or adopt tabs.")),
 			cleanup: defineOperation(SystemCalls.cleanup, result(CleanupResult), Deadline.default),
 			"cleanup-all": defineOperation(SystemCalls["cleanup-all"], result(CleanupAllResult), Deadline.default),
 			probe: defineOperation(SystemCalls.probe, opaque("probe payload is page-defined"), Deadline.default)
@@ -14197,12 +14200,9 @@
 			}
 		};
 	};
-	var TabCall = Union(callsOf(OPERATION_CONTRACTS.tab, "call")).annotate(description("Manage Chrome tabs owned by this Pi session or explicitly selected tabs. Omitted targets require an unambiguous owned set."));
+	var TabCall = Union(callsOf(OPERATION_CONTRACTS.tab, "call")).annotate(description("Manage Chrome tabs owned by this DSH session or explicitly selected tabs. Omitted targets require an unambiguous owned set."));
 	var PageOperation = Union(callsOf(OPERATION_CONTRACTS.page, "call"));
-	var PageCall = Struct({
-		target: optional$1(Target),
-		operation: PageOperation
-	}).annotate(description("Observe, navigate, evaluate, wait for, diagnose, or capture one Chrome page."));
+	var PageCall = Union(flatToolCallsOf(OPERATION_CONTRACTS.page)).annotate(description("Observe, navigate, evaluate, wait for, diagnose, or capture one Chrome page."));
 	var ToolPageOperation = Union(callsOf(OPERATION_CONTRACTS.page, "toolCall"));
 	var NestedToolPageCall = Struct({
 		target: optional$1(Target),
@@ -14214,10 +14214,7 @@
 		encode: transform$1((call) => flattenToolCall(call))
 	}), annotate(description("Observe, navigate, evaluate, wait for, diagnose, or capture one Chrome page.")));
 	var InputOperation = Union(callsOf(OPERATION_CONTRACTS.input, "call"));
-	var InputCall = Struct({
-		target: optional$1(Target),
-		operation: InputOperation
-	}).annotate(description("Drive Chrome's real pointer, keyboard, touch, wheel, drag, and file-input layers."));
+	var InputCall = Union(flatToolCallsOf(OPERATION_CONTRACTS.input)).annotate(description("Drive Chrome's real pointer, keyboard, touch, wheel, drag, and file-input layers."));
 	var NestedToolInputCall = Struct({
 		target: optional$1(Target),
 		background: optional$1(Boolean),
@@ -14238,7 +14235,7 @@
 			};
 			case "ScreenshotByCaptureAndFormat": return {
 				mode: "by-call-fields",
-				selectors: ["call.operation.capture.kind", "call.operation.format"],
+				selectors: ["call.capture.kind", "call.format"],
 				variants: {
 					viewport: {
 						png: toJsonSchemaDocument(contract.schemas.viewport.png).schema,
@@ -14479,22 +14476,73 @@
 			cause
 		})));
 	}));
+	var AutomationRecoveryMessageFailure = class extends TaggedError("AutomationRecoveryMessageFailure") {};
+	var requestAutomationRecovery = (request) => tryPromise({
+		try: () => chrome.runtime.sendMessage(request),
+		catch: (cause) => new AutomationRecoveryMessageFailure({
+			message: "Could not reach automation recovery",
+			cause
+		})
+	}).pipe(timeoutOrElse({
+		duration: "5 seconds",
+		orElse: () => fail(new AutomationRecoveryMessageFailure({ message: "Timed out waiting for automation recovery" }))
+	}), flatMap((response) => {
+		if (typeof response !== "object" || response === null || !("ok" in response)) return fail(new AutomationRecoveryMessageFailure({ message: "Automation recovery returned an invalid response" }));
+		if (response.ok === false && "error" in response) return fail(new AutomationRecoveryMessageFailure({ message: String(response.error) }));
+		if (response.ok !== true || !("result" in response) || typeof response.result !== "object" || response.result === null) {
+			return fail(new AutomationRecoveryMessageFailure({ message: "Automation recovery returned an invalid response" }));
+		}
+		return succeed(response.result);
+	}));
 	//#endregion
 	//#region src/browser/popup.ts
 	var identity = document.querySelector("#identity");
 	var state = document.querySelector("#state");
+	var recovery = document.querySelector("#recovery");
+	var clearStaleButton = document.querySelector("#clear-stale");
 	var effectRuntime = make$7(empty);
 	var render = gen(function* () {
 		const connector = yield* requestConnectorIdentity({ type: "dsh-chrome/connector/load" });
 		yield* sync(() => {
 			identity.textContent = `${connector.label} · ${connector.connectorId.slice(0, 8)} · v${connector.extensionDisplayVersion}`;
-			state.textContent = "Connects to the local Pi bridge automatically while this Chrome profile is open.";
+			state.textContent = "Connects to the local DSH bridge automatically while this Chrome profile is open.";
 			state.dataset.level = "success";
 		});
 	}).pipe(catch_((error) => sync(() => {
 		state.textContent = messageOf(error);
 		state.dataset.level = "error";
 	})));
+	var clearStaleOwnership = gen(function* () {
+		yield* sync(() => {
+			clearStaleButton.disabled = true;
+			recovery.textContent = "Checking stale ownership…";
+			recovery.dataset.level = "";
+		});
+		const status = yield* requestAutomationRecovery({ type: "dsh-chrome/automation/stale-status" });
+		const staleCount = typeof status.staleCount === "number" ? status.staleCount : 0;
+		if (staleCount === 0) {
+			yield* sync(() => {
+				recovery.textContent = "No stale automation ownership records.";
+				recovery.dataset.level = "success";
+				clearStaleButton.disabled = false;
+			});
+			return;
+		}
+		const cleared = yield* requestAutomationRecovery({ type: "dsh-chrome/automation/clear-stale" });
+		const clearedCount = typeof cleared.staleOwnershipsCleared === "number" ? cleared.staleOwnershipsCleared : 0;
+		yield* sync(() => {
+			recovery.textContent = `Reported ${staleCount} stale record(s); cleared ${clearedCount}. Tabs were not closed or adopted.`;
+			recovery.dataset.level = "success";
+			clearStaleButton.disabled = false;
+		});
+	}).pipe(catch_((error) => sync(() => {
+		recovery.textContent = messageOf(error);
+		recovery.dataset.level = "error";
+		clearStaleButton.disabled = false;
+	})));
+	clearStaleButton.addEventListener("click", () => {
+		effectRuntime.runCallback(clearStaleOwnership, { onExit: () => void 0 });
+	});
 	effectRuntime.runCallback(render, { onExit: () => void 0 });
 	//#endregion
 })();

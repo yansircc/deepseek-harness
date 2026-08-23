@@ -11,6 +11,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
+import { OWNER_CREDENTIAL_REF } from './owner-credential.ts'
 
 /** Durable settings section that stores the local bridge port and owner credential reference. */
 export const CHROME_SETTINGS_NAMESPACE = settingsNamespace('tool-chrome')
@@ -19,7 +20,7 @@ export const CHROME_SETTINGS_NAMESPACE = settingsNamespace('tool-chrome')
 export const DEFAULT_CHROME_PORT = 17318
 
 /** Default owner credential reference. */
-export const DEFAULT_OWNER_CREDENTIAL_REF = 'DSH_CHROME_OWNER_CREDENTIAL'
+export const DEFAULT_OWNER_CREDENTIAL_REF = OWNER_CREDENTIAL_REF
 
 /** Shape of the `tool-chrome` settings section. */
 export interface ChromeSettings {

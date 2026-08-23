@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-08-22-chrome-wait-mailbox-wedge.md
+2026-08-22-chrome-wait-mailbox-wedge.md: e7ceb4dc22d01092e292a375a2e798065e24d8b8
+2026-08-22-chrome-wait-mailbox-wedge.zh.md: 14d76d1f69b1530c4a9890bf75a969dea2971a7d

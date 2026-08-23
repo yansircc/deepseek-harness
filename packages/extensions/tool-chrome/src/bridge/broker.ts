@@ -175,6 +175,8 @@ export class CommandBroker {
    * @param session - session context attached to the command envelope.
    * @param timeoutMs - milliseconds to wait for delivery; elapsed queued work
    *   rejects as `CommandTimeout`, already-delivered work as `CommandOutcomeUnknown`.
+   *   Either timeout removes the mailbox slot so a later poll can deliver the
+   *   next command. A late connector `/result` for the abandoned id is ignored.
    * @returns the command result value.
    * @throws BridgeFailure on rejection/timeout/offline.
    */
@@ -248,6 +250,7 @@ export class CommandBroker {
           if (mailbox.stopped) return
           const current = mailbox.pending.get(id)
           if (!current || current.phase !== 'queued') {
+            mailbox.pending.delete(id)
             settleReject(
               new CommandOutcomeUnknown(
                 `Chrome command ${id} was already delivered when the ${timeoutMs}ms reply deadline expired. It may have completed and will not be repeated.`,
@@ -365,7 +368,9 @@ export class CommandBroker {
       mailbox.connection = { connector, lastSeenAt }
       return current
     })
-    if (!completion) return false
+    if (!completion) {
+      return false
+    }
     if (result.ok) {
       completion.resolve(result.value)
     } else if (result.error._tag === 'CommandRejected') {

@@ -503,6 +503,39 @@
   color: var(--dsw-alias-label-tertiary);
 }
 
+.identityBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0 0 20px;
+  min-width: 0;
+}
+
+.identityTitle {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.identityLine {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-tertiary);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reloadGuidance {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-secondary);
+}
+
 /* Secondary action link that opens chrome://extensions in a new tab. */
 .openExtensions {
   display: inline-flex;

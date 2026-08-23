@@ -1,16 +1,23 @@
 /**
- * Operation contracts for the 25 atomic chrome_* tools plus the system
- * operations, and the `operationResultProtocolContract` used by the protocol
- * fingerprint. Pure data — no schema runtime.
+ * Operation contracts for the 27 atomic chrome_* tools plus the remaining
+ * system operations, and the `operationResultProtocolContract` used by the
+ * protocol fingerprint. Tool descriptors plus the tab-id coerce used at
+ * project time.
  *
  * @module @deepseek-ai/dsh-tool-chrome/protocol/operations
  */
 
+import type { ParameterPropertySpec, ParameterSchemaSpec } from '@deepseek-ai/dsh-tools'
+
 // ---------------------------------------------------------------------------
-// Parameter schema node (DSH JSON Schema subset)
+// Parameter schema node (fingerprint projection walk)
 // ---------------------------------------------------------------------------
 
-/** JSON Schema subset used to describe one atomic-tool parameter. */
+/**
+ * Loose structural node used when projecting tool parameters into the
+ * fingerprint JSON Schema subset. Tool registration uses
+ * {@link ParameterSchemaSpec}; this type only exists for the wire walker.
+ */
 export type JsonSchemaProperty = {
   type?: string
   required?: true
@@ -19,6 +26,7 @@ export type JsonSchemaProperty = {
   items?: JsonSchemaProperty
   properties?: Record<string, JsonSchemaProperty>
   additionalProperties?: boolean
+  oneOf?: readonly JsonSchemaProperty[]
 }
 
 // ---------------------------------------------------------------------------
@@ -32,46 +40,49 @@ export type ActionVerb = 'click' | 'fill' | 'press' | 'upload'
 export type AtomicToolDescriptor = {
   readonly name: `chrome_${string}`
   readonly label: string
-  readonly domain: 'tab' | 'page' | 'input'
+  readonly domain: 'tab' | 'page' | 'input' | 'system'
   readonly operation: string
   readonly description: string
   readonly promptSnippet: string
   readonly actionVerb?: ActionVerb
-  readonly parameters: Record<string, JsonSchemaProperty>
+  readonly parameters: ParameterSchemaSpec
   readonly projectInput: (input: Record<string, unknown>) => Record<string, unknown> & { op: string }
 }
 
-const optionalString = (description: string): JsonSchemaProperty => ({
+const optionalString = (description: string): ParameterPropertySpec => ({
   type: 'string',
   description,
 })
-const optionalBool = (description: string): JsonSchemaProperty => ({
+const optionalBool = (description: string): ParameterPropertySpec => ({
   type: 'boolean',
   description,
 })
-const optionalInt = (description: string): JsonSchemaProperty => ({
+const optionalInt = (description: string): ParameterPropertySpec => ({
   type: 'integer',
   description,
 })
-const requiredString = (description: string): JsonSchemaProperty => ({
+const requiredString = (description: string): ParameterPropertySpec => ({
   type: 'string',
   required: true,
   description,
 })
 
 /** Target selector (id/url/title). */
-const targetParam: JsonSchemaProperty = {
+const targetParam: ParameterPropertySpec = {
   type: 'object',
   additionalProperties: true,
   description: 'Exactly one Chrome tab selector.',
   properties: {
     by: { type: 'string', enum: ['id', 'url', 'title'] },
-    value: { type: 'string' },
+    value: {
+      description: 'Tab id from chrome_tab_list (integer or digits), or a URL / title fragment.',
+      oneOf: [{ type: 'integer' }, { type: 'string' }],
+    },
   },
 }
 
 /** Element target (uid/selector). */
-const elementParam: JsonSchemaProperty = {
+const elementParam: ParameterPropertySpec = {
   type: 'object',
   additionalProperties: true,
   description: 'A fresh Action Graph ref (uid) or CSS selector.',
@@ -82,7 +93,7 @@ const elementParam: JsonSchemaProperty = {
 }
 
 /** Pointer target (element or coordinate). */
-const pointerParam: JsonSchemaProperty = {
+const pointerParam: ParameterPropertySpec = {
   type: 'object',
   additionalProperties: true,
   description: 'An element (uid/selector) or viewport coordinate.',
@@ -94,7 +105,7 @@ const pointerParam: JsonSchemaProperty = {
   },
 }
 
-const snapshotVerification: Record<string, JsonSchemaProperty> = {
+const snapshotVerification: ParameterSchemaSpec = {
   includeSnapshot: optionalBool(
     'Include a fresh Action Graph snapshot after the operation completes.',
   ),
@@ -102,7 +113,7 @@ const snapshotVerification: Record<string, JsonSchemaProperty> = {
 }
 
 // ---------------------------------------------------------------------------
-// The 25 atomic tool descriptors
+// The 27 atomic tool descriptors
 // ---------------------------------------------------------------------------
 
 type ToolDef = {
@@ -111,14 +122,14 @@ type ToolDef = {
   description: string
   promptSnippet: string
   actionVerb?: ActionVerb
-  parameters?: Record<string, JsonSchemaProperty>
+  parameters?: ParameterSchemaSpec
 }
 
 const TAB: ToolDef[] = [
   {
     name: 'chrome_tab_list',
     operation: 'list',
-    description: 'List Chrome tabs visible to this Pi session.',
+    description: 'List Chrome tabs visible to this DSH session.',
     promptSnippet: 'List Chrome tabs and their exact ids.',
     parameters: {},
   },
@@ -153,8 +164,8 @@ const TAB: ToolDef[] = [
   {
     name: 'chrome_tab_group',
     operation: 'group',
-    description: 'Place one exact Chrome tab in the Pi session group.',
-    promptSnippet: 'Group an exact Chrome tab under the Pi session.',
+    description: 'Place one exact Chrome tab in the DSH session group.',
+    promptSnippet: 'Group an exact Chrome tab under the DSH session.',
     parameters: {
       target: targetParam,
       groupColor: {
@@ -255,8 +266,9 @@ const PAGE: ToolDef[] = [
   {
     name: 'chrome_wait',
     operation: 'wait',
-    description: 'Wait for one typed page condition.',
-    promptSnippet: 'Wait for a page condition.',
+    description:
+      'Wait for one typed page condition. After chrome_tab_new or chrome_navigate, prefer chrome_read; do not wait on a site-specific selector just to confirm the first paint.',
+    promptSnippet: 'Wait for a page condition. Prefer chrome_read after opening a tab.',
     parameters: {
       condition: {
         type: 'object',
@@ -444,9 +456,30 @@ const INPUT: ToolDef[] = [
   },
 ]
 
-/** The 25 atomic tools in registration order: tab, page, input. */
+const SYSTEM: ToolDef[] = [
+  {
+    name: 'chrome_automation_status',
+    operation: 'automation-status',
+    description:
+      'Report this DSH session\'s Chrome automation ownership targets (owned, allocating, or stale).',
+    promptSnippet: 'Inspect session automation ownership without changing it.',
+    parameters: {},
+  },
+  {
+    name: 'chrome_automation_clear_stale',
+    operation: 'clear-stale',
+    description:
+      'Remove proved-stale Chrome automation ownership records for this DSH session without closing or adopting tabs.',
+    promptSnippet:
+      'Clear proved-stale automation ownership records only; never close or adopt tabs.',
+    parameters: {},
+  },
+]
+
+/** The 27 atomic tools in registration order: tab, page, input, system. */
 const domainOf = (name: string): AtomicToolDescriptor['domain'] => {
   if (name.startsWith('chrome_tab')) return 'tab'
+  if (name.startsWith('chrome_automation')) return 'system'
   if (INPUT.some(t => t.name === name)) return 'input'
   return 'page'
 }
@@ -458,18 +491,35 @@ const labelOf = (name: string): string =>
     .map(part => (part[0] ? part[0].toUpperCase() + part.slice(1) : part))
     .join(' ')
 
-/** The 25 atomic `chrome_*` tools in tab, then page, then input registration order. */
+/**
+ * Coerce a digit-string tab id so the wire Target `{ by: 'id', value: number }` is satisfied.
+ * @param input - tool arguments that may include `target`.
+ * @returns the same record, or a copy whose `target.value` is a safe integer.
+ */
+const coerceTabIdTarget = (input: Record<string, unknown>): Record<string, unknown> => {
+  const target = input.target
+  if (target === null || typeof target !== 'object' || Array.isArray(target)) return input
+  const record = target as { by?: unknown; value?: unknown }
+  if (record.by !== 'id' || typeof record.value !== 'string') return input
+  if (!/^\d+$/.test(record.value)) return input
+  const value = Number(record.value)
+  if (!Number.isSafeInteger(value)) return input
+  return { ...input, target: { ...record, value } }
+}
+
+/** The 27 atomic `chrome_*` tools in tab, page, input, then system registration order. */
 export const ATOMIC_TOOL_DESCRIPTORS: ReadonlyArray<AtomicToolDescriptor> = [
   ...TAB,
   ...PAGE,
   ...INPUT,
+  ...SYSTEM,
 ].map(({ parameters = {}, ...descriptor }) => ({
   ...descriptor,
   label: labelOf(descriptor.name),
   domain: domainOf(descriptor.name),
   parameters,
   projectInput: (input: Record<string, unknown>) => ({
-    ...input,
+    ...coerceTabIdTarget(input),
     op: descriptor.operation,
   }) as Record<string, unknown> & { op: string },
 }))
@@ -524,7 +574,8 @@ const schema = (value: unknown): OperationResultContract => ({ mode: 'schema', s
 
 const screenshotVariants: OperationResultContract = {
   mode: 'by-call-fields',
-  selectors: ['call.operation.capture.kind', 'call.operation.format'],
+  // Flat PageCall paths: wire uses `call.capture` / `call.format`, not nested `call.operation.*`.
+  selectors: ['call.capture.kind', 'call.format'],
   variants: {
     viewport: {
       png: {
@@ -615,6 +666,10 @@ const resultDocuments: Record<string, Record<string, OperationResultContract>> =
       },
     }),
     'automation-status': schema({ type: 'object', properties: { targets: { type: 'array' } } }),
+    'clear-stale': schema({
+      type: 'object',
+      properties: { staleOwnershipsCleared: { type: 'integer' } },
+    }),
     cleanup: schema({
       type: 'object',
       properties: { closedTabIds: { type: 'array' } },
@@ -638,7 +693,14 @@ const deadlines: Record<string, Record<string, OperationDeadlineKind>> = {
     click: 'default', type: 'text-input', fill: 'text-input', key: 'default',
     hover: 'default', drag: 'default', tap: 'default', scroll: 'default', upload: 'default',
   },
-  system: { version: 'default', 'automation-status': 'default', cleanup: 'default', 'cleanup-all': 'default', probe: 'default' },
+  system: {
+    version: 'default',
+    'automation-status': 'default',
+    'clear-stale': 'default',
+    cleanup: 'default',
+    'cleanup-all': 'default',
+    probe: 'default',
+  },
 }
 
 /** Per-domain map of operation name to {@link OperationContract}. */

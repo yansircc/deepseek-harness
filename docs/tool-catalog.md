@@ -41,7 +41,7 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`, `owning Agent session` | `tool/call`, `todo/write`, `tool/result` | - | todo_write is session-owned state; UIs render the latest todo/write event as a checklist. `allowParallelInProgress` is required with no default, so the catalog states its choice: `true`, whose description invites several `in_progress` items. A deployment choosing `false` receives the same tool with a description asking for exactly one active task. |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`, `ctx.workflowEngine`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents the script children)` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`, `web_search` | `ctx.tools`, `ctx.web`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps. |
-| `@deepseek-ai/dsh-tool-chrome` | `chrome_click`, `chrome_console`, `chrome_drag`, `chrome_evaluate`, `chrome_fill`, `chrome_hover`, `chrome_inspect`, `chrome_navigate`, `chrome_network_get`, `chrome_network_list`, `chrome_press`, `chrome_read`, `chrome_screenshot`, `chrome_scroll`, `chrome_snapshot`, `chrome_status`, `chrome_tab_activate`, `chrome_tab_close`, `chrome_tab_group`, `chrome_tab_list`, `chrome_tab_new`, `chrome_tab_ungroup`, `chrome_tap`, `chrome_type`, `chrome_upload`, `chrome_wait` | `ctx.tools`, `ctx.credentials at call time` | `tool/call`, `tool/result`, `local Chrome-bridge HTTP server` | - | chrome_status plus the atomic chrome_* tools share one plugin; the extension must be loaded in a real Chrome profile before those calls succeed. |
+| `@deepseek-ai/dsh-tool-chrome` | `chrome_automation_clear_stale`, `chrome_automation_status`, `chrome_click`, `chrome_console`, `chrome_drag`, `chrome_evaluate`, `chrome_fill`, `chrome_hover`, `chrome_inspect`, `chrome_navigate`, `chrome_network_get`, `chrome_network_list`, `chrome_press`, `chrome_read`, `chrome_screenshot`, `chrome_scroll`, `chrome_snapshot`, `chrome_status`, `chrome_tab_activate`, `chrome_tab_close`, `chrome_tab_group`, `chrome_tab_list`, `chrome_tab_new`, `chrome_tab_ungroup`, `chrome_tap`, `chrome_type`, `chrome_upload`, `chrome_wait` | `ctx.tools`, `ctx.credentials at call time` | `tool/call`, `tool/result`, `local Chrome-bridge HTTP server` | - | chrome_status plus the atomic chrome_* tools share one plugin; the extension must be loaded in a real Chrome profile before those calls succeed. |
 | `@deepseek-ai/dsh-tool-zeroy` | `zeroy_checkout`, `zeroy_inspect`, `zeroy_pair`, `zeroy_push`, `zeroy_unpair` | `ctx.tools`, `ctx.systemPrompt`, `ctx.credentials and ctx.settings at call time` | `tool/call`, `tool/result`, `zeroy-sites settings`, `credential grants` | - | inspect, checkout, push, and pairing are independent config flags; pairing registers both zeroy_pair and zeroy_unpair. Default harvest enables every flag. |
 
 <a id="deepseek-aidsh-tool-ask-user"></a>
@@ -2412,6 +2412,32 @@ web_search and web_fetch keep provider selection behind ctx.web so model-visible
 
 ## `@deepseek-ai/dsh-tool-chrome`
 
+### `chrome_automation_clear_stale`
+
+Remove proved-stale Chrome automation ownership records for this DSH session without closing or adopting tabs.
+
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
+### `chrome_automation_status`
+
+Report this DSH session's Chrome automation ownership targets (owned, allocating, or stale).
+
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+
 ### `chrome_click`
 
 Click a fresh Action Graph ref, selector, or viewport coordinate with real Chrome input.
@@ -3076,7 +3102,15 @@ Activate one exact Chrome tab.
           ]
         },
         "value": {
-          "type": "string"
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "Tab id from chrome_tab_list (integer or digits), or a URL / title fragment."
         }
       }
     }
@@ -3108,7 +3142,15 @@ Close one exact Chrome tab.
           ]
         },
         "value": {
-          "type": "string"
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "Tab id from chrome_tab_list (integer or digits), or a URL / title fragment."
         }
       }
     }
@@ -3120,7 +3162,7 @@ Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/
 
 ### `chrome_tab_group`
 
-Place one exact Chrome tab in the Pi session group.
+Place one exact Chrome tab in the DSH session group.
 
 ```json
 {
@@ -3140,7 +3182,15 @@ Place one exact Chrome tab in the Pi session group.
           ]
         },
         "value": {
-          "type": "string"
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "Tab id from chrome_tab_list (integer or digits), or a URL / title fragment."
         }
       }
     },
@@ -3167,7 +3217,7 @@ Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/
 
 ### `chrome_tab_list`
 
-List Chrome tabs visible to this Pi session.
+List Chrome tabs visible to this DSH session.
 
 ```json
 {
@@ -3233,7 +3283,15 @@ Remove one exact Chrome tab from its group.
           ]
         },
         "value": {
-          "type": "string"
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "Tab id from chrome_tab_list (integer or digits), or a URL / title fragment."
         }
       }
     }
@@ -3374,7 +3432,7 @@ Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/
 
 ### `chrome_wait`
 
-Wait for one typed page condition.
+Wait for one typed page condition. After chrome_tab_new or chrome_navigate, prefer chrome_read; do not wait on a site-specific selector just to confirm the first paint.
 
 ```json
 {

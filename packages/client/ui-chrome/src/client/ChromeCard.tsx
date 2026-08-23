@@ -9,6 +9,16 @@ import clsx from 'clsx'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { IconChevronDownOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ChromeCardFace } from './chrome-card-controller.ts'
+import {
+  applyStatusPollFailure,
+  applyStatusPollSuccess,
+  chromeIdentityLines,
+  classifyChromeStatus,
+  needsReloadGuidance,
+  offlineStatusHint,
+  type ChromeStatusKind,
+  type ChromeStatusPayload,
+} from './chrome-status-view.ts'
 import css from './ChromeCard.module.css'
 
 /** Props the renderer binds for the Chrome card. */
@@ -26,17 +36,13 @@ const STATUS_URL = '/api/chrome/status'
 /** How often the card re-checks the bridge status. */
 const STATUS_POLL_MS = 3000
 
-/** Bridge status payload the host status route returns. */
-interface BridgeStatusPayload {
-  state: 'ready' | 'waiting-for-extension' | 'offline' | 'unconfigured'
-  url: string
-  connector: { connected?: boolean; label?: string } | null
-  error: string | null
+function assertNever(value: never): never {
+  throw new Error(`unexpected Chrome status kind: ${String(value)}`)
 }
 
 /** Poll the host status endpoint until the component unmounts. */
-function useBridgeStatus(): { status: BridgeStatusPayload | null; unknown: boolean } {
-  const [status, setStatus] = useState<BridgeStatusPayload | null>(null)
+function useBridgeStatus(): { status: ChromeStatusPayload | null; unknown: boolean } {
+  const [status, setStatus] = useState<ChromeStatusPayload | null>(null)
   const [unknown, setUnknown] = useState(false)
   useEffect(() => {
     let alive = true
@@ -44,13 +50,18 @@ function useBridgeStatus(): { status: BridgeStatusPayload | null; unknown: boole
       try {
         const response = await fetch(STATUS_URL, { cache: 'no-store' })
         if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        const data = (await response.json()) as BridgeStatusPayload
+        const data = (await response.json()) as ChromeStatusPayload
         if (alive) {
-          setStatus(data)
-          setUnknown(false)
+          const next = applyStatusPollSuccess(data)
+          setStatus(next.status)
+          setUnknown(next.unknown)
         }
       } catch {
-        if (alive) setUnknown(true)
+        if (alive) {
+          const next = applyStatusPollFailure()
+          setStatus(next.status)
+          setUnknown(next.unknown)
+        }
       }
     }
     void poll()
@@ -61,6 +72,38 @@ function useBridgeStatus(): { status: BridgeStatusPayload | null; unknown: boole
     }
   }, [])
   return { status, unknown }
+}
+
+/** Map a status kind onto the status-row copy and dot class. */
+function statusRow(
+  kind: ChromeStatusKind,
+  t: ChromeCardProps['t'],
+  error: string | null,
+): { dot: string | undefined; text: string; hint?: string } {
+  switch (kind) {
+    case 'checking':
+      return { dot: css.dotChecking, text: t('statusChecking') }
+    case 'unknown':
+      return { dot: css.dotChecking, text: t('statusUnknown'), hint: t('statusUnknownHint') }
+    case 'connected':
+      return { dot: css.dotReady, text: t('statusConnected'), hint: t('statusConnectedHint') }
+    case 'waiting':
+      return { dot: css.dotWaiting, text: t('statusWaiting'), hint: t('statusWaitingHint') }
+    case 'stale':
+      return { dot: css.dotWaiting, text: t('statusStale'), hint: t('statusStaleHint') }
+    case 'mismatch':
+      return { dot: css.dotOffline, text: t('statusMismatch'), hint: t('statusMismatchHint') }
+    case 'offline':
+      return {
+        dot: css.dotOffline,
+        text: t('statusOffline'),
+        hint: offlineStatusHint(error, t('statusOfflineHint')),
+      }
+    case 'unconfigured':
+      return { dot: css.dotOffline, text: t('statusNotConfigured') }
+    default:
+      return assertNever(kind)
+  }
 }
 
 /**
@@ -77,20 +120,10 @@ export function ChromeCard(props: ChromeCardProps) {
   if (!state.available) return null
 
   const disabled = !state.writable || state.saving
-
-  // The status dot: green when the extension is connected, amber while
-  // waiting for it, red when the local bridge is down, gray while checking.
-  const view = status === null
-    ? unknown
-      ? { dot: css.dotChecking, text: t('statusUnknown'), hint: t('statusUnknownHint') }
-      : { dot: css.dotChecking, text: t('statusChecking') }
-    : status.state === 'ready'
-      ? { dot: css.dotReady, text: t('statusConnected'), hint: t('statusConnectedHint') }
-      : status.state === 'waiting-for-extension'
-        ? { dot: css.dotWaiting, text: t('statusWaiting'), hint: t('statusWaitingHint') }
-        : status.state === 'offline'
-          ? { dot: css.dotOffline, text: t('statusOffline'), hint: t('statusOfflineHint') }
-          : { dot: css.dotOffline, text: t('statusNotConfigured') }
+  const kind = classifyChromeStatus(status, unknown)
+  const view = statusRow(kind, t, status?.error ?? null)
+  const { expected, live } = chromeIdentityLines(status)
+  const showReload = needsReloadGuidance(kind)
 
   return (
     <li className={clsx(css.card, open && css.cardOpen)}>
@@ -121,6 +154,36 @@ export function ChromeCard(props: ChromeCardProps) {
                   {view.hint ? <span className={css.statusHint}>{view.hint}</span> : null}
                 </div>
               </div>
+              {expected
+                ? (
+                  <div className={css.identityBlock}>
+                    <span className={css.identityTitle}>{t('expectedTitle')}</span>
+                    <span className={css.identityLine}>{t('expectedId', { id: expected.extensionId })}</span>
+                    <span className={css.identityLine}>{t('expectedVersion', { version: expected.displayVersion })}</span>
+                    <span className={css.identityLine}>
+                      {t('expectedFingerprint', { prefix: expected.fingerprintPrefix })}
+                    </span>
+                  </div>
+                )
+                : null}
+              {live
+                ? (
+                  <div className={css.identityBlock}>
+                    <span className={css.identityTitle}>{t('liveTitle')}</span>
+                    {live.label
+                      ? <span className={css.identityLine}>{t('liveLabel', { label: live.label })}</span>
+                      : null}
+                    <span className={css.identityLine}>{t('liveId', { id: live.extensionId })}</span>
+                    <span className={css.identityLine}>{t('liveVersion', { version: live.displayVersion })}</span>
+                    <span className={css.identityLine}>
+                      {t('liveFingerprint', { prefix: live.fingerprintPrefix })}
+                    </span>
+                  </div>
+                )
+                : null}
+              {showReload
+                ? <p className={css.reloadGuidance} role="note">{t('reloadGuidance')}</p>
+                : null}
             </section>
 
             <section className={css.section}>
