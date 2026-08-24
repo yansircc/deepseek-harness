@@ -40,13 +40,35 @@ export function honorsLlmRoute(provider: SubagentProvider): boolean {
   return provider.capabilities.persona && provider.capabilities.toolFilter
 }
 
+/** Treat an omitted, empty, or whitespace tool string as absent. */
+function omitBlankOptionalString(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined
+  const trimmed = value.trim()
+  return trimmed === '' ? undefined : trimmed
+}
+
+/** Drop blank route fields and trim surviving ids. */
+function normalizeDelegationRouteArgs(args: DelegationRouteArgs): DelegationRouteArgs {
+  const provider = omitBlankOptionalString(args.provider)
+  const model = omitBlankOptionalString(args.model)
+  const reasoning_effort = omitBlankOptionalString(args.reasoning_effort)
+  return {
+    ...provider === undefined ? {} : { provider },
+    ...model === undefined ? {} : { model },
+    ...reasoning_effort === undefined ? {} : { reasoning_effort },
+  }
+}
+
 /**
  * Whether the model named any LLM-route override.
  * @param args - the model-facing route fields on one delegation call.
- * @returns true when provider, model, or reasoning_effort is present.
+ * @returns true when a non-blank provider, model, or reasoning_effort is present.
  */
 export function hasDelegationRouteArgs(args: DelegationRouteArgs): boolean {
-  return args.provider !== undefined || args.model !== undefined || args.reasoning_effort !== undefined
+  const normalized = normalizeDelegationRouteArgs(args)
+  return normalized.provider !== undefined
+    || normalized.model !== undefined
+    || normalized.reasoning_effort !== undefined
 }
 
 /** Read the parent session's active LLM route. */
@@ -65,16 +87,17 @@ function parentActiveRoute(parent: Agent): {
 
 /**
  * Resolve child `agentOptions` from tool config plus optional model-facing
- * provider/model/effort. Omitted call fields inherit the parent's active
- * route. A changed provider/model drops inherited effort so the new model
- * keeps its adapter default unless the call names one.
+ * provider/model/effort. Omitted, empty, or whitespace call fields inherit
+ * the parent's active route. A changed provider/model drops inherited effort
+ * so the new model keeps its adapter default unless the call names one.
  * @param input - parent agent, transport, call args, config, and catalog.
  * @returns the child options, or the config options when the call names none.
  */
 export async function resolveDelegationAgentOptions(
   input: ResolveDelegationRouteInput,
 ): Promise<AgentOptions | undefined> {
-  const { args, configAgentOptions, transport } = input
+  const args = normalizeDelegationRouteArgs(input.args)
+  const { configAgentOptions, transport } = input
   if (!hasDelegationRouteArgs(args)) return configAgentOptions
   if (!honorsLlmRoute(transport)) {
     throw new Error(

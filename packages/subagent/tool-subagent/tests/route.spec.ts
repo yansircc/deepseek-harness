@@ -140,6 +140,7 @@ describe('delegation LLM route resolution', () => {
     expect(honorsLlmRoute(inProcess)).toBe(true)
     expect(honorsLlmRoute(product)).toBe(false)
     expect(hasDelegationRouteArgs({})).toBe(false)
+    expect(hasDelegationRouteArgs({ provider: '', model: '  ', reasoning_effort: '\t' })).toBe(false)
     expect(hasDelegationRouteArgs({ reasoning_effort: 'max' })).toBe(true)
   })
 
@@ -152,6 +153,25 @@ describe('delegation LLM route resolution', () => {
       llm: undefined,
       signal,
     })).resolves.toEqual({ model: 'child-model' })
+    await expect(resolveDelegationAgentOptions({
+      parent: parentOn({ provider: 'zai-coding-cn', model: 'glm-5.3' }),
+      transport: inProcess,
+      args: { provider: '', model: '   ', reasoning_effort: '\t' },
+      configAgentOptions: { maxTokens: 32 },
+      llm: undefined,
+      signal,
+    })).resolves.toEqual({ maxTokens: 32 })
+  })
+
+  it('treats blank route fields as omitted on a product transport', async () => {
+    await expect(resolveDelegationAgentOptions({
+      parent: parentOn({ provider: 'zai-coding-cn', model: 'glm-5.3' }),
+      transport: product,
+      args: { provider: '', model: '', reasoning_effort: '' },
+      configAgentOptions: undefined,
+      llm: catalog(),
+      signal,
+    })).resolves.toBeUndefined()
   })
 
   it('rejects route fields on a product transport', async () => {
@@ -194,6 +214,20 @@ describe('delegation LLM route resolution', () => {
       provider: 'zai-coding-cn',
       model: 'glm-5.3',
       reasoningEffort: ReasoningEffortId('max'),
+    })
+  })
+
+  it('trims surrounding whitespace on an explicit route id', async () => {
+    await expect(resolveDelegationAgentOptions({
+      parent: parentOn({ provider: 'zai-coding-cn', model: 'glm-5.3', reasoningEffort: 'max' }),
+      transport: inProcess,
+      args: { provider: '  kimi-coding  ', model: '  kimi-k2  ' },
+      configAgentOptions: undefined,
+      llm: catalog(),
+      signal,
+    })).resolves.toEqual({
+      provider: 'kimi-coding',
+      model: 'kimi-k2',
     })
   })
 

@@ -138,14 +138,36 @@ describe('dsh-tool-subagent-control/list-models', () => {
     )
   })
 
-  it('rejects an unknown or empty provider', async () => {
+  it('treats a blank provider as an overview of every route', async () => {
     const ctx = await setup()
+    const overview = await callTool(ctx, {})
+    expect(overview.isError).toBe(false)
+    if (overview.isError) throw new Error('expected list_models success')
+    for (const provider of ['', '   ', '\t']) {
+      const result = await callTool(ctx, { provider })
+      expect(result.isError).toBe(false)
+      if (result.isError) throw new Error('expected list_models success')
+      expect(result.value).toEqual(overview.value)
+    }
+  })
+
+  it('trims a known provider id and rejects an unknown one', async () => {
+    const ctx = await setup()
+    const padded = await callTool(ctx, { provider: '  zai-coding-cn  ' })
+    expect(padded.isError).toBe(false)
+    if (padded.isError) throw new Error('expected list_models success')
+    expect(padded.value).toEqual({
+      provider: { id: 'zai-coding-cn', name: 'Z.ai Coding' },
+      models: [{
+        id: 'glm-5.3',
+        name: 'GLM 5.3',
+        contextWindow: 200_000,
+        reasoning_efforts: ['high', 'max'],
+      }],
+    })
     const missing = await callTool(ctx, { provider: 'missing' })
     expect(missing.isError).toBe(true)
     expect(text(missing)).toContain('unknown provider "missing"')
-    const empty = await callTool(ctx, { provider: '' })
-    expect(empty.isError).toBe(true)
-    expect(text(empty)).toContain('non-empty route id')
   })
 
   it('has the namespace-plugin export shape', () => {

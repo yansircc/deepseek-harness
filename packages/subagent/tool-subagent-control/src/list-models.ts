@@ -34,6 +34,13 @@ type ListModelsResult =
   | { providers: CatalogProvider[] }
   | { provider: Pick<LlmProviderInfo, 'id' | 'name'>; models: CatalogModel[] }
 
+/** Treat an omitted, empty, or whitespace `provider` as the all-routes overview. */
+function omitBlankOptionalString(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined
+  const trimmed = value.trim()
+  return trimmed === '' ? undefined : trimmed
+}
+
 /** Project exact-model metadata into the model-facing catalog row. */
 function projectModel(info: LlmResolvedModelInfo): CatalogModel {
   const efforts = info.reasoning?.efforts.map(effort => effort.id) ?? []
@@ -158,11 +165,8 @@ export function apply(ctx: Context): void {
     isConcurrencySafe: () => true,
     async execute(args: ListModelsRequest, exec): Promise<ListModelsResult> {
       exec.signal.throwIfAborted()
-      const requested = args.provider
+      const requested = omitBlankOptionalString(args.provider)
       if (requested !== undefined) {
-        if (requested.length === 0) {
-          throw new Error('provider must be a non-empty route id; omit it to list every route')
-        }
         const info = ctx.llm.listProviders().find(entry => entry.id === requested)
         if (info === undefined) {
           throw new Error(`unknown provider "${requested}"`)

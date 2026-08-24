@@ -10,7 +10,7 @@
 
 `list_agents` 接受一个可选的 `scope` 参数，会从调用它的 agent 推导根 id，并且不使用 cursor，将服务目录投影为可继续 child。默认的 `children` scope 读取 `ctx.subagents.listChildren()`；`descendants` 读取 `ctx.subagents.listDescendants()`，其单份语料的遍历会穿过普通会话与一次性 child，并按稳定 pre-order 以 `parent=<id> depth=<n>` 渲染保留下来的条目。`parent` 注释是持久化直接 parent 会话 id，可能指向输出中省略的普通会话。对于调用本工具的 agent，只有 depth-1 child 条目可作为 `send_message` 候选；更深的 child 条目只能作为 `interrupt_agent` 候选。状态来自在线 Agent 注册表：`running`（driver 活跃）、`idle`（驻留但处于轮次之间，可能在等待它启动的 agent）或 `ready`（仅存于存储，表示可恢复而非终态）。服务结果还包含由会话支撑的一次性 subagent，以供 UI 等消费方使用；但这些条目无法接受 `send_message`，因此会从这个模型工具中排除。diagnostic 仍然可见，并在 descendants scope 中带有位置。持久化身份和模式来自每个子 agent 的描述符，消息送达时的鉴权和 Activation 所有权检查仍归服务负责。
 
-`list_models` 接受一个可选的 `provider`。不传参数时，它返回每个已注册 LLM 路由及其目录中的模型 id。传入 `provider` 时，它返回该路由的模型，以及每个模型的 `contextWindow` 与 `reasoning_efforts`。它不要求调用方是 agent，也不列出 Cursor、Claude Code 或 Codex 等产品级 subagent 传输。在 `subagent` 或 `subagent_fork` 上设置 `provider`、`model` 或 `reasoning_effort` 之前应先调用它。
+`list_models` 接受一个可选的 `provider`。不传参数、传入空字符串或仅空白时，它返回每个已注册 LLM 路由及其目录中的模型 id。传入非空白 `provider` 时，它返回该路由的模型，以及每个模型的 `contextWindow` 与 `reasoning_efforts`。它不要求调用方是 agent，也不列出 Cursor、Claude Code 或 Codex 等产品级 subagent 传输。在 `subagent` 或 `subagent_fork` 上设置 `provider`、`model` 或 `reasoning_effort` 之前应先调用它。
 
 ## 模型体验
 
