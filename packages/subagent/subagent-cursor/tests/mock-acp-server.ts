@@ -24,6 +24,12 @@
  *                        and never exits — a non-cooperative child.
  * - `MOCK_PERMISSION`  — if `1`, the agent calls `session/request_permission`
  *                        before answering.
+ * - `MOCK_EXT_METHOD`  — if set, the agent calls that unmatched client method
+ *                        (for example `cursor/update_todos`) before answering.
+ * - `MOCK_EXT_NOTIFICATION` — if set, the agent sends that unmatched client
+ *                        notification before answering.
+ * - `MOCK_EXT_RESULT_FILE` — if set with `MOCK_EXT_METHOD`, write the method
+ *                        result JSON to this path.
  * - `MOCK_PERMISSION_KIND` — the `toolCall.kind` on the permission request
  *                        (default `edit`) — drives the `allowEdits` policy.
  * - `MOCK_NO_ALLOW`    — if `1`, the permission options contain no allow kind.
@@ -97,6 +103,9 @@ if (CRASH_FILE !== undefined && existsSync(CRASH_FILE)) {
 const IGNORE_CANCEL = process.env.MOCK_IGNORE_CANCEL === '1'
 const READY_FILE = process.env.MOCK_READY_FILE
 const FLUSH_ON_EOF = process.env.MOCK_FLUSH_ON_EOF
+const EXT_METHOD = process.env.MOCK_EXT_METHOD
+const EXT_NOTIFICATION = process.env.MOCK_EXT_NOTIFICATION
+const EXT_RESULT_FILE = process.env.MOCK_EXT_RESULT_FILE
 
 // Session counter, so the "malformed session/new once" probe can tell runs apart.
 let newSessionCount = 0
@@ -144,6 +153,17 @@ function makeAgent(conn: AgentSideConnection): Agent {
         if (decision.outcome.outcome === 'cancelled') {
           return { stopReason: 'cancelled' }
         }
+      }
+      if (EXT_METHOD !== undefined) {
+        const result = await conn.extMethod(EXT_METHOD, {
+          toolCallId: 'call-test',
+          todos: [{ content: 'from child', status: 'in_progress' }],
+          merge: false,
+        })
+        if (EXT_RESULT_FILE !== undefined) writeFileSync(EXT_RESULT_FILE, JSON.stringify(result))
+      }
+      if (EXT_NOTIFICATION !== undefined) {
+        await conn.extNotification(EXT_NOTIFICATION, { toolCallId: 'call-test' })
       }
       if (THOUGHT) {
         await conn.sessionUpdate({

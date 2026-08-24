@@ -218,6 +218,28 @@ describe('basic run on the pooled backend', () => {
   })
 })
 
+describe('Cursor editor extensions through the wire', () => {
+  it('acknowledges cursor/update_todos and a cursor/ notification, then answers', async () => {
+    const resultFile = join(mkdtempSync(join(tmpdir(), 'cursor-ext-')), 'result.json')
+    const ctx = await setup({
+      MOCK_EXT_METHOD: 'cursor/update_todos',
+      MOCK_EXT_NOTIFICATION: 'cursor/update_todos',
+      MOCK_EXT_RESULT_FILE: resultFile,
+      MOCK_TEXT: 'after todos',
+    })
+    const { stopReason, output } = await runOnce(ctx)
+    expect(stopReason).toBe('completed')
+    expect(output).toBe('after todos')
+    expect(JSON.parse(readFileSync(resultFile, 'utf8'))).toEqual({})
+  })
+
+  it('still rejects a non-Cursor unmatched client method', async () => {
+    const ctx = await setup({ MOCK_EXT_METHOD: 'other/foo', MOCK_TEXT: 'never seen' })
+    const { stopReason } = await runOnce(ctx)
+    expect(stopReason).toBe('error')
+  })
+})
+
 describe('permission policy through the wire', () => {
   it('deny (default) cancels a permission-requesting child', async () => {
     const ctx = await setup({ MOCK_PERMISSION: '1', MOCK_TEXT: 'never seen' })

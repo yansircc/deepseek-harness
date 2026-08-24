@@ -130,3 +130,4 @@ Cursor 子代理在一个全新 ACP 会话里收到独立文本块作为一轮�
 - **权限自动应答** —— 子代理的权限提示不会转给真人；`allow`/`allowEdits` 在子进程内等同 yolo。
 - **池进程状态共享** —— 常驻 `agent acp` 会累积 Cursor 侧状态；靠逐 run 会话、尽力 `session/close` 与空闲 TTL 缓解。
 - **Cursor 会话 id 保持私有** —— 父命名空间的 run id 不等于 Cursor 会话 id；跨工具续接需要 seam 的逐子续接广告。
+- **Cursor 编辑器扩展会被确认并丢弃** —— `cursor/update_todos` 以及其它 `cursor/` 客户端方法或通知返回空的 ACP 结果，使子轮次可以继续。载荷不会写入父会话。

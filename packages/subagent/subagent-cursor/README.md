@@ -130,3 +130,4 @@ Independent of the parent request cache. Reuse depends only on Cursor's own prov
 - **Permissions are auto-answered** — no human is surfaced a child's permission prompt; `allow`/`allowEdits` are yolo-equivalent within the child process.
 - **Pooled process state is shared** — one long-lived `agent acp` process accumulates Cursor-side state; mitigated by per-run sessions, best-effort `session/close`, and the idle TTL.
 - **Cursor session ids stay private** — the parent-scoped run id never equals the Cursor session id; cross-tool continuation needs the seam's per-child continuation advertisement.
+- **Cursor editor extensions are acknowledged and dropped** — `cursor/update_todos` and any other `cursor/` client method or notification return an empty ACP result so the child turn continues. The payload is not copied into the parent Session.

@@ -24,6 +24,7 @@ import {
   type ToolKind,
 } from '@agentclientprotocol/sdk'
 import type { SubprocessHandle, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess'
+import { acknowledgeCursorClientExtension } from './client-extensions.ts'
 
 /** How to auto-answer the child's `session/request_permission` prompts. */
 export type PermissionPolicy = 'deny' | 'allowEdits' | 'allow'
@@ -249,6 +250,13 @@ export class CursorPool {
         return active?.permission === undefined
           ? Promise.resolve({ outcome: { outcome: 'cancelled' } })
           : Promise.resolve(active.permission(params))
+      },
+      extMethod(method: string, _params: Record<string, unknown>): Promise<Record<string, unknown>> {
+        return Promise.resolve(acknowledgeCursorClientExtension(method))
+      },
+      extNotification(method: string, _params: Record<string, unknown>): Promise<void> {
+        acknowledgeCursorClientExtension(method)
+        return Promise.resolve()
       },
     }
 
