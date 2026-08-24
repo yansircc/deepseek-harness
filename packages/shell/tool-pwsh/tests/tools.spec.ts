@@ -581,15 +581,21 @@ describe('sandbox escalation through ctx.approval', () => {
     expect(schema.parameters.properties).not.toHaveProperty('sandbox_permissions')
   })
 
-  it('rejects injected escalation without a sandbox and non-widening escalation without prompting', async () => {
+  it('rejects injected escalation without a sandbox and treats non-widening as omitted', async () => {
     const plain = await setup()
     expect(text(await call(plain.ctx, 'pwsh', escalate))).toContain('not available in this composition')
 
     const { ctx } = await setupSandboxed(true)
     const prompted = vi.fn()
     ctx.on('approval/request', () => { prompted(); return Promise.resolve<ApprovalOutcome>('allowed-once') })
-    const result = await call(ctx, 'pwsh', { ...escalate, sandbox_permissions: 'workspace-write' }, sandboxAgent('workspace-write'))
-    expect(text(result)).toContain('not strictly wider')
+    const same = await call(ctx, 'pwsh', { ...escalate, sandbox_permissions: 'workspace-write' }, sandboxAgent('workspace-write'))
+    expect(same.isError).toBe(false)
+    const top = await call(ctx, 'pwsh', {
+      ...escalate,
+      sandbox_permissions: 'danger-full-access',
+      justification: 'already at the top',
+    }, sandboxAgent('danger-full-access'))
+    expect(top.isError).toBe(false)
     expect(prompted).not.toHaveBeenCalled()
 
     const malformed = sandboxAgent()
@@ -597,7 +603,8 @@ describe('sandbox escalation through ctx.approval', () => {
       type: 'sandbox/mode',
       data: { mode: 'unknown-mode' },
     })
-    expect(text(await call(ctx, 'pwsh', escalate, malformed))).toContain('not strictly wider')
+    expect((await call(ctx, 'pwsh', escalate, malformed)).isError).toBe(false)
+    expect(prompted).not.toHaveBeenCalled()
   })
 
   it('fails closed when approval cannot be routed', async () => {
