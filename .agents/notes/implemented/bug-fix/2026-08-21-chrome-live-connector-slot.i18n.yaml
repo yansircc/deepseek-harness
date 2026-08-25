@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-08-21-chrome-live-connector-slot.md
-2026-08-21-chrome-live-connector-slot.md: 2c7289669241d50ab481c746b1634dd1cbcbe053
-2026-08-21-chrome-live-connector-slot.zh.md: a3360578a0f0a5c060a7248a0b1f664ddc4b43c6
+2026-08-21-chrome-live-connector-slot.md: 02ac151e23859d43cc92bc5889826704dfffd822
+2026-08-21-chrome-live-connector-slot.zh.md: 3d5e04649f7ce6506449f171a985e240e619a9c3

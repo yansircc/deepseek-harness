@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-Chrome 桥的浏览器设置卡片。它占用共享的 `settings.plugin.item` 槽，键为 `tool-chrome` 命名空间：展示就绪状态、扩展下载和高级端口字段。Host 插件 [`@deepseek-ai/dsh-tool-chrome`](../../chrome/tool-chrome/README.zh.md) 拥有桥、owner 凭据以及全部面向模型的 `chrome_*` 工具。
+Chrome 桥的浏览器设置卡片。它占用共享的 `settings.plugin.item` 槽，键为 `tool-chrome` 命名空间：展示就绪状态、扩展下载和高级端口字段。Host 插件 [`@deepseek-ai/dsh-tool-chrome`](../../extensions/tool-chrome/README.zh.md) 拥有桥、owner 凭据以及全部面向模型的 `chrome_*` 工具。
 
 ```yaml
 - id: ui-chrome

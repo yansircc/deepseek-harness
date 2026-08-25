@@ -8,18 +8,20 @@ The package owns model schemas, descriptions, argument compatibility projection,
 
 ## Model Experience
 
-### Tool schemas
+### Chrome tools
+
+#### What the model sees
 
 The model sees `chrome_status` and the 27 atomic tab, page, input, screenshot, network, and automation-ownership tools. The package adds no system-prompt section.
 
-### Token effect
+#### Token effect
 
 All mounted Chrome tool schemas are present on every request; there is no per-tool switch.
 
-### KV Cache effect
+#### KV Cache effect
 
 The tool prefix is stable while the Consumer stays mounted. Provider reconnects and operation revisions do not change model schemas.
 
 ## Known Limitations and Deferred Work
 
-Screenshot results currently remain bounded JSON from the provider. Workspace binary artifact persistence requires a binary-write filesystem or attachment Consumer; this package deliberately does not bypass `ctx.fs` with ambient Node filesystem writes.
+- Screenshot results currently remain bounded JSON from the provider. Workspace binary artifact persistence requires a binary-write filesystem or attachment Consumer; this package deliberately does not bypass `ctx.fs` with ambient Node filesystem writes.

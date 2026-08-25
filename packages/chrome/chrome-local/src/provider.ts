@@ -175,5 +175,8 @@ export class LocalChromeProvider implements ChromeProvider {
   }
 }
 
-/** Derive the extension owner key from an exact Agent for testing and adapters. */
+/** Derive the extension owner key from an exact Agent for testing and adapters.
+ * @param owner - Exact initiating Agent.
+ * @returns Stable provider-local owner key.
+ */
 export const ownerKey = (owner: Agent): string => `agent:${owner.id}`

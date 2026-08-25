@@ -26,4 +26,4 @@ Status: implemented
 
 ## Testing
 
-`packages/extensions/tool-chrome/tests/connector-registry.spec.ts` 钉住同 id 再握手、驱逐上一个 id，以及 `liveConnector` 跳过离线的第一个配置。`packages/extensions/tool-chrome/tests/bridge-e2e.spec.ts` 先握一个过期 id 再握一个在线 id，断言 owner 命令不点名过期离线 id，在在线 id 上走完 poll/result 往返，并在后续握手 header 与 body 不一致时保持原租约。
+`packages/chrome/chrome-local/tests/connector-owner.spec.ts` 钉住同 id 再握手、驱逐上一个 id，以及 `liveConnector` 跳过离线的第一个配置。`packages/chrome/chrome-local/tests/provider.spec.ts` 先握一个过期 id 再握一个在线 id，断言 owner 命令不点名过期离线 id，在在线 id 上走完 poll/result 往返，并在后续握手 header 与 body 不一致时保持原租约。

@@ -35,7 +35,10 @@ const jsonValue = (value: unknown, depth = 0): ChromeJsonValue => {
   throw new ProtocolFailure('value is not JSON-compatible')
 }
 
-/** Decode and brand one connector handshake body. */
+/** Decode and brand one connector handshake body.
+ * @param text - Raw JSON body.
+ * @returns Validated connector profile.
+ */
 export const decodeProfileConnector = (text: string): ProfileConnector => {
   const value = parse('connector metadata', text)
   if (!isRecord(value)) throw new ProtocolFailure('connector metadata must be an object')
@@ -53,7 +56,10 @@ export const decodeProfileConnector = (text: string): ProfileConnector => {
   }
 }
 
-/** Decode one result body and reject missing, excess, or invalid fields. */
+/** Decode one result body and reject missing, excess, or invalid fields.
+ * @param text - Raw JSON body.
+ * @returns Validated wire result.
+ */
 export const decodeWireResult = (text: string): WireResult => {
   const value = parse('wire result', text)
   if (!isRecord(value) || typeof value.ok !== 'boolean') throw new ProtocolFailure('wire result is malformed')

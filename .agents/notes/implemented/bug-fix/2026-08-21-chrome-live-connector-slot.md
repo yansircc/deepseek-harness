@@ -26,4 +26,4 @@ A command that arrives before the live connector's first `/next` poll sees "exte
 
 ## Testing
 
-`packages/extensions/tool-chrome/tests/connector-registry.spec.ts` pins same-id rehandshake, eviction of the previous id, and `liveConnector` skipping an offline first profile. `packages/extensions/tool-chrome/tests/bridge-e2e.spec.ts` handshakes a stale id then a live id, asserts the owner command does not name the stale offline id, completes a poll/result round-trip on the live id, and keeps a live lease when a later handshake header does not match the body.
+`packages/chrome/chrome-local/tests/connector-owner.spec.ts` pins same-id rehandshake, eviction of the previous id, and `liveConnector` skipping an offline first profile. `packages/chrome/chrome-local/tests/provider.spec.ts` handshakes a stale id then a live id, asserts the owner command does not name the stale offline id, completes a poll/result round-trip on the live id, and keeps a live lease when a later handshake header does not match the body.

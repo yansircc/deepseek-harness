@@ -26,4 +26,4 @@ Status: implemented
 
 ## Testing
 
-`packages/extensions/tool-chrome/tests/tab-target-schema.spec.ts` 接受整数 tab id 和 URL 字符串作为 `chrome_tab_activate` 参数，并把数字字符串 id 收到 wire Target 上。
+`packages/chrome/tool-chrome/tests/tab-target-schema.spec.ts` 接受整数 tab id 和 URL 字符串作为 `chrome_tab_activate` 参数，并把数字字符串 id 收到 wire Target 上。

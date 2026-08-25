@@ -26,4 +26,4 @@ epoch 与缺标签所有权在自动协调后不再挡住替换。记录的标�
 
 ## 测试
 
-`packages/extensions/tool-chrome/tests/plugin.spec.ts` 期望 27 个原子工具加 `chrome_status`。`automation-stale-recovery.spec.ts` 钉死系统描述符与宿主 clear-stale 契约。`bundled-service-worker-wire-schema.spec.ts` 钉死捆绑 `clear-stale`、自动协调原因、仅记录语义与弹窗恢复消息。针对 `packages/extensions/tool-chrome/tests` 的 `vitest`，以及对 `service-worker.js` 与 `popup.js` 的 `node --check`。
+`packages/chrome/tool-chrome/tests/plugin.spec.ts` 期望 27 个原子工具加 `chrome_status`。`automation-stale-recovery.spec.ts` 钉死系统描述符与宿主 clear-stale 契约。`bundled-service-worker-wire-schema.spec.ts` 钉死捆绑 `clear-stale`、自动协调原因、仅记录语义与弹窗恢复消息。针对 `packages/chrome/chrome-extension/tests` 的 `vitest`，以及对 `service-worker.js` 与 `popup.js` 的 `node --check`。

@@ -8,6 +8,7 @@ export * from './types.ts'
 
 declare module '@deepseek-ai/cordis' { interface Context { chrome: ChromeRuntime } }
 
+/** Owner-scoped registry for one Chrome automation provider. */
 export class ChromeRuntime extends Service {
   private provider: ChromeProvider | undefined
   private disposing = false
@@ -19,7 +20,10 @@ export class ChromeRuntime extends Service {
     ctx.effect(() => () => this.dispose(), 'chrome runtime teardown')
   }
 
-  /** Register exactly one started provider and publish it only after startup succeeds. */
+  /** Register exactly one started provider and publish it only after startup succeeds.
+   * @param provider - Provider to start and publish.
+   * @returns Async disposer that reaches provider quiescence.
+   */
   async registerProvider(provider: ChromeProvider): Promise<() => Promise<void>> {
     if (this.disposing) throw new ChromeError('Chrome service is disposing', 'CHROME_PROVIDER_DISPOSING')
     if (this.provider !== undefined) throw new ChromeError('a Chrome provider is already registered', 'CHROME_PROVIDER_DUPLICATE')
@@ -42,7 +46,12 @@ export class ChromeRuntime extends Service {
     return dispose
   }
 
-  /** Execute one command for an exact initiating Agent. */
+  /** Execute one command for an exact initiating Agent.
+   * @param owner - Exact initiating Agent.
+   * @param command - Provider-neutral Chrome command.
+   * @param signal - Required caller cancellation signal.
+   * @returns Provider JSON result.
+   */
   async execute(owner: Agent, command: ChromeCommand, signal: AbortSignal): Promise<ChromeJsonValue> {
     signal.throwIfAborted()
     if (this.disposing) throw new ChromeError('Chrome service is disposing', 'CHROME_PROVIDER_DISPOSING')
@@ -58,14 +67,20 @@ export class ChromeRuntime extends Service {
     }
   }
 
-  /** Return a fresh provider health snapshot. */
+  /** Return a fresh provider health snapshot.
+   * @param signal - Optional status cancellation signal.
+   * @returns Current provider health.
+   */
   async status(signal?: AbortSignal): Promise<ChromeHealth> {
     const provider = this.provider
     if (provider === undefined) throw new ChromeError('no Chrome provider is registered', 'CHROME_PROVIDER_MISSING')
     return provider.status(signal)
   }
 
-  /** Whether an exact owner has admitted work. */
+  /** Whether an exact owner has admitted work.
+   * @param owner - Exact Agent to inspect.
+   * @returns Whether work is admitted for that owner.
+   */
   hasOwnerActivity(owner: Agent): boolean { return (this.active.get(owner) ?? 0) > 0 }
 
   private async dispose(): Promise<void> {

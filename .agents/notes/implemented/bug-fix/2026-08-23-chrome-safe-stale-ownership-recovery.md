@@ -26,4 +26,4 @@ Epoch and missing-tab ownership no longer block replacement after auto-reconcile
 
 ## Testing
 
-`packages/extensions/tool-chrome/tests/plugin.spec.ts` expects 27 atomic tools plus `chrome_status`. `automation-stale-recovery.spec.ts` pins system descriptors and host clear-stale contracts. `bundled-service-worker-wire-schema.spec.ts` pins bundled `clear-stale`, auto-reconcile reasons, record-only wording, and popup recovery messages. Focused `vitest` under `packages/extensions/tool-chrome/tests` plus `node --check` on `service-worker.js` and `popup.js`.
+`packages/chrome/tool-chrome/tests/plugin.spec.ts` expects 27 atomic tools plus `chrome_status`. `automation-stale-recovery.spec.ts` pins system descriptors and host clear-stale contracts. `bundled-service-worker-wire-schema.spec.ts` pins bundled `clear-stale`, auto-reconcile reasons, record-only wording, and popup recovery messages. Focused `vitest` under `packages/chrome/chrome-extension/tests` plus `node --check` on `service-worker.js` and `popup.js`.

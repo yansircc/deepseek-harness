@@ -28,4 +28,4 @@ Status: implemented
 
 ## 测试
 
-`tests/protocol-fingerprint.spec.ts` 断言钉死对齐，以及 call 联合完整/对嵌套敏感。`tests/poll-diagnostics.spec.ts` 覆盖字段路径、密钥脱敏、长度上界与拒绝形态。`tests/bundled-service-worker-wire-schema.spec.ts` 门控扁平 PageCall/InputCall（SW + popup）、clear-stale、poll 解码辅助与 `readResponseText` body 取消。针对 `packages/extensions/tool-chrome/tests` 的 vitest，以及对 `service-worker.js` 与 `popup.js` 的 `node --check`。
+`tests/protocol-fingerprint.spec.ts` 断言钉死对齐，以及 call 联合完整/对嵌套敏感。`tests/poll-diagnostics.spec.ts` 覆盖字段路径、密钥脱敏、长度上界与拒绝形态。`tests/bundled-service-worker-wire-schema.spec.ts` 门控扁平 PageCall/InputCall（SW + popup）、clear-stale、poll 解码辅助与 `readResponseText` body 取消。针对 `packages/chrome/chrome-extension/tests` 的 vitest，以及对 `service-worker.js` 与 `popup.js` 的 `node --check`。

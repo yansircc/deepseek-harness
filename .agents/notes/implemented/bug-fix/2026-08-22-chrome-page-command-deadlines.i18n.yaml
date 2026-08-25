@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-08-22-chrome-page-command-deadlines.md
-2026-08-22-chrome-page-command-deadlines.md: af99b16d363adbaf83e0b9921e82067bdd60c739
-2026-08-22-chrome-page-command-deadlines.zh.md: aba6f2c0a02cd16e4888e35cdb7a4b3fb3314ba6
+2026-08-22-chrome-page-command-deadlines.md: cb6f7f9766e3cdd97a100a3d90f65eb661feaea3
+2026-08-22-chrome-page-command-deadlines.zh.md: 3be0b37f6d6591421592d985c59d9f7fbffb6630

@@ -36,4 +36,4 @@ Chrome 卡片在 payload 带 `error` 时，把宿主错误显示在 offline 标�
 
 ## 测试
 
-`packages/extensions/tool-chrome/tests/owner-credential.spec.ts` 钉死解析顺序、旧名回写、回写失败、同名跳过，以及 `pinOwnerSecret` 只飞一次。`packages/extensions/tool-chrome/tests/plugin.spec.ts` 通过后来 resolve 翻转、只含旧名的存储、拒绝写入的存储、抛错的 resolve，以及缺失凭据服务，驱动 `chrome_status`。`packages/client/ui-chrome/tests/chrome-status-view.client.spec.ts` 钉死 offline 提示优先使用宿主 error。
+`packages/chrome/chrome-local/tests/config.spec.ts` 钉死解析顺序、旧名回写、回写失败、同名跳过，以及 `pinOwnerSecret` 只飞一次。`packages/chrome/tool-chrome/tests/plugin.spec.ts` 通过后来 resolve 翻转、只含旧名的存储、拒绝写入的存储、抛错的 resolve，以及缺失凭据服务，驱动 `chrome_status`。`packages/client/ui-chrome/tests/chrome-status-view.client.spec.ts` 钉死 offline 提示优先使用宿主 error。

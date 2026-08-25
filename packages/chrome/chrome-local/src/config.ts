@@ -48,7 +48,10 @@ const boundedInteger = (name: string, value: number, minimum: number, maximum: n
   return value
 }
 
-/** Apply defaults and validate all deployment-varying values before binding. */
+/** Apply defaults and validate all deployment-varying values before binding.
+ * @param config - Cordis provider config.
+ * @returns Complete bounded provider config.
+ */
 export const resolveConfig = (config: Config): ResolvedConfig => {
   const host = config.host ?? '127.0.0.1'
   if (host !== '127.0.0.1' && host !== 'localhost' && host !== '::1') {

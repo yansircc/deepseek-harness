@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-08-23-chrome-safe-stale-ownership-recovery.md
-2026-08-23-chrome-safe-stale-ownership-recovery.md: 4bae9feb2c592af31b3fa5c1257de4f4336a46a9
-2026-08-23-chrome-safe-stale-ownership-recovery.zh.md: 8fedca8173c9eeb505f7180d7e8d0b6c50aa0cd6
+2026-08-23-chrome-safe-stale-ownership-recovery.md: 8765e5626ad9c3fe97674153f4b474312f6c9f23
+2026-08-23-chrome-safe-stale-ownership-recovery.zh.md: cf17cb7647599a204c676f08503c288975da8509

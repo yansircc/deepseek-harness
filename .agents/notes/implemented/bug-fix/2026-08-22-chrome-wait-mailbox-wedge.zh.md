@@ -26,4 +26,4 @@ wait 超时期间 `chrome_status` 仍为 `ready`，不能说明下一条命令�
 
 ## Testing
 
-`packages/extensions/tool-chrome/tests/broker.spec.ts` 领取一条命令，在没有 `/result` 的情况下让 owner 截止到期，断言迟到的 complete 被忽略，然后再投递并完成第二条命令。
+`packages/chrome/chrome-local/tests/broker.spec.ts` 领取一条命令，在没有 `/result` 的情况下让 owner 截止到期，断言迟到的 complete 被忽略，然后再投递并完成第二条命令。

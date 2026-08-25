@@ -38,11 +38,20 @@ export interface ChromeIdentityLine {
   connected?: boolean
 }
 
+/** Default displayed fingerprint character count. */
 export const FINGERPRINT_PREFIX_LENGTH = 12
-/** Return a bounded revision prefix. */
+/** Return a bounded revision prefix.
+ * @param value - Full revision or fingerprint.
+ * @param length - Maximum displayed characters.
+ * @returns Bounded prefix.
+ */
 export const fingerprintPrefix = (value: string, length = FINGERPRINT_PREFIX_LENGTH): string => value.slice(0, length)
 
-/** Classify formal health plus poll state. */
+/** Classify formal health plus poll state.
+ * @param status - Latest host payload.
+ * @param unknown - Whether the latest poll failed.
+ * @returns UI status category.
+ */
 export function classifyChromeStatus(status: ChromeStatusPayload | null, unknown: boolean): ChromeStatusKind {
   if (status === null) return unknown ? 'unknown' : 'checking'
   if (status.state === 'offline') return 'offline'
@@ -53,7 +62,10 @@ export function classifyChromeStatus(status: ChromeStatusPayload | null, unknown
   return 'waiting'
 }
 
-/** Project kernel revision and connector label onto legacy identity rows. */
+/** Project kernel revision and connector label onto identity rows.
+ * @param status - Latest host payload.
+ * @returns Expected and live identity rows.
+ */
 export function chromeIdentityLines(status: ChromeStatusPayload | null): {
   expected: ChromeIdentityLine | null
   live: ChromeIdentityLine | null
@@ -78,16 +90,29 @@ export function chromeIdentityLines(status: ChromeStatusPayload | null): {
   }
 }
 
-/** Whether the card should present extension reload guidance. */
+/** Whether the card should present extension reload guidance.
+ * @param kind - Classified UI status.
+ * @returns Whether reload guidance is useful.
+ */
 export function needsReloadGuidance(kind: ChromeStatusKind): boolean {
   return kind === 'mismatch' || kind === 'stale'
 }
-/** Prefer a concrete host failure over generic locale text. */
+/** Prefer a concrete host failure over generic locale text.
+ * @param error - Concrete host error when present.
+ * @param fallback - Localized generic text.
+ * @returns User-facing hint.
+ */
 export function offlineStatusHint(error: string | null, fallback: string): string {
   return error !== null && error.length > 0 ? error : fallback
 }
+/** Latest status poll projection. */
 export type BridgeStatusPollState = { status: ChromeStatusPayload | null; unknown: boolean }
-/** Apply one successful health poll. */
+/** Apply one successful health poll.
+ * @param status - Successful host payload.
+ * @returns Non-unknown poll state.
+ */
 export const applyStatusPollSuccess = (status: ChromeStatusPayload): BridgeStatusPollState => ({ status, unknown: false })
-/** Clear stale success after a failed poll. */
+/** Clear stale success after a failed poll.
+ * @returns Unknown poll state without stale payload.
+ */
 export const applyStatusPollFailure = (): BridgeStatusPollState => ({ status: null, unknown: true })

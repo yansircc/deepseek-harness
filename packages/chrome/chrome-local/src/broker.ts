@@ -38,7 +38,12 @@ export class LocalCommandBroker {
 
   constructor(private readonly maximum: number, private readonly deadlineMs: number) {}
 
-  /** Submit one owner-scoped command and await its result. */
+  /** Submit one owner-scoped command and await its result.
+   * @param owner - Exact initiating Agent.
+   * @param command - Provider-neutral Chrome command.
+   * @param signal - Caller cancellation signal.
+   * @returns Connector result JSON.
+   */
   send(owner: Agent, command: ChromeCommand, signal: AbortSignal): Promise<ChromeJsonValue> {
     signal.throwIfAborted()
     if (this.stopped) throw new ChromeError('Chrome provider is stopped', 'CHROME_PROVIDER_DISPOSING')
@@ -91,7 +96,11 @@ export class LocalCommandBroker {
     })
   }
 
-  /** Claim the next queued command, or report a cancellation intent. */
+  /** Claim the next queued command, or report a cancellation intent.
+   * @param connector - Authenticated connector.
+   * @param waitMs - Poll deadline.
+   * @returns Command, cancel intent, or idle response.
+   */
   async next(connector: PublicConnector, waitMs: number): Promise<{ type: 'command'; command: WireCommand } | { type: 'cancel'; commandId: ChromeCommandIdType } | { type: 'none' }> {
     const deadline = Date.now() + waitMs
     while (!this.stopped && Date.now() < deadline) {
@@ -121,7 +130,11 @@ export class LocalCommandBroker {
     return { type: 'none' }
   }
 
-  /** Accept a result, including late results after the caller stopped awaiting. */
+  /** Accept a result, including late results after the caller stopped awaiting.
+   * @param connector - Reporting connector.
+   * @param result - Wire result.
+   * @returns Acceptance disposition.
+   */
   complete(connector: PublicConnector, result: WireResult): 'accepted' | 'late' | 'unknown' {
     const entry = this.entries.get(result.id)
     if (!entry) {
@@ -137,10 +150,15 @@ export class LocalCommandBroker {
     return 'accepted'
   }
 
-  /** Read a retained late result for diagnostics. */
+  /** Read a retained late result for diagnostics.
+   * @param id - Command identity.
+   * @returns Retained late result when present.
+   */
   lateResult(id: ChromeCommandIdType): LateResultRecord | undefined { return this.late.get(id) }
 
-  /** Current queue and executing-command counts. */
+  /** Current queue and executing-command counts.
+   * @returns Secret-free broker status.
+   */
   status(): BrokerStatus {
     const current = [...this.entries.values()].find(entry => entry.phase === 'claimed' || entry.phase === 'cancel-requested')
     return {

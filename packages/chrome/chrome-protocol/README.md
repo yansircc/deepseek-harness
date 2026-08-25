@@ -1,11 +1,17 @@
 # @deepseek-ai/dsh-chrome-protocol
 
+English | [中文](README.zh.md)
+
 Executable, provider-neutral Chrome command vocabulary shared by DSH host providers and browser connectors. It owns closed operation unions, opaque identifiers, command effects, lifecycle phases, protocol revisions, health, and result errors. Transport authentication and model-facing tool registration belong to consumers and providers.
 
 ## Model Experience
 
-This package is not mounted as a model-facing plugin and contributes no tool schemas or prompt text.
+None, as this is a provider-neutral protocol package and it registers no model-facing tool or prompt section.
+
+#### KV Cache effect
+
+None.
 
 ## Known Limitations and Deferred Work
 
-Runtime JSON decoding and canonical wire fingerprint generation move here as the local bridge provider migrates from the legacy `tool-chrome` package.
+- Kernel compatibility intentionally rejects incompatible peers instead of carrying pre-release shims.

@@ -14,7 +14,11 @@ export const name = 'tool-chrome'
 /** Required tool registry and Chrome capability. */
 export const inject = ['tools', 'chrome']
 
-/** Project one descriptor input onto the shared closed command union. */
+/** Project one descriptor input onto the shared closed command union.
+ * @param descriptor - Registered atomic tool descriptor.
+ * @param args - Validated model tool arguments.
+ * @returns Provider-neutral Chrome command.
+ */
 export function projectChromeCommand(
   descriptor: (typeof ATOMIC_TOOL_DESCRIPTORS)[number],
   args: Record<string, unknown>,

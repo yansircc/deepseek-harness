@@ -1,5 +1,7 @@
 # chrome/ — signed-in Chrome capability
 
+English | [中文](README.zh.md)
+
 The Chrome capability family separates provider-neutral command ownership, local connector transport, authored browser code, and model-facing Consumers.
 
 | Package | Role | ctx key |

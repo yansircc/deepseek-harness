@@ -947,8 +947,11 @@ export const operationResultProtocolContract = Object.fromEntries(
   ]),
 )
 
+/** Chrome tab target schema type. */
 export type Target = Schema.Schema.Type<typeof Target>
+/** Chrome element target schema type. */
 export type ElementTarget = Schema.Schema.Type<typeof ElementTarget>
+/** Chrome pointer target schema type. */
 export type PointerTarget = Schema.Schema.Type<typeof PointerTarget>
 export type TabCall = Schema.Schema.Type<typeof TabCall>
 export type PageCall = Schema.Schema.Type<typeof PageCall>

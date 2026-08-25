@@ -707,6 +707,7 @@ flowchart TD
   pkg_chrome_local --> pkg_invariants
   pkg_chrome_local_web --> pkg_chrome
   pkg_chrome_local_web --> pkg_chrome_extension
+  pkg_chrome_local_web --> pkg_chrome_protocol
   pkg_chrome_local_web --> pkg_host_webserver
   pkg_chrome_local_web --> pkg_invariants
   pkg_compaction --> pkg_brand
@@ -1680,7 +1681,7 @@ flowchart TD
 | [`acp`](../packages/acp/acp) | `acp` | [`agent`](../packages/core/agent), [`attachment`](../packages/attachment/attachment), [`invariants`](../packages/runtime-diagnostics/invariants), [`llm`](../packages/llm/llm), [`session`](../packages/core/session), [`user-approval`](../packages/interaction/user-approval) |
 | [`headless`](../packages/bundle/headless) | `bundle` | [`agent`](../packages/core/agent), [`agent-default-model`](../packages/core/agent-default-model), [`invariants`](../packages/runtime-diagnostics/invariants), [`llm`](../packages/llm/llm), [`session`](../packages/core/session) |
 | [`chrome-local`](../packages/chrome/chrome-local) | `chrome` | [`agent`](../packages/core/agent), [`chrome`](../packages/chrome/chrome), [`chrome-protocol`](../packages/chrome/chrome-protocol), [`credentials`](../packages/credentials/credentials), [`invariants`](../packages/runtime-diagnostics/invariants) |
-| [`chrome-local-web`](../packages/chrome/chrome-local-web) | `chrome` | [`chrome`](../packages/chrome/chrome), [`chrome-extension`](../packages/chrome/chrome-extension), [`host-webserver`](../packages/host/webserver), [`invariants`](../packages/runtime-diagnostics/invariants) |
+| [`chrome-local-web`](../packages/chrome/chrome-local-web) | `chrome` | [`chrome`](../packages/chrome/chrome), [`chrome-extension`](../packages/chrome/chrome-extension), [`chrome-protocol`](../packages/chrome/chrome-protocol), [`host-webserver`](../packages/host/webserver), [`invariants`](../packages/runtime-diagnostics/invariants) |
 | [`compaction`](../packages/compaction/compaction) | `compaction` | [`brand`](../packages/util/brand), [`commands`](../packages/interaction/commands), [`invariants`](../packages/runtime-diagnostics/invariants), [`llm`](../packages/llm/llm), [`session`](../packages/core/session) |
 | [`tmux-context`](../packages/context/tmux-context) | `context` | [`agent`](../packages/core/agent), [`invariants`](../packages/runtime-diagnostics/invariants), [`session`](../packages/core/session), [`shell`](../packages/shell/shell) |
 | [`fs-e2b`](../packages/e2b/fs-e2b) | `e2b` | [`e2b`](../packages/e2b/e2b), [`fs`](../packages/fs/fs), [`invariants`](../packages/runtime-diagnostics/invariants) |

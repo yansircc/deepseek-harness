@@ -36,4 +36,4 @@ The card can show a `BridgeUnavailable` message that names HMAC failure. That is
 
 ## Testing
 
-`packages/extensions/tool-chrome/tests/owner-credential.spec.ts` pins resolve order, legacy write-back, write-back failure, same-name skip, and single-flight `pinOwnerSecret`. `packages/extensions/tool-chrome/tests/plugin.spec.ts` drives `chrome_status` through a flipped later resolve, a legacy-only store, a rejecting store, a throwing resolve, and a missing credentials service. `packages/client/ui-chrome/tests/chrome-status-view.client.spec.ts` pins the offline hint preferring the host error.
+`packages/chrome/chrome-local/tests/config.spec.ts` pins resolve order, legacy write-back, write-back failure, same-name skip, and single-flight `pinOwnerSecret`. `packages/chrome/tool-chrome/tests/plugin.spec.ts` drives `chrome_status` through a flipped later resolve, a legacy-only store, a rejecting store, a throwing resolve, and a missing credentials service. `packages/client/ui-chrome/tests/chrome-status-view.client.spec.ts` pins the offline hint preferring the host error.

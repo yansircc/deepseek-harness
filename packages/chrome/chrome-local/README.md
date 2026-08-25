@@ -1,5 +1,7 @@
 # @deepseek-ai/dsh-chrome-local
 
+English | [中文](README.zh.md)
+
 Local Service Provider for [`@deepseek-ai/dsh-chrome`](../chrome/README.md). It binds a loopback-only HTTP listener for one authenticated Chrome extension connector and submits model commands directly to its in-process command broker; DSH never calls its own listener as an owner client.
 
 ## Configuration
@@ -12,8 +14,12 @@ Provider startup binds before publication and rejects load on failure. One proof
 
 ## Model Experience
 
-This provider registers no model tools or prompt text. [`@deepseek-ai/dsh-tool-chrome`](../../chrome/tool-chrome/README.md) remains the Consumer during migration.
+Indirectly, through `@deepseek-ai/dsh-tool-chrome`, which owns the model-facing schemas and result rendering.
+
+#### KV Cache effect
+
+None.
 
 ## Known Limitations and Deferred Work
 
-The current connector handshake adapter preserves the installed extension's single-request metadata flow; the authored-extension integration slice will replace the proof-complete placeholder with the shared two-step kernel handshake. Status and extension-download Web routes remain in the legacy package until the Web adapter migration.
+- The connector transport remains single-profile and loopback-only; failed compatibility checks reject the connector.

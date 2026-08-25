@@ -26,4 +26,4 @@ A wait or evaluate that overruns `commandTimeoutMs` no longer blocks later comma
 
 ## Testing
 
-`packages/extensions/tool-chrome/tests/broker.spec.ts` claims one command, lets the owner deadline expire without `/result`, asserts a late complete is ignored, then delivers and completes a second command.
+`packages/chrome/chrome-local/tests/broker.spec.ts` claims one command, lets the owner deadline expire without `/result`, asserts a late complete is ignored, then delivers and completes a second command.

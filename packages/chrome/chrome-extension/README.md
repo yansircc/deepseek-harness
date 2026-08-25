@@ -1,5 +1,7 @@
 # @deepseek-ai/dsh-chrome-extension
 
+English | [中文](README.zh.md)
+
 Authored Manifest V3 source and deterministic browser artifacts for the DSH Chrome connector. The package owns the service worker, popup, injected page programs, protocol projection, and `dist/browser-extension`; consumers serve or package that directory without editing generated JavaScript.
 
 ## Build
@@ -16,8 +18,12 @@ The kernel protocol, manifest permissions, connector transport, durable command 
 
 ## Model Experience
 
-This package registers no tools and contributes no model-visible context. `@deepseek-ai/dsh-tool-chrome` owns tool schemas and results.
+None, as this is a build-only browser artifact package and it registers no model-facing tool or prompt section.
+
+#### KV Cache effect
+
+None.
 
 ## Known Limitations and Deferred Work
 
-The initial recovery keeps Effect 4 and Vite Plus/Rolldown pinned to reproduce the imported 0.5.3 artifact behavior. The shared `@deepseek-ai/dsh-chrome-protocol` package will become the sole protocol authority during provider and consumer migration; this package still carries the recovered protocol implementation until that integration lands.
+- Kernel or manifest changes still require one safe MV3 extension reload; operation-only development uses `pnpm run dev:chrome` revisions.

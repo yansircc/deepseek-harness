@@ -28,4 +28,4 @@ Old extensions with the previous fingerprint fail closed until reloaded from the
 
 ## Testing
 
-`tests/protocol-fingerprint.spec.ts` asserts pin alignment and that call unions are complete / nest-sensitive. `tests/poll-diagnostics.spec.ts` covers field paths, secret redaction, length bound, and rejection shape. `tests/bundled-service-worker-wire-schema.spec.ts` gates flat PageCall/InputCall (SW + popup), clear-stale, poll-decode helpers, and `readResponseText` body cancel. Focused vitest under `packages/extensions/tool-chrome/tests` plus `node --check` on `service-worker.js` and `popup.js`.
+`tests/protocol-fingerprint.spec.ts` asserts pin alignment and that call unions are complete / nest-sensitive. `tests/poll-diagnostics.spec.ts` covers field paths, secret redaction, length bound, and rejection shape. `tests/bundled-service-worker-wire-schema.spec.ts` gates flat PageCall/InputCall (SW + popup), clear-stale, poll-decode helpers, and `readResponseText` body cancel. Focused vitest under `packages/chrome/chrome-extension/tests` plus `node --check` on `service-worker.js` and `popup.js`.

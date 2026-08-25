@@ -26,4 +26,4 @@ A stalled attach or injected script returns an error inside 8s instead of `Comma
 
 ## Testing
 
-`packages/extensions/tool-chrome/tests/tab-target-schema.spec.ts` accepts an integer tab id and a URL string on `chrome_tab_activate`, and coerces a digit-string id onto the wire Target.
+`packages/chrome/tool-chrome/tests/tab-target-schema.spec.ts` accepts an integer tab id and a URL string on `chrome_tab_activate`, and coerces a digit-string id onto the wire Target.

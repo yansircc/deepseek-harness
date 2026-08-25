@@ -2927,7 +2927,7 @@ Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chr
 
 ### `chrome_screenshot`
 
-Capture the viewport or a bounded full-page tile set. The image is saved into the workspace; use capture.path (viewport) or capture.directory (full-page) to choose the destination, otherwise a timestamped path under .chrome-screenshots/ is used.
+Capture the viewport or a bounded full-page tile set and return the bounded image transport payload.
 
 ```json
 {
@@ -2944,14 +2944,6 @@ Capture the viewport or a bounded full-page tile set. The image is saved into th
             "viewport",
             "full-page-tiles"
           ]
-        },
-        "path": {
-          "type": "string",
-          "description": "Workspace-relative path for a viewport capture."
-        },
-        "directory": {
-          "type": "string",
-          "description": "Workspace-relative directory for full-page tiles."
         }
       }
     },
