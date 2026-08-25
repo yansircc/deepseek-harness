@@ -112,7 +112,7 @@ zeroy_checkout({ siteId: "site-b", source: "active-release" }) → checkout site
 
 #### 模型看到什么
 
-生成的 [`zeroy_inspect`、`zeroy_checkout`、`zeroy_push`、`zeroy_pair` 与 `zeroy_unpair` schema](../../../docs/tool-catalog.md#deepseek-aidsh-tool-zeroy)。config 开关 `inspect`、`checkout`、`push` 和 `pairing` 在加载时省略对应工具；pairing 同时覆盖 `zeroy_pair` 和 `zeroy_unpair`。
+生成的 [`zeroy_inspect`、`zeroy_checkout`、`zeroy_push`、`zeroy_pair` 与 `zeroy_unpair` schema](../../../docs/tool-catalog.zh.md#deepseek-aidsh-tool-zeroy)。config 开关 `inspect`、`checkout`、`push` 和 `pairing` 在加载时省略对应工具；pairing 同时覆盖 `zeroy_pair` 和 `zeroy_unpair`。
 
 #### Token 影响
 

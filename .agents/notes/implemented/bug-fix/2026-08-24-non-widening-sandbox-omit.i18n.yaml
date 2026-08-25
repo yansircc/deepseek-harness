@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-08-24-non-widening-sandbox-omit.md
 2026-08-24-non-widening-sandbox-omit.md: 9024ffd12cbc64b985636b45f37cd95f5abce336
-2026-08-24-non-widening-sandbox-omit.zh.md: a0cc78f8e6b2f58316c7b357afce7e0b6da05658
+2026-08-24-non-widening-sandbox-omit.zh.md: 9ebe1e5191febf986e1f265d7d3ffba475db2db7

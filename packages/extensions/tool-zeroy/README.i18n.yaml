@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/extensions/tool-zeroy/README.md
 README.md: 8c64efd9fba4a5cf2b9e4d838e4444fda7968cf9
-README.zh.md: 7a975c5c61a06b5408b002159aaa4b55e9845eb4
+README.zh.md: 6473befe6bd73252055efdc4237d4d1c25fba82e

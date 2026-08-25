@@ -9,7 +9,14 @@ import { CallId } from '@deepseek-ai/dsh-llm'
 import { SettingsProvider } from '@deepseek-ai/dsh-settings'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import { CredentialProvider, credentialRef } from '@deepseek-ai/dsh-credentials'
+import {
+  CredentialProvider,
+  credentialRef,
+  type CredentialKey,
+  type CredentialRecord,
+  type CredentialRecordEntry,
+  type CredentialRecordInfo,
+} from '@deepseek-ai/dsh-credentials'
 import * as ToolChrome from '../src/index.ts'
 import { ATOMIC_TOOL_DESCRIPTORS } from '../src/protocol/operations.ts'
 import { LEGACY_OWNER_CREDENTIAL_REF, OWNER_CREDENTIAL_REF } from '../src/owner-credential.ts'
@@ -24,6 +31,7 @@ class MemorySettings extends SettingsProvider {
 /** In-memory credentials provider for testing. */
 class MemoryCredentials extends CredentialProvider {
   private store = new Map<string, string>()
+  private records = new Map<CredentialKey, CredentialRecord>()
   async resolve(ref: string) {
     const value = this.store.get(ref)
     return value === undefined
@@ -35,6 +43,26 @@ class MemoryCredentials extends CredentialProvider {
   }
   async set(ref: string, value: string) { this.store.set(ref, value) }
   async unset(ref: string) { this.store.delete(ref) }
+  async readRecord(key: CredentialKey) { return this.records.get(key) }
+  async describeRecord(key: CredentialKey): Promise<CredentialRecordInfo> {
+    const record = this.records.get(key)
+    return record === undefined
+      ? { configured: false, writable: true }
+      : { configured: true, kind: record.kind, writable: true }
+  }
+  async listRecords(): Promise<readonly CredentialRecordEntry[]> {
+    return [...this.records].map(([key, record]) => ({ key, kind: record.kind }))
+  }
+  async modifyRecord(
+    key: CredentialKey,
+    mutate: (current: CredentialRecord | undefined) => Promise<CredentialRecord | undefined>,
+  ) {
+    const current = this.records.get(key)
+    const next = await mutate(current)
+    if (next !== undefined) this.records.set(key, next)
+    return next ?? current
+  }
+  async deleteRecord(key: CredentialKey) { this.records.delete(key) }
 }
 
 const testToolSignal = new AbortController().signal

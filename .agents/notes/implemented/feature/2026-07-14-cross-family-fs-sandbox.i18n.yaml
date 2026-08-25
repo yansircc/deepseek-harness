@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-07-14-cross-family-fs-sandbox.md
 2026-07-14-cross-family-fs-sandbox.md: 038a6957cea42b2b6090e7a70f0b97bb09d93350
-2026-07-14-cross-family-fs-sandbox.zh.md: d7f2d01d2a7c603d2d912038208a5edbd29d21dc
+2026-07-14-cross-family-fs-sandbox.zh.md: d0cb92bab3dc299edc374aa0903a5b65c636e9c5

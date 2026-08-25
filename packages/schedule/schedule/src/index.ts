@@ -57,11 +57,14 @@ export function apply(ctx: Context): void {
   ctx.inject(['sessionProjections'], (projectionCtx) => {
     projectionCtx.sessionProjections.register<'schedule', ScheduleProjectionView>({
       key: 'schedule',
-      schema: scheduleProjectionSchema,
+      stateVersion: 1,
+      stateSchema: scheduleProjectionSchema,
       init: initialScheduleProjectionState,
       apply: applyScheduleProjection,
-      view: state => state,
-      stateVersion: 1,
+      wire: {
+        viewSchema: scheduleProjectionSchema,
+        view: state => state,
+      },
     })
   })
 

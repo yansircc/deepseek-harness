@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-面向 [subagent seam](../subagent/README.md) 的一等公民 Cursor 子代理后端。与通用 ACP provider 不同，它按模型各保持一个常驻 `agent acp` 服务器，每次委派在池化连接上开一个 ACP 会话——重复的小任务完全跳过逐次拉进程的冷启动。权限策略从二元的 allow/reject 升级为按 ACP 工具类型判定的三档策略，并且支持按模型分池路由子代理模型。
+面向 [subagent seam](../subagent/README.zh.md) 的一等公民 Cursor 子代理后端。与通用 ACP provider 不同，它按模型各保持一个常驻 `agent acp` 服务器，每次委派在池化连接上开一个 ACP 会话——重复的小任务完全跳过逐次拉进程的冷启动。权限策略从二元的 allow/reject 升级为按 ACP 工具类型判定的三档策略，并且支持按模型分池路由子代理模型。
 
 ## 启动与所有权
 
@@ -14,7 +14,7 @@
 
 ## 能力与上下文
 
-provider 不声明任何可选的启动期能力，`inheritsParentContext: false`。子代理只收到独立的任务文本与自己的会话工作目录，不继承父对话、persona、工具过滤、深度策略或结构化输出契约。可续聊子代理仍是 seam 层工作（见 [subagent seam 的已知限制](../subagent/README.md#known-limitations-and-deferred-work)）。
+provider 不声明任何可选的启动期能力，`inheritsParentContext: false`。子代理只收到独立的任务文本与自己的会话工作目录，不继承父对话、persona、工具过滤、深度策略或结构化输出契约。可续聊子代理仍是 seam 层工作（见 [subagent seam 的已知限制](../subagent/README.zh.md)）。
 
 ## 配置
 

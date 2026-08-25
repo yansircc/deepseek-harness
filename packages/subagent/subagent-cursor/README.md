@@ -14,7 +14,7 @@ The published `run.result` starts exactly one turn on the run's own ACP session.
 
 ## Capabilities and context
 
-The provider advertises NO optional start-time capabilities and reports `inheritsParentContext: false`. The child receives the standalone task text and its session workspace, but not the parent conversation, persona, tool filter, depth policy, or structured-output contract. Continuable children remain seam-level work (see the [subagent seam's Known Limitations](../subagent/README.md#known-limitations-and-deferred-work)).
+The provider advertises NO optional start-time capabilities and reports `inheritsParentContext: false`. The child receives the standalone task text and its session workspace, but not the parent conversation, persona, tool filter, depth policy, or structured-output contract. Continuable children remain seam-level work (see the [subagent seam's Known Limitations](../subagent/README.md)).
 
 ## Configuration
 

@@ -12,7 +12,7 @@ Status: implemented
 
 在宿主上由原子工具描述符加显式系统 wire 操作（`version`、`cleanup`、`cleanup-all`、`probe`）推导完整的 WireCommand / ForwardRequest / PollResponse call 联合，覆盖扁平 `op`、target、必选/可选字段，并在 PollResponse 中嵌入 WireCommand。截图选择器改为 `call.capture.kind` / `call.format`。以 `assets/browser-extension/evidence.json` 为随包钉死权威；`EXTENSION_PROTOCOL_FINGERPRINT` 读取它；service-worker 的 probe/profile 字面量一致；漂移门断言 computed == evidence == 宿主期望 == 捆绑字面量。捆绑 service worker 将 Effect Schema poll 解码失败格式化为无密钥字段路径与有界摘要 `{type, command:{id/domain/call.op}}`（≤2KB）。当可恢复 `type:'command'` 与 id 时，投递 `CommandRejected` 且 code 为 `poll-response-invalid`；否则记录日志并重试，邮箱超时仍为回退。`readResponseText` 中断时取消 `response.body`。保持扁平 PageCall/InputCall 与系统 `clear-stale`（含弹窗对齐）。
 
-本切片完成 [Chrome 安全的过期所有权恢复](2026-08-23-chrome-safe-stale-ownership-recovery.md) 中延后的指纹对齐。
+本切片完成 [Chrome 安全的过期所有权恢复](2026-08-23-chrome-safe-stale-ownership-recovery.zh.md) 中延后的指纹对齐。
 
 ## 考虑过的替代方案
 

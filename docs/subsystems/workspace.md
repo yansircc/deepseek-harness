@@ -2,7 +2,7 @@
 
 English | [中文](workspace.zh.md)
 
-A workspace is the persistent record of a directory the user works in: a stable id over a canonical path, a display title, and the ordered account of sessions that belong to it. The subsystem is two packages: the registry ([dsh-workspace](../../packages/workspace/workspace), `ctx.workspaceRegistry`) and a Host git sample for session-header chrome ([dsh-workspace-git](../../packages/workspace/workspace-git), `ctx.workspaceGit`). Both are optional host-side capabilities, not part of the agent-loop spine, and invisible to models (no tools, no prompt text, no session events). The registry stores its records through the [storage domain form](storage.md) and validates session membership against [`SessionHeader.cwd`](persistence.md#sessionheader--metadata-beside-the-log), so `storageDomain` and `sessionPersistence` are mandatory startup dependencies: an unavailable persistence peer leaves the plugin pending rather than being mistaken for an empty history. The git sample is a Host read of one cwd and is never written to a session log; `workspace.gitStatus` serves it. Design record: [domain KV storage Agent Note](../../.agents/notes/proposed/architecture/2026-07-24-domain-kv-storage-and-workspace.md); bootstrap and GUI ordering: [Workspace UI product-flow Agent Note](../../.agents/notes/implemented/feature/2026-07-25-workspace-ui-product-flow.md); display chrome: [conversation display toggles](../../.agents/notes/implemented/feature/2026-08-20-conversation-display-toggles.md).
+A workspace is the persistent record of a directory the user works in: a stable id over a canonical path, a display title, and the ordered account of sessions that belong to it. The subsystem is one package ([dsh-workspace](../../packages/workspace/workspace), `ctx.workspaceRegistry`) — an optional host-side capability, not part of the agent-loop spine, and invisible to models (no tools, no prompt text, no session events). It stores its records through the [storage domain form](storage.md) and validates session membership against [`SessionHeader.cwd`](persistence.md#sessionheader--metadata-beside-the-log), so `storageDomain` and `sessionPersistence` are mandatory startup dependencies: an unavailable persistence peer leaves the plugin pending rather than being mistaken for an empty history. Design record: [domain KV storage Agent Note](../../.agents/notes/proposed/architecture/2026-07-24-domain-kv-storage-and-workspace.md); bootstrap and GUI ordering: [Workspace UI product-flow Agent Note](../../.agents/notes/implemented/feature/2026-07-25-workspace-ui-product-flow.md).
 
 Source: [`packages/workspace/workspace/src/types.ts`](../../packages/workspace/workspace/src/types.ts)
 
@@ -121,44 +121,9 @@ Ownership truth is the record's ordered `sessionIds`, never derived from session
 
 Sessions get their cwd at create time from whoever creates them, not from this registry — the API gateway resolves a new session's cwd from the chosen workspace's `path` (falling back to an explicit or default cwd), creates the session so the cwd lands in its immutable [`SessionHeader`](persistence.md#sessionheader--metadata-beside-the-log), then calls `attachSession`, which re-validates that stored header cwd against the workspace path. On the first successful start, the registry bootstraps history from persisted headers alone (`id`, `cwd`, `createdAt` — never event bodies), grouping sessions with a valid canonical cwd into per-directory workspaces, newest first; the initialized marker is written last so an interrupted bootstrap resumes safely. The bootstrap is one-time: cwd-less legacy sessions stay Ungrouped, and sessions created afterwards join a workspace only through `attachSession`.
 
-## Host git sample
-
-`WorkspaceGit` (`ctx.workspaceGit`) samples one cwd for session-header chrome. The sample is a Host filesystem read and is never written to a session log. `workspace.gitStatus` serves the structurally matching wire type ([conversation display toggles](../../.agents/notes/implemented/feature/2026-08-20-conversation-display-toggles.md)).
-
-Source: [`packages/workspace/workspace-git/src/sample.ts`](../../packages/workspace/workspace-git/src/sample.ts)
-
-```ts type-equiv
-/**
- * One cwd's git facts for header chrome. Structurally matches the
- * `workspace.gitStatus` wire type; this package never imports the browser
- * contract. `present: false` when the path is empty, not a work tree, git is
- * missing, or the sample timed out. Added and deleted lines are
- * `git diff --shortstat HEAD`; untracked files raise `dirty` only.
- */
-type WorkspaceGitSample =
-  | { present: false }
-  | {
-    present: true
-    /** Short HEAD SHA. */
-    shortHead: string
-    /** Porcelain v1 entry count, including untracked. */
-    dirty: number
-    /** Insertions versus HEAD. */
-    insertions: number
-    /** Deletions versus HEAD. */
-    deletions: number
-    /** Symbolic-ref short name when attached; omitted when detached. */
-    branch?: string
-    /** Commits ahead of upstream; omitted when no upstream. */
-    ahead?: number
-    /** Commits behind upstream; omitted when no upstream. */
-    behind?: number
-  }
-```
-
 ## Consumers
 
-[dsh-host-apiproxy](../../packages/host/apiproxy) is the product consumer: it serves workspace CRUD to GUI clients over `ctx.workspaceRegistry`, performs the create-session-then-attach flow above, and serves `workspace.gitStatus` from `ctx.workspaceGit` when that plugin is mounted. [dsh-client-ui-conversation](../../packages/client/ui-conversation) renders the sample as session-header chrome. [dsh-agent-instructions](../../packages/context/agent-instructions) is **not** a consumer despite the name: it discovers AGENTS.md-style instruction files under an agent's own cwd and never touches `ctx.workspaceRegistry` — the shared word refers to the user's working directory, not to this registry's entities.
+[dsh-host-apiproxy](../../packages/host/apiproxy) is the product consumer: it serves workspace CRUD to GUI clients over `ctx.workspaceRegistry` and performs the create-session-then-attach flow above. [dsh-agent-instructions](../../packages/context/agent-instructions) is **not** a consumer despite the name: it discovers AGENTS.md-style instruction files under an agent's own cwd and never touches `ctx.workspaceRegistry` — the shared word refers to the user's working directory, not to this registry's entities.
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
@@ -166,7 +131,7 @@ type WorkspaceGitSample =
 
 ## Cordis API
 
-Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — this section is byte-identical in both language sides of the page. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
+Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
 
 <a id="ctxdirectorypicker--directorypicker-abstract-seam"></a>
 
@@ -182,7 +147,7 @@ Abstract directory-picking service. Subclass, implement `capability()`, and load
 abstract capability(): DirectoryPickerCapability
 ```
 
-Source: [`packages/host/directory-picker/src/index.ts:131`](../../packages/host/directory-picker/src/index.ts)
+Source: [`packages/host/directory-picker/src/index.ts`](../../packages/host/directory-picker/src/index.ts)
 
 <a id="ctxworkspacegit--workspacegit"></a>
 
@@ -199,7 +164,7 @@ Host git sample for one cwd. A missing git binary, a path that is not a work tre
 sample(cwd: string): Promise<WorkspaceGitSample>
 ```
 
-Source: [`packages/workspace/workspace-git/src/index.ts:41`](../../packages/workspace/workspace-git/src/index.ts)
+Source: [`packages/workspace/workspace-git/src/index.ts`](../../packages/workspace/workspace-git/src/index.ts)
 
 <a id="ctxworkspaceregistry--workspaceregistry"></a>
 
@@ -276,5 +241,5 @@ async resolveByPath(path: string): Promise<Workspace | undefined>
 
 Types: [SessionId](core.md)
 
-Source: [`packages/workspace/workspace/src/index.ts:92`](../../packages/workspace/workspace/src/index.ts)
+Source: [`packages/workspace/workspace/src/index.ts`](../../packages/workspace/workspace/src/index.ts)
 <!-- END GENERATED cordis-surface -->

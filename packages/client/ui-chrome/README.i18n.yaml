@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/client/ui-chrome/README.md
 README.md: dcfb00c39864447cec482628504cbc2662a7c690
-README.zh.md: 8043e016922f2e26dd2de0e0aaec7d8b86dca1b6
+README.zh.md: efa43e3791b5c6598e71c1c5d6162abac9336b22

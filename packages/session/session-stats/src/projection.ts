@@ -64,6 +64,12 @@ interface SessionStatsState extends SessionStatsTotals {
   pendingCalls: Record<string, number>
 }
 
+declare module '@deepseek-ai/dsh-session-projection/types' {
+  interface SessionProjectionStateMap {
+    sessionStats: SessionStatsState
+  }
+}
+
 const sessionStatsSchema = z.object({
   turns: z.number().int().nonnegative(),
   steps: z.number().int().nonnegative(),
@@ -75,6 +81,17 @@ const sessionStatsSchema = z.object({
   decodeMs: z.number().nonnegative(),
   decodeTokens: z.number().nonnegative(),
 }).strict()
+
+const sessionStatsStateSchema = sessionStatsSchema.extend({
+  lastTurn: z.number().int().nonnegative().nullable(),
+  openStep: z.object({
+    turn: z.number().int().nonnegative(),
+    step: z.number().int().nonnegative(),
+    startTime: z.number().nonnegative(),
+    firstTokenTime: z.number().nonnegative().nullable(),
+  }).nullable(),
+  pendingCalls: z.record(z.string(), z.number().nonnegative()),
+})
 
 /**
  * Provider-reported completion tokens, guarded the way the window fold guards
@@ -89,9 +106,10 @@ function usageOutputTokens(usage: unknown): number | null {
 }
 
 /** The `sessionStats` unit registered on `ctx.sessionProjections` (exported for the unit spec). */
-export const sessionStatsProjectionDefinition: ProjectionDefinition<'sessionStats', SessionStatsState> = {
+export const sessionStatsProjectionDefinition = {
   key: 'sessionStats',
-  schema: sessionStatsSchema,
+  stateVersion: 2,
+  stateSchema: sessionStatsStateSchema,
   init: () => ({
     turns: 0,
     steps: 0,
@@ -178,16 +196,18 @@ export const sessionStatsProjectionDefinition: ProjectionDefinition<'sessionStat
         return state
     }
   },
-  view: state => ({
-    turns: state.turns,
-    steps: state.steps,
-    llmMs: state.llmMs,
-    toolMs: state.toolMs,
-    toolCalls: state.toolCalls,
-    ttftMs: state.ttftMs,
-    ttftSteps: state.ttftSteps,
-    decodeMs: state.decodeMs,
-    decodeTokens: state.decodeTokens,
-  }),
-  stateVersion: 2,
-}
+  wire: {
+    viewSchema: sessionStatsSchema,
+    view: state => ({
+      turns: state.turns,
+      steps: state.steps,
+      llmMs: state.llmMs,
+      toolMs: state.toolMs,
+      toolCalls: state.toolCalls,
+      ttftMs: state.ttftMs,
+      ttftSteps: state.ttftSteps,
+      decodeMs: state.decodeMs,
+      decodeTokens: state.decodeTokens,
+    }),
+  },
+} satisfies ProjectionDefinition<'sessionStats', SessionStatsState>

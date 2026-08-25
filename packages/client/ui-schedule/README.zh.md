@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-`conversation.input.dock` 里的浏览器提醒条。它读取 Host 计算的 `schedule` 投影，在会话至少有一条活动提醒之前不渲染任何内容。[`@deepseek-ai/dsh-schedule`](../../schedule/schedule/README.md) 拥有持久化、cron 调度以及面向模型的日程工具。
+`conversation.input.dock` 里的浏览器提醒条。它读取 Host 计算的 `schedule` 投影，在会话至少有一条活动提醒之前不渲染任何内容。[`@deepseek-ai/dsh-schedule`](../../schedule/schedule/README.zh.md) 拥有持久化、cron 调度以及面向模型的日程工具。
 
 ```yaml
 - id: ui-schedule

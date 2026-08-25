@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-已绑定 zeroY WordPress 站点的浏览器设置卡片。它占用共享的 `settings.plugin.item` 槽，键为 `zeroy-sites` 命名空间，并驱动一键浏览器绑定。Host 插件 [`@deepseek-ai/dsh-tool-zeroy`](../../extensions/tool-zeroy/README.md) 拥有站点凭据、绑定路由以及全部面向模型的 `zeroy_*` 工具。
+已绑定 zeroY WordPress 站点的浏览器设置卡片。它占用共享的 `settings.plugin.item` 槽，键为 `zeroy-sites` 命名空间，并驱动一键浏览器绑定。Host 插件 [`@deepseek-ai/dsh-tool-zeroy`](../../extensions/tool-zeroy/README.zh.md) 拥有站点凭据、绑定路由以及全部面向模型的 `zeroy_*` 工具。
 
 ```yaml
 - id: ui-zeroy

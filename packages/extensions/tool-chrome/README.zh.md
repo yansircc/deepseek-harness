@@ -92,7 +92,7 @@ DSH_CHROME_OWNER_CREDENTIAL: "<64-hex-char secret>"
 
 #### 模型看到什么
 
-生成的 [`chrome_status` 与 `chrome_*` schema](../../../docs/tool-catalog.md#deepseek-aidsh-tool-chrome)。描述和 JSON 参数以目录正文为准；本包不额外添加系统提示词段落。
+生成的 [`chrome_status` 与 `chrome_*` schema](../../../docs/tool-catalog.zh.md#deepseek-aidsh-tool-chrome)。描述和 JSON 参数以目录正文为准；本包不额外添加系统提示词段落。
 
 #### Token 影响
 

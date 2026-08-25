@@ -8,7 +8,7 @@ Status: implemented
 
 `approveEscalation` 会拒绝任何不严格宽于调用有效模式的 `sandbox_permissions`。已经处于 `danger-full-access`（Full access 预设）的会话里，只要 bash 或 fs 调用仍带 `sandbox_permissions: "danger-full-access"`，就会失败。按 Codex 风格工具训练的模型几乎每次都会带上这对参数。命令因此永远跑不起来。
 
-原先的 fail-closed 规则写在[沙箱决策](../feature/2026-07-06-sandbox.md)里。它避免无操作升级弹出审批。它同时也挡住了这种习惯性的同级请求。
+原先的 fail-closed 规则写在[沙箱决策](../feature/2026-07-06-sandbox.zh.md)里。它避免无操作升级弹出审批。它同时也挡住了这种习惯性的同级请求。
 
 ## Decision
 

@@ -10,7 +10,7 @@ Status: implemented
 
 ## 决策
 
-注册系统域原子工具 `chrome_automation_status` 与 `chrome_automation_clear_stale`。捆绑的 service worker 增加 `clear-stale`：只删除已证明过期的所有权记录，从不关闭或接管标签。get/create 继续之前，`withTargetTurn` 仅自动协调 `epoch-changed` 与 `tab-missing`。从不自动清除 `tab-outside-regular-profile`；该情形的所有权错误会点名 `chrome_automation_clear_stale`。扩展弹窗提供同源恢复按钮，可报告并清除配置级过期记录，不展示密钥，也不提供破坏性 cleanup 控件。宿主 operation/result/deadline 契约与打包 SW 片段包含 `clear-stale`。协议指纹钉死对齐见 [Chrome 协议指纹完整性与 poll 解码诊断](2026-08-23-chrome-protocol-fingerprint-poll-diagnostics.md)。
+注册系统域原子工具 `chrome_automation_status` 与 `chrome_automation_clear_stale`。捆绑的 service worker 增加 `clear-stale`：只删除已证明过期的所有权记录，从不关闭或接管标签。get/create 继续之前，`withTargetTurn` 仅自动协调 `epoch-changed` 与 `tab-missing`。从不自动清除 `tab-outside-regular-profile`；该情形的所有权错误会点名 `chrome_automation_clear_stale`。扩展弹窗提供同源恢复按钮，可报告并清除配置级过期记录，不展示密钥，也不提供破坏性 cleanup 控件。宿主 operation/result/deadline 契约与打包 SW 片段包含 `clear-stale`。协议指纹钉死对齐见 [Chrome 协议指纹完整性与 poll 解码诊断](2026-08-23-chrome-protocol-fingerprint-poll-diagnostics.zh.md)。
 
 ## 考虑过的替代方案
 
@@ -18,7 +18,7 @@ Status: implemented
 
 **用 `cleanup` 做恢复。** 否决：cleanup 会关闭已拥有标签；过期恢复必须只动记录。
 
-**在本切片更新指纹钉死值。** 当时否决；已在 [Chrome 协议指纹完整性与 poll 解码诊断](2026-08-23-chrome-protocol-fingerprint-poll-diagnostics.md) 完成。
+**在本切片更新指纹钉死值。** 当时否决；已在 [Chrome 协议指纹完整性与 poll 解码诊断](2026-08-23-chrome-protocol-fingerprint-poll-diagnostics.zh.md) 完成。
 
 ## 后果
 
