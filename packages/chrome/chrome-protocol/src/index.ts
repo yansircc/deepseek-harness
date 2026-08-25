@@ -7,3 +7,4 @@ export type {
   ChromeProtocolRevision, ChromeRuntimeHealth, ChromeSnapshotOptions, ChromeSystemCall, ChromeTabCall, ChromeTabTarget,
 } from './types.ts'
 export { ChromeCommandId, ChromeConnectorId, ChromeProviderId, ChromeBuildId, ChromeOperationRevision } from './ids.ts'
+export { chromeProtocolRevision, compatibleKernel } from './revisions.ts'
