@@ -631,15 +631,15 @@ const TOOL_PACKAGES: ToolPackage[] = [
   {
     pkg: '@deepseek-ai/dsh-tool-chrome',
     dir: 'tool-chrome',
-    source: 'packages/extensions/tool-chrome/src/index.ts',
-    requires: ['ctx.tools', 'ctx.credentials at call time'],
-    writes: ['tool/call', 'tool/result', 'local Chrome-bridge HTTP server'],
+    source: 'packages/chrome/tool-chrome/src/index.ts',
+    requires: ['ctx.tools', 'ctx.chrome'],
+    writes: ['tool/call', 'tool/result'],
     async mount(ctx) {
-      // Ephemeral port so harvest does not collide with a running product bridge.
-      await ctx.plugin(ToolChrome, { port: 0 })
+      ctx.provide('chrome', {} as never)
+      await ctx.plugin(ToolChrome)
     },
     note:
-      'chrome_status plus the atomic chrome_* tools share one plugin; the extension must be loaded in a real Chrome profile before those calls succeed.',
+      'chrome_status plus the atomic chrome_* tools consume ctx.chrome; provider selection and connector transport do not alter model-visible schemas.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-zeroy',

@@ -42,7 +42,7 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`, `owning Agent session` | `tool/call`, `todo/write`, `tool/result` | - | todo_write is session-owned state; UIs render the latest todo/write event as a checklist. `allowParallelInProgress` is required with no default, so the catalog states its choice: `true`, whose description invites several `in_progress` items. A deployment choosing `false` receives the same tool with a description asking for exactly one active task. |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`, `ctx.workflowEngine`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents the script children)` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`, `web_search` | `ctx.tools`, `ctx.web`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps. |
-| `@deepseek-ai/dsh-tool-chrome` | `chrome_automation_clear_stale`, `chrome_automation_status`, `chrome_click`, `chrome_console`, `chrome_drag`, `chrome_evaluate`, `chrome_fill`, `chrome_hover`, `chrome_inspect`, `chrome_navigate`, `chrome_network_get`, `chrome_network_list`, `chrome_press`, `chrome_read`, `chrome_screenshot`, `chrome_scroll`, `chrome_snapshot`, `chrome_status`, `chrome_tab_activate`, `chrome_tab_close`, `chrome_tab_group`, `chrome_tab_list`, `chrome_tab_new`, `chrome_tab_ungroup`, `chrome_tap`, `chrome_type`, `chrome_upload`, `chrome_wait` | `ctx.tools`, `ctx.credentials at call time` | `tool/call`, `tool/result`, `local Chrome-bridge HTTP server` | - | chrome_status plus the atomic chrome_* tools share one plugin; the extension must be loaded in a real Chrome profile before those calls succeed. |
+| `@deepseek-ai/dsh-tool-chrome` | `chrome_automation_clear_stale`, `chrome_automation_status`, `chrome_click`, `chrome_console`, `chrome_drag`, `chrome_evaluate`, `chrome_fill`, `chrome_hover`, `chrome_inspect`, `chrome_navigate`, `chrome_network_get`, `chrome_network_list`, `chrome_press`, `chrome_read`, `chrome_screenshot`, `chrome_scroll`, `chrome_snapshot`, `chrome_status`, `chrome_tab_activate`, `chrome_tab_close`, `chrome_tab_group`, `chrome_tab_list`, `chrome_tab_new`, `chrome_tab_ungroup`, `chrome_tap`, `chrome_type`, `chrome_upload`, `chrome_wait` | `ctx.tools`, `ctx.chrome` | `tool/call`, `tool/result` | - | chrome_status plus the atomic chrome_* tools consume ctx.chrome; provider selection and connector transport do not alter model-visible schemas. |
 | `@deepseek-ai/dsh-tool-zeroy` | `zeroy_checkout`, `zeroy_inspect`, `zeroy_pair`, `zeroy_push`, `zeroy_unpair` | `ctx.tools`, `ctx.systemPrompt`, `ctx.credentials and ctx.settings at call time` | `tool/call`, `tool/result`, `zeroy-sites settings`, `credential grants` | - | inspect, checkout, push, and pairing are independent config flags; pairing registers both zeroy_pair and zeroy_unpair. Default harvest enables every flag. |
 
 <a id="deepseek-aidsh-tool-ask-user"></a>
@@ -2430,7 +2430,7 @@ Remove proved-stale Chrome automation ownership records for this DSH session wit
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_automation_status`
 
@@ -2443,7 +2443,7 @@ Report this DSH session's Chrome automation ownership targets (owned, allocating
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_click`
 
@@ -2489,7 +2489,7 @@ Click a fresh Action Graph ref, selector, or viewport coordinate with real Chrom
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_console`
 
@@ -2507,7 +2507,7 @@ Read captured page console entries.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_drag`
 
@@ -2573,7 +2573,7 @@ Drag between two elements or coordinates with real Chrome input.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_evaluate`
 
@@ -2598,7 +2598,7 @@ Evaluate one JavaScript expression in the page and return bounded JSON.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_fill`
 
@@ -2648,7 +2648,7 @@ Replace the value of a fresh Action Graph ref or selector with real Chrome input
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_hover`
 
@@ -2686,7 +2686,7 @@ Move the real Chrome pointer over an element or coordinate.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_inspect`
 
@@ -2721,7 +2721,7 @@ Inspect one page element and its local context.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_navigate`
 
@@ -2781,7 +2781,7 @@ Navigate the session-owned page or one explicitly selected tab.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_network_get`
 
@@ -2802,7 +2802,7 @@ Read one captured network request and response body.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_network_list`
 
@@ -2824,7 +2824,7 @@ List captured page network requests.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_press`
 
@@ -2889,7 +2889,7 @@ Press one key with real Chrome input, optionally after focusing a fresh Action G
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_read`
 
@@ -2923,7 +2923,7 @@ Read bounded rendered content from the current page without loading the Action G
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_screenshot`
 
@@ -2974,7 +2974,7 @@ Capture the viewport or a bounded full-page tile set. The image is saved into th
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_scroll`
 
@@ -3017,7 +3017,7 @@ Scroll the page or one element with real Chrome wheel input.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_snapshot`
 
@@ -3072,7 +3072,7 @@ Observe the page and return a compact Action Graph. Use its refs for actions.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_status`
 
@@ -3085,7 +3085,7 @@ Read the Chrome bridge and connector status without changing it.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_tab_activate`
 
@@ -3125,7 +3125,7 @@ Activate one exact Chrome tab.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_tab_close`
 
@@ -3165,7 +3165,7 @@ Close one exact Chrome tab.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_tab_group`
 
@@ -3220,7 +3220,7 @@ Place one exact Chrome tab in the DSH session group.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_tab_list`
 
@@ -3233,7 +3233,7 @@ List Chrome tabs visible to this DSH session.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_tab_new`
 
@@ -3266,7 +3266,7 @@ Create another session-owned Chrome tab.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_tab_ungroup`
 
@@ -3306,7 +3306,7 @@ Remove one exact Chrome tab from its group.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_tap`
 
@@ -3344,7 +3344,7 @@ Send a real Chrome touch tap to an element or coordinate.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_type`
 
@@ -3394,7 +3394,7 @@ Type text with real Chrome keyboard input, optionally into an element.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_upload`
 
@@ -3435,7 +3435,7 @@ Upload workspace files through a fresh file-input Action Graph ref or selector.
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
 ### `chrome_wait`
 
@@ -3479,9 +3479,9 @@ Wait for one typed page condition. After chrome_tab_new or chrome_navigate, pref
 }
 ```
 
-Source: [`packages/extensions/tool-chrome/src/index.ts`](../packages/extensions/tool-chrome/src/index.ts)
+Source: [`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts)
 
-chrome_status plus the atomic chrome_* tools share one plugin; the extension must be loaded in a real Chrome profile before those calls succeed.
+chrome_status plus the atomic chrome_* tools consume ctx.chrome; provider selection and connector transport do not alter model-visible schemas.
 
 <a id="deepseek-aidsh-tool-zeroy"></a>
 

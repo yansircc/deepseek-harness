@@ -395,6 +395,34 @@ Depends on: [`LocalConfig`](#deepseek-aidsh-bash-local)
 
 Source: [`packages/shell/bash-sandbox/src/index.ts:35`](../packages/shell/bash-sandbox/src/index.ts)
 
+<a id="deepseek-aidsh-chrome-local"></a>
+
+## `@deepseek-ai/dsh-chrome-local`
+
+Requires: `chrome` · `credentials`
+
+```ts config-catalog
+/** Validated startup configuration for the loopback connector provider. */
+export interface Config {
+  /** Loopback hostname used by the extension connector. */
+  readonly host?: string
+  /** TCP port for the local connector HTTP listener. */
+  readonly port?: number
+  /** Credential reference containing the owner HMAC secret. */
+  readonly ownerCredentialRef?: string
+  /** Complete owner command deadline in milliseconds. */
+  readonly commandTimeoutMs?: number
+  /** Maximum silence before a connector lease becomes stale. */
+  readonly connectorLeaseMs?: number
+  /** Long-poll wait duration in milliseconds. */
+  readonly pollWaitMs?: number
+  /** Maximum queued or executing commands admitted at once. */
+  readonly maxAdmittedCommands?: number
+}
+```
+
+Source: [`packages/chrome/chrome-local/src/config.ts:5`](../packages/chrome/chrome-local/src/config.ts)
+
 <a id="deepseek-aidsh-client-connection"></a>
 
 ## `@deepseek-ai/dsh-client-connection`
@@ -2610,30 +2638,6 @@ export interface Config {
 
 Source: [`packages/shell/tool-bash-persistent/src/index.ts:432`](../packages/shell/tool-bash-persistent/src/index.ts)
 
-<a id="deepseek-aidsh-tool-chrome"></a>
-
-## `@deepseek-ai/dsh-tool-chrome`
-
-Requires: `tools`
-
-```ts config-catalog
-/** Plugin config: bridge address, owner credential, and command limits. */
-export interface Config {
-  /** Bridge listen host. Defaults to the bridge contract host (127.0.0.1). */
-  host?: string
-  /** Bridge listen port. Defaults to the bridge contract port (17318). */
-  port?: number
-  /** Display version reported to the extension. Defaults to the package version. */
-  displayVersion?: string
-  /** Owner credential reference in ctx.credentials. Defaults to DSH_CHROME_OWNER_CREDENTIAL. */
-  ownerCredentialRef?: string
-  /** Per-command timeout in ms. Defaults to 30000. */
-  commandTimeoutMs?: number
-}
-```
-
-Source: [`packages/extensions/tool-chrome/src/config.ts:10`](../packages/extensions/tool-chrome/src/config.ts)
-
 <a id="deepseek-aidsh-tool-fs"></a>
 
 ## `@deepseek-ai/dsh-tool-fs`
@@ -3358,6 +3362,8 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 - `@deepseek-ai/dsh-api-gateway` — requires `typert` ([`packages/api/gateway/src/index.ts`](../packages/api/gateway/src/index.ts))
 - `@deepseek-ai/dsh-api-remotes` ([`packages/api/remotes/src/index.ts`](../packages/api/remotes/src/index.ts))
 - `@deepseek-ai/dsh-authorization` — requires `credentials` ([`packages/credentials/authorization/src/index.ts`](../packages/credentials/authorization/src/index.ts))
+- `@deepseek-ai/dsh-chrome` ([`packages/chrome/chrome/src/index.ts`](../packages/chrome/chrome/src/index.ts))
+- `@deepseek-ai/dsh-chrome-local-web` — requires `chrome` · `webServer` ([`packages/chrome/chrome-local-web/src/index.ts`](../packages/chrome/chrome-local-web/src/index.ts))
 - `@deepseek-ai/dsh-client-locale` ([`packages/client/locale/src/index.ts`](../packages/client/locale/src/index.ts))
 - `@deepseek-ai/dsh-client-modules` — requires `webServer` · `loader` ([`packages/client/modules/src/index.ts`](../packages/client/modules/src/index.ts))
 - `@deepseek-ai/dsh-client-runtime` ([`packages/client/runtime/src/index.ts`](../packages/client/runtime/src/index.ts))
@@ -3427,6 +3433,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 - `@deepseek-ai/dsh-terminal` ([`packages/terminal/terminal/src/index.ts`](../packages/terminal/terminal/src/index.ts))
 - `@deepseek-ai/dsh-tool-ask-user` — requires `tools` · `userQuestions` ([`packages/interaction/tool-ask-user/src/index.ts`](../packages/interaction/tool-ask-user/src/index.ts))
 - `@deepseek-ai/dsh-tool-call-timeout-policy` — requires `tools` ([`packages/guard/timeout-policy/src/index.ts`](../packages/guard/timeout-policy/src/index.ts))
+- `@deepseek-ai/dsh-tool-chrome` — requires `tools` · `chrome` ([`packages/chrome/tool-chrome/src/index.ts`](../packages/chrome/tool-chrome/src/index.ts))
 - `@deepseek-ai/dsh-tool-cordis` — requires `tools` · `systemPrompt` · `dynamicCordisRunner` · `cordisInspect` ([`packages/extensions/tool-cordis/src/index.ts`](../packages/extensions/tool-cordis/src/index.ts))
 - `@deepseek-ai/dsh-tool-list-models` — requires `tools` · `llm` ([`packages/llm/tool-list-models/src/index.ts`](../packages/llm/tool-list-models/src/index.ts))
 - `@deepseek-ai/dsh-tool-subagent-control` — requires `tools` · `subagents` ([`packages/subagent/tool-subagent-control/src/index.ts`](../packages/subagent/tool-subagent-control/src/index.ts))
@@ -3465,6 +3472,8 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-atomic-write` ([`packages/util/atomic-write/src/index.ts`](../packages/util/atomic-write/src/index.ts))
 - `@deepseek-ai/dsh-base` ([`packages/bundle/base/src/index.ts`](../packages/bundle/base/src/index.ts))
 - `@deepseek-ai/dsh-brand` ([`packages/util/brand/src/index.ts`](../packages/util/brand/src/index.ts))
+- `@deepseek-ai/dsh-chrome-extension` ([`packages/chrome/chrome-extension/src/index.ts`](../packages/chrome/chrome-extension/src/index.ts))
+- `@deepseek-ai/dsh-chrome-protocol` ([`packages/chrome/chrome-protocol/src/index.ts`](../packages/chrome/chrome-protocol/src/index.ts))
 - `@deepseek-ai/dsh-client-test-runtime` ([`packages/test-support/client-runtime/src/index.ts`](../packages/test-support/client-runtime/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-primitives` ([`packages/client/ui-primitives/src/index.ts`](../packages/client/ui-primitives/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-slots` ([`packages/client/ui-slots/src/index.ts`](../packages/client/ui-slots/src/index.ts))

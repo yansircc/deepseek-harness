@@ -3,12 +3,19 @@ import z from '@deepseek-ai/schemastery'
 
 /** Validated startup configuration for the loopback connector provider. */
 export interface Config {
+  /** Loopback hostname used by the extension connector. */
   readonly host?: string
+  /** TCP port for the local connector HTTP listener. */
   readonly port?: number
+  /** Credential reference containing the owner HMAC secret. */
   readonly ownerCredentialRef?: string
+  /** Complete owner command deadline in milliseconds. */
   readonly commandTimeoutMs?: number
+  /** Maximum silence before a connector lease becomes stale. */
   readonly connectorLeaseMs?: number
+  /** Long-poll wait duration in milliseconds. */
   readonly pollWaitMs?: number
+  /** Maximum queued or executing commands admitted at once. */
   readonly maxAdmittedCommands?: number
 }
 

@@ -32,7 +32,7 @@ const FORK_OWNED = [
   'packages/session/session-tool-stats',
   'packages/subagent/subagent-route-policy',
   'packages/subagent/subagent-cursor',
-  'packages/extensions/tool-chrome',
+  'packages/chrome/tool-chrome',
   'packages/extensions/tool-zeroy',
 ] as const
 

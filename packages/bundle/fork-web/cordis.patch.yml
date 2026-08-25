@@ -41,7 +41,9 @@
     - id: ui-zeroy
       name: '@deepseek-ai/dsh-client-ui-zeroy'
 
-    # Chrome control card: setup status, install guide, and bridge settings.
+    # Formal Chrome health and authored-extension routes plus the setup card.
+    - id: chrome-local-web
+      name: '@deepseek-ai/dsh-chrome-local-web'
     - id: ui-chrome
       name: '@deepseek-ai/dsh-client-ui-chrome'
 
