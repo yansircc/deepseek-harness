@@ -48,6 +48,8 @@ allowBuilds:
   '@google/genai': false
   protobufjs: false
   node-addon-require-builtin: false
+  # Optional native accelerator pulled by the extension build tool; the pure-JS fallback is sufficient and its install script is not required.
+  msgpackr-extract: false
   # JSONL durability calls MoveFileExW with write-through publication on Windows.
   koffi: true
   # The Python runtime deploy includes the reviewed workspace postinstall that
