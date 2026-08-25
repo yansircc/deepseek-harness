@@ -18,6 +18,10 @@
   - img
   - img
   - text: Context injection @deepseek-ai/dsh-system-prompt
+- button "Context injection time-context":
+  - img
+  - img
+  - text: Context injection time-context
 - paragraph: partial
 - status: Deep diving...
 - textbox "Parent session offline; sending is unavailable but you can still stop the run" [disabled]

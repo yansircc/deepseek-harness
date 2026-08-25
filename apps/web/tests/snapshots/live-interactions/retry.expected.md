@@ -16,6 +16,10 @@
   - img
   - img
   - text: Context injection @deepseek-ai/dsh-system-prompt
+- button "Context injection time-context":
+  - img
+  - img
+  - text: Context injection time-context
 - group:
   - status: Retried model request (1/5) · {{duration}}
 - button "Think The user is asking for a one-sentence description of event sourcing. This is a straightforward knowledge question that doesn't require any skill loading or tool calls.":
@@ -41,4 +45,4 @@
   - img
 - button "6% of context used"
 - button "Send message" [disabled]
-- text: 1 turns · 1 steps LLM {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 99% Input 7.8K tok · Output 79 tok
+- text: 1 turns · 1 steps LLM {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 99% Uncached 110 · Input 7.8K · Output 79

@@ -26,12 +26,54 @@ const FILE_REFERENCE_PROMPT = fileURLToPath(new URL(
 ))
 
 /**
+ * Host-plane model-facing tools that register outside agent presets: Chrome
+ * owns a process-singleton bridge, and zeroY owns process-wide site bindings.
+ * They still merge into every agent's catalog through the global tools layer.
+ */
+const HOST_PLANE_TOOLS = [
+  'chrome_automation_clear_stale',
+  'chrome_automation_status',
+  'chrome_click',
+  'chrome_console',
+  'chrome_drag',
+  'chrome_evaluate',
+  'chrome_fill',
+  'chrome_hover',
+  'chrome_inspect',
+  'chrome_navigate',
+  'chrome_network_get',
+  'chrome_network_list',
+  'chrome_press',
+  'chrome_read',
+  'chrome_screenshot',
+  'chrome_scroll',
+  'chrome_snapshot',
+  'chrome_status',
+  'chrome_tab_activate',
+  'chrome_tab_close',
+  'chrome_tab_group',
+  'chrome_tab_list',
+  'chrome_tab_new',
+  'chrome_tab_ungroup',
+  'chrome_tap',
+  'chrome_type',
+  'chrome_upload',
+  'chrome_wait',
+  'zeroy_checkout',
+  'zeroy_inspect',
+  'zeroy_pair',
+  'zeroy_push',
+  'zeroy_unpair',
+]
+
+/**
  * The catalog the shipped Web composition puts in front of the model, minus the
- * ripgrep-dependent pair below. The absences are deliberate, not incidental
- * gaps: the `cordis_*` toolset executes model-written JavaScript that no
- * sandbox row confines, `web_fetch` chooses its own request target, and
- * `mcp_*` servers spawn outside `ctx.shell`. The composition Agent Note owns the
- * rationale and its sources.
+ * ripgrep-dependent pair and the host-plane Chrome/zeroY tools below. The
+ * absences are deliberate, not incidental gaps: the `cordis_*` toolset executes
+ * model-written JavaScript that no sandbox row confines, `web_fetch` chooses
+ * its own request target, and `mcp_*` servers spawn outside `ctx.shell`. The
+ * composition Agent Note owns the rationale and its sources. Schedule tools are
+ * agent-scoped registrations from the shipped host plugin.
  */
 const EXPECTED_TOOLS = [
   'ask_user_question',
@@ -49,6 +91,13 @@ const EXPECTED_TOOLS = [
   'ralph',
   'read',
   'read_image',
+  'schedule_create',
+  'schedule_delete',
+  'schedule_list',
+  'schedule_pause',
+  'schedule_resume',
+  'schedule_run_now',
+  'schedule_update',
   'send_message',
   'skill',
   'subagent',
@@ -135,19 +184,19 @@ it('assembles the shipped Web catalog, file-reference guidance, retry policy, an
       "mode": "always",
     }
   `)
-  // The catalog belongs to an AGENT, not to the process: every model-facing row
-  // now lives in a preset mounted under one session's scope, so the global
-  // layer holds nothing and a caller must name the agent to see anything. This
-  // composes from the deployment default — what a session that names no preset
-  // gets — which is the shape this test has always been about.
-  expect(ctx.tools.schemas().map(schema => schema.name)).toEqual([])
+  // Most model-facing rows live behind agent presets, so the global layer holds
+  // only the process-singleton Chrome/zeroY tools. Naming an agent merges those
+  // host-plane rows with the preset catalog — the shape this test pins.
+  expect(ctx.tools.schemas().map(schema => schema.name).sort()).toEqual([...HOST_PLANE_TOOLS].sort())
   const handle = await ctx.agents.create({
     sessionId: SessionId('shipped-composition'),
     setup: agentCtx => ctx.agentPresets.mount(agentCtx).then(() => undefined),
   })
   try {
     const names = ctx.tools.schemas(handle.agent).map(schema => schema.name).sort()
-    expect(names.filter(name => !RIPGREP_TOOLS.includes(name))).toEqual(EXPECTED_TOOLS)
+    const hostPlane = new Set(HOST_PLANE_TOOLS)
+    expect(names.filter(name => !RIPGREP_TOOLS.includes(name) && !hostPlane.has(name))).toEqual(EXPECTED_TOOLS)
+    expect(names.filter(name => hostPlane.has(name))).toEqual([...HOST_PLANE_TOOLS].sort())
     // The packaged ripgrep binary ships with the dependency, so the pair is a
     // fixed roster member on every host.
     expect(names.filter(name => RIPGREP_TOOLS.includes(name))).toEqual(RIPGREP_TOOLS)

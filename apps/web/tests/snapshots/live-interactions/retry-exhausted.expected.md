@@ -16,6 +16,10 @@
   - img
   - img
   - text: Context injection @deepseek-ai/dsh-system-prompt
+- button "Context injection time-context":
+  - img
+  - img
+  - text: Context injection time-context
 - group:
   - status: Retried model request (2/2) · {{duration}}
 - status:

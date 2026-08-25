@@ -16,6 +16,10 @@
   - img
   - img
   - text: Context injection @deepseek-ai/dsh-system-prompt
+- button "Context injection time-context":
+  - img
+  - img
+  - text: Context injection time-context
 - button "Think The user wants me to reply with a single word. Let me comply.":
   - img
   - img
@@ -43,4 +47,4 @@
   - img
 - button "6% of context used"
 - button "Send message" [disabled]
-- text: 1 turns · 1 steps LLM {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 99% Input 7.8K tok · Output 21 tok
+- text: 1 turns · 1 steps LLM {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 99% Uncached 109 · Input 7.8K · Output 21

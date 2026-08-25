@@ -25,14 +25,22 @@
   - tabpanel "插件配置":
     - list:
       - listitem:
-        - 'button "展开设置: 终端"':
-          - text: 终端 限制 agent 运行的每一条命令。
-          - img
-      - listitem:
         - 'button "展开设置: Agent 循环"':
           - text: Agent 循环 Agent 如何派发工具调用。
           - img
       - listitem:
+        - 'button "展开设置: 终端"':
+          - text: 终端 限制 agent 运行的每一条命令。
+          - img
+      - listitem:
+        - 'button "显示设置: Chrome 自动化"':
+          - text: Chrome 自动化 让 agent 使用你已登录的 Chrome 标签页。
+          - img
+      - listitem:
         - 'button "展开设置: 网页搜索"':
           - text: 网页搜索 DeepSeek 搜索提供方。
+          - img
+      - listitem:
+        - 'button "显示设置: zeroY 站点"':
+          - text: zeroY 站点 通过 agent 构建和发布 WordPress 站点。
           - img

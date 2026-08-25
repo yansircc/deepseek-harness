@@ -16,6 +16,10 @@
   - img
   - img
   - text: Context injection @deepseek-ai/dsh-system-prompt
+- button "Context injection time-context":
+  - img
+  - img
+  - text: Context injection time-context
 - button "Think The user wants me to use the ask_user_question tool with specific parameters. Let me do exactly that.":
   - img
   - img
@@ -24,6 +28,10 @@
   - img
   - img
   - text: Ask question 1/1 answered
+- button "Context injection time-context":
+  - img
+  - img
+  - text: Context injection time-context
 - button "Think The user answered \"Blue\". I should now reply with the single word DONE and stop.":
   - img
   - img
@@ -47,4 +55,4 @@
   - img
 - button "3% of context used"
 - button "Send message" [disabled]
-- text: 1 turns · 2 steps LLM {{duration}} · Tool call {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 95% Input 8.6K tok · Output 180 tok
+- text: 1 turns · 2 steps LLM {{duration}} · Tools 1× {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 95% Uncached 397 · Input 8.6K · Output 180
