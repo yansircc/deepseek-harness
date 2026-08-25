@@ -12,7 +12,7 @@ Provider startup binds before publication and rejects load on failure. One proof
 
 ## Model Experience
 
-This provider registers no model tools or prompt text. [`@deepseek-ai/dsh-tool-chrome`](../../extensions/tool-chrome/README.md) remains the Consumer during migration.
+This provider registers no model tools or prompt text. [`@deepseek-ai/dsh-tool-chrome`](../../chrome/tool-chrome/README.md) remains the Consumer during migration.
 
 ## Known Limitations and Deferred Work
 

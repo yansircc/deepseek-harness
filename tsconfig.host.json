@@ -93,6 +93,7 @@
     "examples/*/start.ts",
     "examples/*/tests/**/*.ts",
     "packages/*/*/tests/**/*.ts",
+    "packages/chrome/chrome-extension/scripts/**/*.ts",
     "scripts/**/*.ts",
     "website/**/*.ts",
     "website/.vitepress/**/*.ts"
@@ -301,7 +302,8 @@
     { "path": "./packages/chrome/chrome-extension" },
     { "path": "./packages/extensions/cordis-host-runner" },
     { "path": "./packages/extensions/tool-cordis" },
-    { "path": "./packages/extensions/tool-chrome" },
+    { "path": "./packages/chrome/tool-chrome" },
+    { "path": "./packages/chrome/chrome-local-web" },
     { "path": "./packages/extensions/tool-zeroy" },
     { "path": "./packages/hooks/hook-protocol" },
     { "path": "./packages/hooks/hooks-claude-code" },

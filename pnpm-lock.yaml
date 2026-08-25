@@ -18,6 +18,9 @@ importers:
       '@agentclientprotocol/sdk':
         specifier: 0.25.1
         version: 0.25.1(zod@4.4.3)
+      '@deepseek-ai/dsh-tool-chrome':
+        specifier: workspace:^
+        version: link:packages/chrome/tool-chrome
       '@deepseek-ai/dsh-tool-session-query':
         specifier: workspace:^
         version: link:packages/session-query/tool-session-query
@@ -1265,9 +1268,15 @@ importers:
 
   packages/bundle/fork-base:
     dependencies:
+      '@deepseek-ai/dsh-chrome':
+        specifier: workspace:^
+        version: link:../../chrome/chrome
+      '@deepseek-ai/dsh-chrome-local':
+        specifier: workspace:^
+        version: link:../../chrome/chrome-local
       '@deepseek-ai/dsh-tool-chrome':
         specifier: workspace:^
-        version: link:../../extensions/tool-chrome
+        version: link:../../chrome/tool-chrome
       '@deepseek-ai/dsh-tool-list-models':
         specifier: workspace:^
         version: link:../../llm/tool-list-models
@@ -1284,6 +1293,9 @@ importers:
 
   packages/bundle/fork-web:
     dependencies:
+      '@deepseek-ai/dsh-chrome-local-web':
+        specifier: workspace:^
+        version: link:../../chrome/chrome-local-web
       '@deepseek-ai/dsh-client-ui-chrome':
         specifier: workspace:^
         version: link:../../client/ui-chrome
@@ -1656,6 +1668,31 @@ importers:
         specifier: workspace:^
         version: link:../../runtime-diagnostics/invariants
 
+  packages/chrome/chrome-local-web:
+    dependencies:
+      fflate:
+        specifier: ^0.8.2
+        version: 0.8.3
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-chrome':
+        specifier: workspace:^
+        version: link:../chrome
+      '@deepseek-ai/dsh-chrome-extension':
+        specifier: workspace:^
+        version: link:../chrome-extension
+      '@deepseek-ai/dsh-chrome-protocol':
+        specifier: workspace:^
+        version: link:../chrome-protocol
+      '@deepseek-ai/dsh-host-webserver':
+        specifier: workspace:^
+        version: link:../../host/webserver
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
+
   packages/chrome/chrome-protocol:
     devDependencies:
       '@deepseek-ai/cordis':
@@ -1667,6 +1704,27 @@ importers:
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../runtime-diagnostics/invariants
+
+  packages/chrome/tool-chrome:
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-agent':
+        specifier: workspace:^
+        version: link:../../core/agent
+      '@deepseek-ai/dsh-chrome':
+        specifier: workspace:^
+        version: link:../chrome
+      '@deepseek-ai/dsh-chrome-protocol':
+        specifier: workspace:^
+        version: link:../chrome-protocol
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
+      '@deepseek-ai/dsh-tools':
+        specifier: workspace:^
+        version: link:../../core/tools
 
   packages/client/connection:
     dependencies:
@@ -4677,34 +4735,6 @@ importers:
       '@deepseek-ai/dsh-typert-protocol':
         specifier: workspace:^
         version: link:../../typert/protocol
-
-  packages/extensions/tool-chrome:
-    dependencies:
-      fflate:
-        specifier: ^0.8.2
-        version: 0.8.3
-    devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../../vendor/cordis
-      '@deepseek-ai/dsh-agent':
-        specifier: workspace:^
-        version: link:../../core/agent
-      '@deepseek-ai/dsh-credentials':
-        specifier: workspace:^
-        version: link:../../credentials/credentials
-      '@deepseek-ai/dsh-host-webserver':
-        specifier: workspace:^
-        version: link:../../host/webserver
-      '@deepseek-ai/dsh-invariants':
-        specifier: workspace:^
-        version: link:../../runtime-diagnostics/invariants
-      '@deepseek-ai/dsh-settings':
-        specifier: workspace:^
-        version: link:../../settings/settings
-      '@deepseek-ai/dsh-tools':
-        specifier: workspace:^
-        version: link:../../core/tools
 
   packages/extensions/tool-cordis:
     devDependencies:

@@ -2,7 +2,7 @@
 
 English | [中文](README.zh.md)
 
-Browser settings card for the Chrome bridge. It occupies the shared `settings.plugin.item` slot under the `tool-chrome` namespace: setup status, extension download, and the advanced port field. The Host [`@deepseek-ai/dsh-tool-chrome`](../../extensions/tool-chrome/README.md) plugin owns the bridge, the owner credential, and every model-facing `chrome_*` tool.
+Browser settings card for the Chrome bridge. It occupies the shared `settings.plugin.item` slot under the `tool-chrome` namespace: setup status, extension download, and the advanced port field. The Host [`@deepseek-ai/dsh-tool-chrome`](../../chrome/tool-chrome/README.md) plugin owns the bridge, the owner credential, and every model-facing `chrome_*` tool.
 
 ```yaml
 - id: ui-chrome

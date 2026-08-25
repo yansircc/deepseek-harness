@@ -10,3 +10,6 @@ The Chrome capability family separates provider-neutral command ownership, local
 | [`chrome-extension/`](chrome-extension/README.md) | Authored Manifest V3 connector source, deterministic build, and committed browser artifact | none; loaded by Chrome |
 
 Chrome remains a host-plane capability because its local provider owns process-wide browser connector state. The model-facing tools and Web settings card are separate Consumers.
+
+- [`tool-chrome/`](tool-chrome/README.md) — model-facing 28-tool Consumer.
+- [`chrome-local-web/`](chrome-local-web/README.md) — Web health and extension artifact adapter.

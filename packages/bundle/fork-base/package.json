@@ -39,6 +39,8 @@
     }
   },
   "dependencies": {
+    "@deepseek-ai/dsh-chrome": "workspace:^",
+    "@deepseek-ai/dsh-chrome-local": "workspace:^",
     "@deepseek-ai/dsh-tool-chrome": "workspace:^",
     "@deepseek-ai/dsh-tool-list-models": "workspace:^",
     "@deepseek-ai/dsh-tool-zeroy": "workspace:^"

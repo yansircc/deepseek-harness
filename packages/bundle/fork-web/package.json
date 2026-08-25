@@ -39,6 +39,7 @@
     }
   },
   "dependencies": {
+    "@deepseek-ai/dsh-chrome-local-web": "workspace:^",
     "@deepseek-ai/dsh-client-ui-chrome": "workspace:^",
     "@deepseek-ai/dsh-client-ui-schedule": "workspace:^",
     "@deepseek-ai/dsh-client-ui-stats": "workspace:^",
