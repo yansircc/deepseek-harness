@@ -1,0 +1,60 @@
+{
+  "name": "@deepseek-ai/dsh-fork-web",
+  "description": "Fork-owned Web Host and client rows over dsh-web-app: Schedule, workspace git, session tool stats, zeroY and Chrome UI",
+  "version": "0.1.1-rc.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/bundle/fork-web"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "cordis.patch.yml",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-client-ui-chrome": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-schedule": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-stats": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-workspace-git": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-zeroy": "workspace:^",
+    "@deepseek-ai/dsh-schedule": "workspace:^",
+    "@deepseek-ai/dsh-session-tool-stats": "workspace:^",
+    "@deepseek-ai/dsh-time-context": "workspace:^",
+    "@deepseek-ai/dsh-workspace-git": "workspace:^"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@deepseek-ai/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@deepseek-ai/cordis": "workspace:^"
+  }
+}

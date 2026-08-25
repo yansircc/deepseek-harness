@@ -38,9 +38,15 @@ describe('dsh-base bundle', () => {
     expect(rows.filter(row => row.id === 'subagent-codex')).toHaveLength(0)
     expect(rows.filter(row => row.id === 'subagent-claude-code')).toHaveLength(0)
     expect(rows.filter(row => row.id === 'subagent-cursor')).toHaveLength(0)
+    expect(rows.filter(row => row.id === 'tool-list-models')).toHaveLength(0)
+    expect(rows.filter(row => row.id === 'tool-chrome')).toHaveLength(0)
+    expect(rows.filter(row => row.id === 'tool-zeroy')).toHaveLength(0)
     expect(manifest.dependencies).not.toHaveProperty('@deepseek-ai/dsh-subagent-codex')
     expect(manifest.dependencies).not.toHaveProperty('@deepseek-ai/dsh-subagent-claude-code')
     expect(manifest.dependencies).not.toHaveProperty('@deepseek-ai/dsh-subagent-cursor')
+    expect(manifest.dependencies).not.toHaveProperty('@deepseek-ai/dsh-tool-list-models')
+    expect(manifest.dependencies).not.toHaveProperty('@deepseek-ai/dsh-tool-chrome')
+    expect(manifest.dependencies).not.toHaveProperty('@deepseek-ai/dsh-tool-zeroy')
   })
 
   it('gates each shell stack by platform with a symmetric disabled expression', () => {

@@ -1,0 +1,49 @@
+# Fork-owned Web Host and client rows over dsh-web-app. Shipped in the default
+# web Profile template after dsh-web-app; absent from upstream dsh-web-app.
+# Disables the fork-base host-plane tool-list-models row so agent presets own
+# the catalog tool, matching the other agent-plane disables in dsh-web-app.
+
+- insert:
+    # Cwd git sample for session-header chrome (Typert Remote workspaceGit.sample).
+    - id: workspace-git
+      name: '@deepseek-ai/dsh-workspace-git'
+
+    # Whole-log matched tool-call count for the chat stats strip (the
+    # sessionToolStats projection key); composed with sessionStats.toolMs.
+    - id: session-tool-stats
+      name: '@deepseek-ai/dsh-session-tool-stats'
+
+    # Session-local Schedule reminders (after/at/every/cron) plus the browser
+    # time-zone context the model uses to interpret unqualified dates; the
+    # ui-schedule client row below renders the status bar from the schedule
+    # session projection this host plugin computes.
+    - id: time-context
+      name: '@deepseek-ai/dsh-time-context'
+
+    - id: schedule
+      name: '@deepseek-ai/dsh-schedule'
+
+    # Session-header workspace git chrome and its General Settings toggles.
+    - id: ui-workspace-git
+      name: '@deepseek-ai/dsh-client-ui-workspace-git'
+
+    # Fork-owned stats strip and General Settings toggles. The plugin occupies
+    # the single composer stats seat declared by ui-conversation.
+    - id: ui-stats
+      name: '@deepseek-ai/dsh-client-ui-stats'
+
+    # Schedule surface: reminder status bar in the input dock over the
+    # schedule session projection (needs the dsh-schedule host plugin).
+    - id: ui-schedule
+      name: '@deepseek-ai/dsh-client-ui-schedule'
+
+    # zeroY sites card: manage WordPress sites in the Plugins configuration tab.
+    - id: ui-zeroy
+      name: '@deepseek-ai/dsh-client-ui-zeroy'
+
+    # Chrome control card: setup status, install guide, and bridge settings.
+    - id: ui-chrome
+      name: '@deepseek-ai/dsh-client-ui-chrome'
+
+- id: tool-list-models
+  disabled: true
