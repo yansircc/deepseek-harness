@@ -4,17 +4,18 @@
 
 import { Fragment, memo, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { ConversationSnapshot, SnapshotStore, UseProjection } from '@deepseek-ai/dsh-client-runtime/client'
-import type { InjectFace, SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
+import type {
+  AssistantMessageNode, ConversationSnapshot, SnapshotStore, UseProjection,
+} from '@deepseek-ai/dsh-client-runtime/client'
+import type {
+  InjectFace, PropsLocale, SnapshotSelectorHook,
+} from '@deepseek-ai/dsh-client-ui-slots'
 // Type-only: merges the sessionStats key into SessionProjectionMap for useProjection.
 import type {} from '@deepseek-ai/dsh-session-stats/client'
 // Type-only: merges the sessionToolStats key into SessionProjectionMap for useProjection.
 import type {} from '@deepseek-ai/dsh-session-tool-stats/client'
 import type { ContextPressureProjection, TokenUsageProjection } from '@deepseek-ai/dsh-token-meter/client'
-import type { ComposerBarProps } from '../contract/slots.ts'
-import type { ConversationDisplayPreferences } from '../../submission-settings.ts'
-import { formatTokensPerSecond } from './message-chrome.ts'
-import { assistantStepReading } from './turn-metrics.ts'
+import type { StatsDisplayPreferences } from '../stats-display-settings.ts'
 import css from './StatsLine.module.css'
 
 interface WindowStats {
@@ -34,6 +35,40 @@ interface WindowStats {
   decodeMs: number
   /** Summed output tokens over the same decode-timed steps. */
   decodeTokens: number
+}
+
+interface StepReading {
+  ttftMs: number | null
+  decodeMs: number | null
+  outputTokens: number | null
+}
+
+function usageOutputTokens(usage: unknown): number | null {
+  if (typeof usage !== 'object' || usage === null) return null
+  const value = (usage as { outputTokens?: number }).outputTokens
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
+}
+
+/** Read one assistant node's TTFT, decode wall time, and output tokens. */
+function assistantStepReading(node: AssistantMessageNode): StepReading {
+  const timing = node.timing
+  const ttftMs = timing !== undefined && timing.stepStartTime !== null && timing.firstTokenTime !== null
+    ? Math.max(0, timing.firstTokenTime - timing.stepStartTime)
+    : null
+  const decodeMs = timing !== undefined && timing.firstTokenTime !== null
+    ? Math.max(0, timing.completedTime - timing.firstTokenTime)
+    : null
+  return { ttftMs, decodeMs, outputTokens: usageOutputTokens(node.usage) }
+}
+
+/**
+ * Decode-throughput figure: whole tokens from ten up, one decimal below.
+ * @param tps - Tokens per second.
+ * @returns Display number without unit.
+ */
+function formatTokensPerSecond(tps: number): string {
+  const clamped = Math.max(0, tps)
+  return clamped >= 10 ? String(Math.round(clamped)) : String(Math.round(clamped * 10) / 10)
 }
 
 /**
@@ -187,13 +222,8 @@ interface ContextOccupancy {
 
 /**
  * Approximate context occupancy, using the TUI's integer rounding and upper
- * clamp. The numerator is `projectedTokens` — the provider sample carried
- * forward over the surface's movement since — so compaction shows immediately
- * instead of waiting for the next request to report usage; it falls back to the
- * bare sample only for a log whose projection predates that field. Numerator
- * and capacity remain independent last-wins projection fields, so this is a
- * reference figure rather than an exact measurement of one request (see the
- * token-meter README).
+ * clamp. Kept for package tests that pin the shared derivation; ContextMeter
+ * in ui-conversation owns the product meter and its own copy of this helper.
  * @param pressure - the session's context-pressure projection value.
  * @returns occupancy with its numerator and denominator, or null until both values are known.
  */
@@ -213,7 +243,7 @@ export function contextOccupancy(
 export interface StatsLineInjected {
   hooks: {
     /** Persisted display flags bound as useDisplay. */
-    display: SnapshotStore<ConversationDisplayPreferences>
+    display: SnapshotStore<StatsDisplayPreferences>
   }
 }
 
@@ -222,9 +252,9 @@ export interface StatsLineProps {
   useSession: SnapshotSelectorHook<ConversationSnapshot>
   useProjection: UseProjection
   /** Persisted display flags; every group still hides itself when it has no data. */
-  useDisplay: SnapshotSelectorHook<ConversationDisplayPreferences>
+  useDisplay: SnapshotSelectorHook<StatsDisplayPreferences>
   /** The owning dock's locale seat. */
-  t: ComposerBarProps['t']
+  t: PropsLocale<'conversationStats'>['t']
 }
 
 export type StatsLineSlotProps = StatsLineProps & InjectFace<StatsLineInjected>

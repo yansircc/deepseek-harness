@@ -4,9 +4,9 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-test-runtime'
 import { createSnapshotStore, type SessionListState, type WorkspaceListState } from '@deepseek-ai/dsh-client-runtime/client'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
-import { StatsDisplayRow } from '../src/client/settings/StatsDisplayRow.tsx'
-import type { StatsDisplayRowProps } from '../src/client/settings/StatsDisplayRow.tsx'
-import { ConversationDisplayPolicy } from '../src/client/settings/display-policy.ts'
+import { StatsDisplayRow } from '../src/client/StatsDisplayRow.tsx'
+import type { StatsDisplayRowProps } from '../src/client/StatsDisplayRow.tsx'
+import { StatsDisplayPolicy } from '../src/client/display-policy.ts'
 import { en } from '../src/client/locales.ts'
 
 afterEach(() => {
@@ -28,7 +28,7 @@ function emptyWorkspaces() {
 }
 
 function mount() {
-  const policy = new ConversationDisplayPolicy()
+  const policy = new StatsDisplayPolicy()
   const setDisplay = vi.fn((field: Parameters<StatsDisplayRowProps['setDisplay']>[0], value: boolean) => {
     policy.set(field, value)
   })

@@ -2,8 +2,8 @@ import { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it } from 'vitest'
 import { SettingsProvider, settingsNamespace, type SettingsNamespace } from '@deepseek-ai/dsh-settings'
 import {
-  CONVERSATION_SETTINGS_NAMESPACE, DEFAULT_BUSY_ENTER_BEHAVIOR, apply,
-} from '@deepseek-ai/dsh-client-ui-conversation'
+  DEFAULT_STATS_DISPLAY_FLAGS, STATS_SETTINGS_NAMESPACE, apply,
+} from '@deepseek-ai/dsh-client-ui-stats'
 
 class MemorySettings extends SettingsProvider {
   readonly writable = true
@@ -13,17 +13,17 @@ class MemorySettings extends SettingsProvider {
   }
 }
 
-describe('ui-conversation host', () => {
-  it('registers, validates, and disposes the durable busy-Enter preference', async () => {
+describe('ui-stats host', () => {
+  it('registers, validates, and disposes the durable stats display flags', async () => {
     const ctx = new Context()
     await ctx.plugin(MemorySettings).await()
     const fiber = ctx.plugin({ apply })
     await fiber.await()
-    const ns = settingsNamespace(CONVERSATION_SETTINGS_NAMESPACE)
-    expect(ctx.settings.get(ns)).toEqual({ busyEnter: DEFAULT_BUSY_ENTER_BEHAVIOR })
-    await ctx.settings.update(ns, { busyEnter: 'steer' })
-    expect(ctx.settings.get(ns)).toEqual({ busyEnter: 'steer' })
-    await expect(ctx.settings.update(ns, { busyEnter: 'invalid' })).rejects.toThrow()
+    const ns = settingsNamespace(STATS_SETTINGS_NAMESPACE)
+    expect(ctx.settings.get(ns)).toEqual(DEFAULT_STATS_DISPLAY_FLAGS)
+    await ctx.settings.update(ns, { showStatsCounts: false })
+    expect(ctx.settings.get(ns)).toEqual({ ...DEFAULT_STATS_DISPLAY_FLAGS, showStatsCounts: false })
+    await expect(ctx.settings.update(ns, { showStatsCounts: 'invalid' as unknown as boolean })).rejects.toThrow()
     await fiber.dispose()
     expect(ctx.settings.describe().map(row => row.ns)).not.toContain(ns)
   })

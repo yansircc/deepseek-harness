@@ -11,8 +11,6 @@ import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
 import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
 import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
 import { apply, inject } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { StatsLineInjected } from '../src/client/chat/StatsLine.tsx'
-import type { DisplayPreferenceRowInjected } from '../src/client/settings/StatsDisplayRow.tsx'
 
 // The service reads its initial locale from the browser; these specs assert
 // the shipped Chinese copy, so they state the browser they assume.
@@ -96,8 +94,9 @@ describe('apply wiring', () => {
     expect(b.slots.spec('conversation.hero.workspace')).toEqual({ kind: 'single', scope: 'root' })
     expect(b.slots.spec('conversation.hero.agentPreset')).toEqual({ kind: 'single', scope: 'root' })
     expect(b.slots.entries('settings.general.item').map(entry => entry.options.id))
-      .toEqual(['composer-enter', 'stats-display'])
+      .toEqual(['composer-enter'])
     expect(b.slots.entries('conversation.session.header.utilities')).toHaveLength(0)
+    expect(b.slots.entries('conversation.composer.dock')).toHaveLength(0)
     await b.runtime.dispose()
   })
 
@@ -108,8 +107,8 @@ describe('apply wiring', () => {
     // one search row registers under both grep and glob; the web rows register
     // one component under both web tool names.
     expect(b.slots.entries('conversation.chat.node').map(entry => entry.options.key)).not.toContain('tool-call')
-    // Stats stick with the composer (not inside ChatView).
-    expect(b.slots.entries('conversation.composer.dock').map(e => e.options.id)).toEqual(['stats'])
+    // Ambient readout seat stays declared and empty; ui-stats occupies it.
+    expect(b.slots.spec('conversation.composer.dock')).toEqual({ kind: 'single', scope: 'session' })
     await b.runtime.dispose()
   })
 
@@ -125,19 +124,6 @@ describe('apply wiring', () => {
     expect(b.slots.entries('details')).toHaveLength(0)
     expect(b.slots.entries('settings.general.item')).toHaveLength(0)
     expect(b.runtime.ctx.get('conversation')).toBeUndefined()
-    await b.runtime.dispose()
-  })
-
-  it('writes display flags through the stats General row', async () => {
-    const b = await bench()
-    const general = b.slots.entries('settings.general.item')
-    const stats = (general.find(entry => entry.options.id === 'stats-display')!.inject as unknown as () => DisplayPreferenceRowInjected)()
-    expect(stats.hooks.display.getSnapshot().showStatsCounts).toBe(true)
-    stats.setDisplay('showStatsCounts', false)
-    expect(stats.hooks.display.getSnapshot().showStatsCounts).toBe(false)
-
-    const line = (b.slots.entries('conversation.composer.dock')[0]!.inject as unknown as () => StatsLineInjected)()
-    expect(line.hooks.display.getSnapshot().showStatsCounts).toBe(false)
     await b.runtime.dispose()
   })
 })

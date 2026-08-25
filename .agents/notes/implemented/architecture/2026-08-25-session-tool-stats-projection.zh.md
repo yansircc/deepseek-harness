@@ -12,7 +12,7 @@ Status: implemented
 
 `@deepseek-ai/dsh-session-tool-stats` 注册独立的 `sessionToolStats` 投影单元，视图为 `{ toolCalls }`。配对规则与 `sessionStats.toolMs` 及窗口折叠一致：按 callId 统计 `tool/call` → `tool/result`；在 `turn/end` 丢弃未解决调用；忽略孤儿 result。`stateVersion` 为 1。上游 `@deepseek-ai/dsh-session-stats` 在该字段上与 upstream/master 字节一致（无 `toolCalls`，`stateVersion` 为 1）。
 
-web-app bundle 同时挂载两个插件。`StatsLine` 组合 `useProjection('sessionStats')` 与 `useProjection('sessionToolStats')` 画出 `工具 {count}次 {duration}` 分组。没有 `sessionStats` 的装配仍整体回退到 `deriveStats`（含其窗口 `toolCalls`）。有 `sessionStats` 而无 `sessionToolStats` 时，次数为 0，时长仍来自 `toolMs`。
+web-app bundle 同时挂载两个插件。`@deepseek-ai/dsh-client-ui-stats` 组合 `useProjection('sessionStats')` 与 `useProjection('sessionToolStats')` 画出 `工具 {count}次 {duration}` 分组。没有 `sessionStats` 的装配仍整体回退到 `deriveStats`（含其窗口 `toolCalls`）。有 `sessionStats` 而无 `sessionToolStats` 时，次数为 0，时长仍来自 `toolMs`。
 
 ## Alternatives considered
 

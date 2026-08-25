@@ -12,7 +12,7 @@ Local forks added a whole-session matched tool-call count (`toolCalls`) inside `
 
 `@deepseek-ai/dsh-session-tool-stats` registers an independent `sessionToolStats` projection unit whose view is `{ toolCalls }`. Pairing matches `sessionStats.toolMs` and the window fold: count `tool/call` → `tool/result` by callId; drop unresolved calls at `turn/end`; ignore orphan results. `stateVersion` is 1. Upstream `@deepseek-ai/dsh-session-stats` stays byte-identical to upstream/master for this field (no `toolCalls`, `stateVersion` 1).
 
-The web-app bundle mounts both plugins. `StatsLine` composes `useProjection('sessionStats')` with `useProjection('sessionToolStats')` for the `Tools {count}× {duration}` group. Assemblies without `sessionStats` still fall back to `deriveStats` wholesale (including its window `toolCalls`). When `sessionStats` is present and `sessionToolStats` is not, the count is 0 while duration still comes from `toolMs`.
+The web-app bundle mounts both plugins. `@deepseek-ai/dsh-client-ui-stats` composes `useProjection('sessionStats')` with `useProjection('sessionToolStats')` for the `Tools {count}× {duration}` group. Assemblies without `sessionStats` still fall back to `deriveStats` wholesale (including its window `toolCalls`). When `sessionStats` is present and `sessionToolStats` is not, the count is 0 while duration still comes from `toolMs`.
 
 ## Alternatives considered
 
