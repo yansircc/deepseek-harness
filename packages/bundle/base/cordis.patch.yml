@@ -292,6 +292,9 @@
     - id: subagent
       name: '@deepseek-ai/dsh-subagent'
 
+    - id: subagent-route-policy
+      name: '@deepseek-ai/dsh-subagent-route-policy'
+
     - id: subagent-spawn-in-process
       name: '@deepseek-ai/dsh-subagent-spawn-in-process'
       config:

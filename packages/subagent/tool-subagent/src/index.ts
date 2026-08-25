@@ -15,10 +15,9 @@ import type { AgentOptions } from '@deepseek-ai/dsh-agent'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import type { JsonValue } from '@deepseek-ai/dsh-session'
 import { assertSubagentMaxDepth, settleRun } from '@deepseek-ai/dsh-subagent'
-import type { SubagentProvider, SubagentResult, SubagentRun } from '@deepseek-ai/dsh-subagent'
+import type { SubagentProvider, SubagentResult, SubagentRun, SubagentRoute } from '@deepseek-ai/dsh-subagent'
 import type { JobOutcome } from '@deepseek-ai/dsh-jobs'
 import type {} from '@deepseek-ai/dsh-system-prompt'
-import { honorsLlmRoute, resolveDelegationAgentOptions } from './route.ts'
 
 export const name = 'tool-subagent'
 export const inject = ['tools', 'subagents', 'systemPrompt']
@@ -299,7 +298,8 @@ export function apply(ctx: Context, config: Config): void {
       )
     }
     const wording = providerWording(provider.inheritsParentContext)
-    const routeEnabled = honorsLlmRoute(provider)
+    const route = ctx.get('subagentRoute') as SubagentRoute | undefined
+    const routeEnabled = route !== undefined && route.honors(provider)
     if (continuable && provider.prepareContinuable === undefined) {
       throw new Error(
         `tool-subagent: provider "${provider.name}" does not support \`backgroundMode: continuable\``,
@@ -315,9 +315,7 @@ export function apply(ctx: Context, config: Config): void {
           ? ' This tool runs in the background by default, immediately returns a durable subagent id, and keeps the child conversation available for later turns. When that run settles, the runtime sends the parent a notice containing its outcome and any final assistant message; `send_message` starts a later turn in the same child conversation. Set `run_in_background: false` only when your next action depends on receiving the result.'
           : ' This call waits for the result by default. Set `run_in_background: true` to return a job id; collect with `job_output` and stop with `job_kill`.'
         : ' This call waits for the subagent and returns its result.')
-        + (routeEnabled
-          ? ' Optional provider, model, and reasoning_effort select the child LLM route; omit them to inherit this conversation\'s active route. Call list_models before choosing a different route. A different provider requires model. A different provider or model drops inherited effort unless this call names one.'
-          : ''),
+        + (routeEnabled ? route.descriptionSuffix() : ''),
       parameters: {
         description: {
           type: 'string',
@@ -337,27 +335,7 @@ export function apply(ctx: Context, config: Config): void {
               : 'Whether to run as a background job and return its id. Defaults to false; collect with job_output or stop with job_kill.',
           },
         } : {},
-        ...routeEnabled ? {
-          provider: {
-            type: 'string' as const,
-            description:
-              'LLM provider route for the child. Omit to inherit this conversation\'s active route. '
-              + 'Call list_models first. A different provider also requires model.',
-          },
-          model: {
-            type: 'string' as const,
-            description:
-              'Model id on the selected or inherited provider. Omit to inherit this conversation\'s active model. '
-              + 'Call list_models first. An explicit model must appear in that provider\'s catalog.',
-          },
-          reasoning_effort: {
-            type: 'string' as const,
-            description:
-              'Reasoning effort for the child. Omit to inherit this conversation\'s effort when the route is unchanged; '
-              + 'a different provider or model drops inherited effort and uses that model\'s default. '
-              + 'Call list_models with the provider to see supported values. Unsupported values are rejected.',
-          },
-        } : {},
+        ...routeEnabled ? route.parameters() : {},
       },
       output: {
         schema: {
@@ -409,14 +387,17 @@ export function apply(ctx: Context, config: Config): void {
         }
 
         const maxDepth = typeof config.maxDepth === 'number' ? config.maxDepth : undefined
-        const agentOptions = await resolveDelegationAgentOptions({
-          parent,
-          transport: provider,
-          args,
-          configAgentOptions: config.agentOptions,
-          llm: ctx.get('llm'),
-          signal: exec.signal,
-        })
+        const routeService = ctx.get('subagentRoute') as SubagentRoute | undefined
+        const agentOptions = routeService === undefined
+          ? config.agentOptions
+          : await routeService.resolve({
+            parent,
+            transport: provider,
+            args,
+            configAgentOptions: config.agentOptions,
+            llm: ctx.get('llm'),
+            signal: exec.signal,
+          })
         const request = {
           label: args.description,
           prompt: [{ type: 'text', text: args.prompt }] as ContentBlock[],

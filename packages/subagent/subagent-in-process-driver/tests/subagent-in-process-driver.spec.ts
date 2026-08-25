@@ -1,4 +1,4 @@
-import { CallId, createUserMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
+import { CallId, createUserMessage } from '@deepseek-ai/dsh-llm'
 import { describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import { type Agent, type AgentOptions } from '@deepseek-ai/dsh-agent'
@@ -82,89 +82,27 @@ describe('startInProcessRun', () => {
     await run.dispose()
   })
 
-  it('inherits the parent ACTIVE session route (its logged request header) when the parent has no explicit model', () => {
-    // The parent carries no explicit provider/model option, but its session has
-    // ALREADY made requests under a concrete route (e.g. a model picked
-    // per-session in the UI and logged in request/header). The child must
-    // inherit that active route rather than falling through to the default.
+  it('inherits create-time parent provider/model and applies request overrides', () => {
     const parent = {
-      options: {},
+      options: { provider: 'parent-p', model: 'parent-m', maxTokens: 128 },
       session: {
-        requestHeader: () => ({ config: { provider: 'mock', model: 'active-route-model' } }),
+        requestHeader: () => ({ config: { provider: 'logged-p', model: 'logged-m' } }),
       },
       ctx: { get: () => undefined },
     } as unknown as Agent
-    expect(resolveChildAgentOptions(parent, undefined, 1))
-      .toMatchObject({ provider: 'mock', model: 'active-route-model', subagentDepth: 1 })
-  })
-
-  it('prefers the logged ACTIVE route over create-time AgentOptions', () => {
-    // Web create/resume seeds options from the deployment default and records
-    // a later UI pick only in request/header. Preferring options here would
-    // send the child to a provider whose key the parent is not using.
-    const parent = {
-      options: { provider: 'stale-default', model: 'stale-default-model' },
-      session: {
-        requestHeader: () => ({ config: { provider: 'active-provider', model: 'active-model' } }),
-      },
-      ctx: { get: () => ({ currentSelection: () => ({ provider: 'unused-default', model: 'unused' }) }) },
-    } as unknown as Agent
-    expect(resolveChildAgentOptions(parent, undefined, 1))
-      .toMatchObject({ provider: 'active-provider', model: 'active-model', subagentDepth: 1 })
-  })
-
-  it('inherits the parent active reasoning effort when the child stays on that route', () => {
-    const parent = {
-      options: { provider: 'mock', model: 'm', reasoningEffort: ReasoningEffortId('high') },
-      session: {
-        requestHeader: () => ({
-          config: { provider: 'mock', model: 'm', reasoningEffort: ReasoningEffortId('max') },
-        }),
-      },
-      ctx: { get: () => undefined },
-    } as unknown as Agent
-    expect(resolveChildAgentOptions(parent, undefined, 1)).toMatchObject({
-      provider: 'mock',
-      model: 'm',
-      reasoningEffort: ReasoningEffortId('max'),
+    // Without a resolve-child-options listener, the logged header is ignored.
+    expect(resolveChildAgentOptions(parent, undefined, 1)).toEqual({
+      provider: 'parent-p',
+      model: 'parent-m',
+      maxTokens: 128,
       subagentDepth: 1,
     })
-  })
-
-  it('drops inherited reasoning effort when the request changes provider or model', () => {
-    const parent = {
-      options: { provider: 'mock', model: 'm', reasoningEffort: ReasoningEffortId('max') },
-      session: {
-        requestHeader: () => ({
-          config: { provider: 'mock', model: 'm', reasoningEffort: ReasoningEffortId('max') },
-        }),
-      },
-      ctx: { get: () => undefined },
-    } as unknown as Agent
-    expect(resolveChildAgentOptions(parent, { model: 'other' }, 1)).toEqual({
-      provider: 'mock',
-      model: 'other',
-      subagentDepth: 1,
+    expect(resolveChildAgentOptions(parent, { model: 'override-m' }, 2)).toEqual({
+      provider: 'parent-p',
+      model: 'override-m',
+      maxTokens: 128,
+      subagentDepth: 2,
     })
-    expect(resolveChildAgentOptions(parent, {
-      provider: 'other',
-      model: 'm',
-      reasoningEffort: ReasoningEffortId('high'),
-    }, 1)).toMatchObject({
-      provider: 'other',
-      model: 'm',
-      reasoningEffort: ReasoningEffortId('high'),
-    })
-  })
-
-  it('falls back to agentDefaultModel only when the parent has neither an explicit model nor a logged route', () => {
-    const parent = {
-      options: {},
-      session: { requestHeader: () => undefined },
-      ctx: { get: () => ({ currentSelection: () => ({ provider: 'default-p', model: 'default-m' }) }) },
-    } as unknown as Agent
-    expect(resolveChildAgentOptions(parent, undefined, 1))
-      .toMatchObject({ provider: 'default-p', model: 'default-m' })
   })
 
   it('reports a prompt a pre-step rejection discarded as refusal, not completion', async () => {

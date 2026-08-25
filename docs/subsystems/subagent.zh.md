@@ -486,6 +486,45 @@ spawn 和 fork 后端通过 `parent.ctx` 创建一个普通的单次 agent，将
 
 Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.zh.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
 
+<a id="ctxsubagentroute--subagentroutepolicy"></a>
+
+### `ctx.subagentRoute` — `SubagentRoutePolicy`
+
+Provides `ctx.subagentRoute` and owns the `subagent/resolve-child-options` waterfall for active logged-route inheritance.
+
+```ts cordis-catalog
+/**
+ * Whether this transport composes a local child that honors `AgentOptions`.
+ * @param provider - the selected subagent transport.
+ * @returns true when the child can apply provider, model, and effort.
+ */
+honors(provider: SubagentProvider): boolean
+
+/**
+ * Suffix appended to the tool description when {@link honors} is true.
+ * @returns the description fragment, including a leading space.
+ */
+descriptionSuffix(): string
+
+/**
+ * Model-facing `provider` / `model` / `reasoning_effort` parameter schemas.
+ * @returns the three optional route parameters.
+ */
+parameters(): SubagentRouteParameters
+
+/**
+ * Resolve child `agentOptions` from tool config plus optional model-facing
+ * route fields.
+ * @param input - parent, transport, call args, config, and catalog.
+ * @returns the child options, or the config options when the call names none.
+ */
+resolve(input: ResolveDelegationRouteInput): Promise<AgentOptions | undefined>
+```
+
+Types: [AgentOptions](core.zh.md)
+
+Source: [`packages/subagent/subagent-route-policy/src/index.ts`](../../packages/subagent/subagent-route-policy/src/index.ts)
+
 <a id="ctxsubagents--subagentruntime"></a>
 
 ### `ctx.subagents` — `SubagentRuntime`
@@ -728,6 +767,30 @@ A provider left the registry. Accepted runs remain holder-owned.
  */
 'subagent/provider-removed'(name: string): void
 ```
+
+Source: [`packages/subagent/subagent/src/index.ts`](../../packages/subagent/subagent/src/index.ts)
+
+<a id="subagentresolve-child-options--waterfall"></a>
+
+#### `subagent/resolve-child-options` — waterfall
+
+Resolve child `AgentOptions` before in-process creation. `next()` yields create-time parent options plus request overrides (baselineChildAgentOptions); return a replacement to apply logged route inheritance, default-model fallback, or effort policy.
+
+```ts cordis-catalog
+/**
+ * Resolve child `AgentOptions` before in-process creation. `next()` yields
+ * create-time parent options plus request overrides
+ * ({@link baselineChildAgentOptions}); return a replacement to apply logged
+ * route inheritance, default-model fallback, or effort policy.
+ * @param input - parent, request overrides, and child depth.
+ * @param next - the baseline resolver.
+ * @mode waterfall
+ * @returns the options stamped onto `ctx.agents.create()`.
+ */
+'subagent/resolve-child-options'( input: ResolveChildAgentOptionsInput, next: () => AgentOptions, ): AgentOptions
+```
+
+Types: [AgentOptions](core.zh.md)
 
 Source: [`packages/subagent/subagent/src/index.ts`](../../packages/subagent/subagent/src/index.ts)
 

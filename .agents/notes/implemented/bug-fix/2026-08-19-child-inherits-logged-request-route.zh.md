@@ -10,7 +10,9 @@ Status: implemented
 
 ## Decision
 
-`resolveChildAgentOptions()` 把父会话最新一条 `request/header` 的提供方／模型当作 ACTIVE 路由；仅当父会话还没有记过请求时，才回退到创建时的 options。两者都没有时，才使用 `agentDefaultModel`。按子请求给出的 `request.agentOptions` 覆盖仍然生效。
+`resolveChildAgentOptions()` 分发 `subagent/resolve-child-options`。挂载 `@deepseek-ai/dsh-subagent-route-policy` 时，父会话最新一条 `request/header` 的提供方／模型是 ACTIVE 路由；仅当父会话还没有记过请求时，才回退到创建时的 options。两者都没有时，才使用 `agentDefaultModel`。按子请求给出的 `request.agentOptions` 覆盖仍然生效。未挂载该插件时，基线只保留创建时父级 options。
+
+见[将 subagent 路由策略插件化](../architecture/2026-08-25-pluginize-subagent-route-policy.zh.md)。
 
 ## Alternatives considered
 
@@ -26,4 +28,4 @@ Status: implemented
 
 ## Testing
 
-`subagent-in-process-driver.spec.ts` 断言：父会话 options 指向过期默认、日志指向另一条路由时，子 agent 落在日志中的路由上。
+`packages/subagent/subagent-route-policy/tests/child-options.spec.ts` 断言：父会话 options 指向过期默认、日志指向另一条路由时，子 agent 落在日志中的路由上。

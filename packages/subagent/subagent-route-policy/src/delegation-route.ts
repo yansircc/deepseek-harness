@@ -1,35 +1,17 @@
 /**
- * Per-call LLM route selection for in-process subagent delegation.
- * @module @deepseek-ai/dsh-tool-subagent/route
+ * Per-call LLM route selection and catalog validation for in-process
+ * delegation. Mounted as `ctx.subagentRoute` by the route-policy plugin.
+ * @module @deepseek-ai/dsh-subagent-route-policy/delegation-route
  */
 
-import type { Agent, AgentOptions } from '@deepseek-ai/dsh-agent'
-import { ReasoningEffortId, type LlmResolvedModelInfo } from '@deepseek-ai/dsh-llm'
-import type { SubagentProvider } from '@deepseek-ai/dsh-subagent'
-
-/** Catalog queries used to validate an explicit child LLM route. */
-export interface DelegationLlmCatalog {
-  listProviders(): ReadonlyArray<{ id: string }>
-  listModels(provider: string): Promise<ReadonlyArray<{ id: string }>>
-  resolveModelInfo(provider: string, model: string, signal?: AbortSignal): Promise<LlmResolvedModelInfo>
-}
-
-/** Model-facing LLM route arguments on one delegation call. */
-export interface DelegationRouteArgs {
-  readonly provider?: string
-  readonly model?: string
-  readonly reasoning_effort?: string
-}
-
-/** Inputs for resolving the child `agentOptions` of one start. */
-export interface ResolveDelegationRouteInput {
-  readonly parent: Agent
-  readonly transport: SubagentProvider
-  readonly args: DelegationRouteArgs
-  readonly configAgentOptions: AgentOptions | undefined
-  readonly llm: DelegationLlmCatalog | undefined
-  readonly signal: AbortSignal
-}
+import type { AgentOptions } from '@deepseek-ai/dsh-agent'
+import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
+import type {
+  DelegationRouteArgs,
+  ResolveDelegationRouteInput,
+  SubagentRouteParameters,
+  SubagentProvider,
+} from '@deepseek-ai/dsh-subagent'
 
 /**
  * Whether this transport composes a local child that honors `AgentOptions`.
@@ -72,7 +54,7 @@ export function hasDelegationRouteArgs(args: DelegationRouteArgs): boolean {
 }
 
 /** Read the parent session's active LLM route. */
-function parentActiveRoute(parent: Agent): {
+function parentActiveRoute(parent: ResolveDelegationRouteInput['parent']): {
   provider: string | undefined
   model: string | undefined
   reasoningEffort: ReasoningEffortId | undefined
@@ -83,6 +65,36 @@ function parentActiveRoute(parent: Agent): {
     model: header?.model ?? parent.options.model,
     reasoningEffort: header?.reasoningEffort ?? parent.options.reasoningEffort,
   }
+}
+
+/** Model-facing route parameter schemas. */
+export function delegationRouteParameters(): SubagentRouteParameters {
+  return {
+    provider: {
+      type: 'string',
+      description:
+        'LLM provider route for the child. Omit to inherit this conversation\'s active route. '
+        + 'Call list_models first. A different provider also requires model.',
+    },
+    model: {
+      type: 'string',
+      description:
+        'Model id on the selected or inherited provider. Omit to inherit this conversation\'s active model. '
+        + 'Call list_models first. An explicit model must appear in that provider\'s catalog.',
+    },
+    reasoning_effort: {
+      type: 'string',
+      description:
+        'Reasoning effort for the child. Omit to inherit this conversation\'s effort when the route is unchanged; '
+        + 'a different provider or model drops inherited effort and uses that model\'s default. '
+        + 'Call list_models with the provider to see supported values. Unsupported values are rejected.',
+    },
+  }
+}
+
+/** Description suffix when route fields are exposed. */
+export function delegationRouteDescriptionSuffix(): string {
+  return ' Optional provider, model, and reasoning_effort select the child LLM route; omit them to inherit this conversation\'s active route. Call list_models before choosing a different route. A different provider requires model. A different provider or model drops inherited effort unless this call names one.'
 }
 
 /**

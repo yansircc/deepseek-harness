@@ -33,6 +33,7 @@ import * as WebSearchExa from '@deepseek-ai/dsh-web-search-exa'
 import * as WebFetchLocal from '@deepseek-ai/dsh-web-fetch-http'
 import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import type { SubagentProvider, SubagentReportDelivery } from '@deepseek-ai/dsh-subagent'
+import SubagentRoutePolicy from '@deepseek-ai/dsh-subagent-route-policy'
 import * as ToolSubagentControl from '@deepseek-ai/dsh-tool-subagent-control'
 import * as ToolSubagentListAgents from '@deepseek-ai/dsh-tool-subagent-control/list-agents'
 import * as ToolListModels from '@deepseek-ai/dsh-tool-list-models'
@@ -464,11 +465,12 @@ const TOOL_PACKAGES: ToolPackage[] = [
     shippedNames: ['subagent', 'subagent_fork'],
     async mount(ctx) {
       await ctx.plugin(SubagentRuntime)
+      await ctx.plugin(SubagentRoutePolicy)
       registerCatalogSubagentProvider(ctx, 'mock')
       await ctx.plugin(ToolSubagent, { provider: 'mock' })
     },
     note:
-      'The registered tool name is the load-time `toolName` config (default `subagent`); the schema above is that default. The shipped compositions load this package once per subagent backend, so the model additionally sees `subagent_fork` bound to the fork backend. Each instance\'s description, `run_in_background` parameter, and system-prompt policy follow its own `backgroundMode` and `enableRunInBackground`, so the two shipped schemas are not identical: `subagent` is `continuable` and defaults omitted calls to background with automatic settlement delivery, while `subagent_fork` stays `one-shot` and defaults them to foreground — see `packages/bundle/base/cordis.patch.yml` and `examples/acp-agent/cordis.yml`. In-process instances also expose optional `provider`, `model`, and `reasoning_effort`; product transports omit those fields. Call `list_models` before choosing a different child route.',
+      'The registered tool name is the load-time `toolName` config (default `subagent`); the schema above is that default. The shipped compositions load this package once per subagent backend, so the model additionally sees `subagent_fork` bound to the fork backend. Each instance\'s description, `run_in_background` parameter, and system-prompt policy follow its own `backgroundMode` and `enableRunInBackground`, so the two shipped schemas are not identical: `subagent` is `continuable` and defaults omitted calls to background with automatic settlement delivery, while `subagent_fork` stays `one-shot` and defaults them to foreground — see `packages/bundle/base/cordis.patch.yml` and `examples/acp-agent/cordis.yml`. With `@deepseek-ai/dsh-subagent-route-policy` mounted, in-process instances also expose optional `provider`, `model`, and `reasoning_effort`; product transports omit those fields. Call `list_models` before choosing a different child route.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-subagent-control',

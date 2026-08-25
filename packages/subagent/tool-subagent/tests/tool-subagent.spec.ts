@@ -14,6 +14,7 @@ import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-test
 import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import type { SubagentStartRequest } from '@deepseek-ai/dsh-subagent'
+import SubagentRoutePolicy from '@deepseek-ai/dsh-subagent-route-policy'
 import LocalJobRegistry from '@deepseek-ai/dsh-jobs-local'
 import * as SubagentSpawn from '@deepseek-ai/dsh-subagent-spawn-in-process'
 import * as ToolTasks from '@deepseek-ai/dsh-tool-jobs'
@@ -42,6 +43,7 @@ async function setup(toolConfig: tool.Config, mockConfig: Partial<mock.Config> =
   await ctx.plugin(SystemPrompt)
   await ctx.plugin(ToolRuntime)
   await ctx.plugin(SubagentRuntime)
+  await ctx.plugin(SubagentRoutePolicy)
   await mock.mountScriptedProvider(ctx, { name: 'mock', ...mockConfig })
   await ctx.plugin(tool, toolConfig)
   return ctx
