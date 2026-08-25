@@ -63,7 +63,7 @@ describe('bundled service-worker PageCall/InputCall wire schema', () => {
 describe('bundled service-worker result contracts', () => {
   it('keeps dynamic wait observations opaque at the bridge boundary', async () => {
     const { operationResultProtocolContract } = await import('../src/protocol/operations.ts')
-    expect(operationResultProtocolContract.page.wait).toMatchObject({ mode: 'opaque' })
+    expect(operationResultProtocolContract.page?.wait).toMatchObject({ mode: 'opaque' })
   })
 })
 
