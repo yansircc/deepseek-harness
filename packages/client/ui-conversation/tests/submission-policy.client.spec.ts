@@ -4,9 +4,9 @@ import { stubSettingsScope } from '@deepseek-ai/dsh-client-test-runtime'
 import {
   ComposerSubmissionPolicy, DEFAULT_BUSY_ENTER_BEHAVIOR,
 } from '../src/client/input/submission-policy.ts'
-import { DEFAULT_DISPLAY_FLAGS, type ConversationSettings } from '../src/submission-settings.ts'
+import type { ConversationSettings } from '../src/submission-settings.ts'
 
-const allOn = { busyEnter: 'queue' as const, ...DEFAULT_DISPLAY_FLAGS }
+const queued = { busyEnter: 'queue' as const }
 
 describe('ComposerSubmissionPolicy', () => {
   it('defaults to Queue and only applies the preference while running', () => {
@@ -53,14 +53,14 @@ describe('ComposerSubmissionPolicy', () => {
     const policy = new ComposerSubmissionPolicy(host.scope)
     host.publish({
       status: 'ready',
-      value: { ...allOn, busyEnter: 'steer' },
+      value: { ...queued, busyEnter: 'steer' },
       revision: 1,
       writable: true,
     })
     expect(policy.busyEnter.getSnapshot()).toBe('steer')
     policy.setBusyEnter('steer')
     expect(host.set).not.toHaveBeenCalled()
-    host.publish({ value: { ...allOn, busyEnter: 'steer' }, revision: 2 })
+    host.publish({ value: { ...queued, busyEnter: 'steer' }, revision: 2 })
     expect(policy.busyEnter.getSnapshot()).toBe('steer')
   })
 
@@ -68,7 +68,7 @@ describe('ComposerSubmissionPolicy', () => {
     const host = stubSettingsScope<ConversationSettings>()
     host.publish({
       status: 'ready',
-      value: { ...allOn, busyEnter: 'steer' },
+      value: { ...queued, busyEnter: 'steer' },
       revision: 1,
       writable: true,
     })

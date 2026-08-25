@@ -13,10 +13,10 @@ import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import { en as commonEn } from '@deepseek-ai/dsh-client-locale/src/locales/en.ts'
 import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
-import { StatsLine, contextOccupancy, deriveStats, formatDuration, formatTokens, type StatsLineProps } from '../src/client/chat/StatsLine.tsx'
-import { DEFAULT_DISPLAY_FLAGS, type ConversationDisplayPreferences } from '../src/submission-settings.ts'
+import { StatsLine, contextOccupancy, deriveStats, formatDuration, formatTokens, type StatsLineProps } from '../src/client/StatsLine.tsx'
+import { DEFAULT_STATS_DISPLAY_FLAGS, type StatsDisplayPreferences } from '../src/stats-display-settings.ts'
 import { en, zh } from '../src/client/locales.ts'
-import { chatSnapshotFixture } from './chat-snapshot-fixture.client.ts'
+import { chatSnapshotFixture } from '../../ui-conversation/tests/chat-snapshot-fixture.client.ts'
 
 // Mirrors the real lookup chain (conversation namespace, then common).
 const t: StatsLineProps['t'] = makeTranslate(zh, commonZh)
@@ -120,6 +120,15 @@ describe('deriveStats', () => {
     expect(stats.toolMs).toBe(0)
   })
 
+  it('skips non-assistant non-tool nodes in the window fold', () => {
+    const stats = deriveStats([
+      { kind: 'user', seq: 1, time: 1, turn: 1, content: [] } as never,
+      assistant(2, 1),
+    ])
+    expect(stats.turns).toBe(1)
+    expect(stats.steps).toBe(1)
+  })
+
   it('sums LLM wall time from assistant timing and tool wall time from call/result pairs', () => {
     const timed: AssistantMessageNode = {
       ...assistant(1, 1),
@@ -195,7 +204,7 @@ describe('StatsLine', () => {
   function props(
     source: { getSnapshot(): ConversationSnapshot; subscribe(fn: () => void): () => void },
     values: Record<string, unknown> = { tokenUsage: USAGE },
-    display: ConversationDisplayPreferences = DEFAULT_DISPLAY_FLAGS,
+    display: StatsDisplayPreferences = DEFAULT_STATS_DISPLAY_FLAGS,
   ): StatsLineProps {
     return {
       useSession: bindSnapshotSelector(source),
@@ -204,6 +213,30 @@ describe('StatsLine', () => {
       t: tEn,
     }
   }
+
+  function tokenUsage(cacheReadTokens: number, uncachedInputTokens: number) {
+    return { uncachedInputTokens, outputTokens: 1, cacheReadTokens, cacheWriteTokens: 0 }
+  }
+
+  it.each([
+    { actual: '98.6%', tokenUsageValue: tokenUsage(986, 14), expected: 'Cache hit 99%' },
+    { actual: '99.1%', tokenUsageValue: tokenUsage(991, 9), expected: 'Cache hit 99%' },
+    { actual: '99.49%', tokenUsageValue: tokenUsage(9_949, 51), expected: 'Cache hit 99%' },
+    { actual: '99.5%', tokenUsageValue: tokenUsage(995, 5), expected: 'Cache hit 99.5%' },
+    { actual: '99.94%', tokenUsageValue: tokenUsage(9_994, 6), expected: 'Cache hit 99.9%' },
+    { actual: '99.95%', tokenUsageValue: tokenUsage(9_995, 5), expected: 'Cache hit 99.95%' },
+    { actual: '99.995%', tokenUsageValue: tokenUsage(19_999, 1), expected: 'Cache hit 99.995%' },
+    {
+      actual: 'the closest non-full ratio available from safe integer cumulative counts',
+      tokenUsageValue: tokenUsage(Number.MAX_SAFE_INTEGER - 1, 1),
+      expected: 'Cache hit 99.99999999999999%',
+    },
+    { actual: '100%', tokenUsageValue: tokenUsage(10_000, 0), expected: 'Cache hit 100%' },
+  ])('formats an actual $actual cache-hit ratio as $expected', ({ tokenUsageValue, expected }) => {
+    const { source } = makeSource({ nodes: [assistant(1, 1)] })
+    const view = render(<StatsLine {...props(source, { tokenUsage: tokenUsageValue })} />)
+    expect(view.container.textContent).toContain(expected)
+  })
 
   it('renders the grouped stats row and hides a brand-new empty session', () => {
     const { source } = makeSource({ nodes: [assistant(1, 1)] })
@@ -251,6 +284,17 @@ describe('StatsLine', () => {
     const { source } = makeSource({ nodes: [timed] })
     const view = render(<StatsLine {...props(source)} />)
     expect(view.container.textContent).toContain('LLM 3.8s| TTFT avg 0.8s · 20 tok/s')
+  })
+
+  it('formats sub-ten tokens-per-second with one decimal place', () => {
+    const timed: AssistantMessageNode = {
+      ...assistant(1, 1, { outputTokens: 3 }),
+      timing: { stepStartTime: 1_000, firstTokenTime: 1_200, completedTime: 2_200 },
+    }
+    const { source } = makeSource({ nodes: [timed] })
+    const view = render(<StatsLine {...props(source)} />)
+    // 3 tokens / 1s decode = 3 tok/s
+    expect(view.container.textContent).toContain('3 tok/s')
   })
 
   it('takes every stats label from the active locale', () => {
@@ -410,7 +454,7 @@ describe('StatsLine', () => {
   it('hides the whole line when every stats flag is off', () => {
     const { source } = makeSource({ nodes: [assistant(1, 1)] })
     const view = render(<StatsLine {...props(source, { tokenUsage: USAGE, sessionStats: sessionStats({ turns: 1, steps: 1 }) }, {
-      ...DEFAULT_DISPLAY_FLAGS,
+      ...DEFAULT_STATS_DISPLAY_FLAGS,
       showStatsCounts: false,
       showStatsDurations: false,
       showStatsLatency: false,
@@ -423,9 +467,37 @@ describe('StatsLine', () => {
   it('drops one group when its flag is off', () => {
     const { source } = makeSource({ nodes: [assistant(1, 1)] })
     const view = render(<StatsLine {...props(source, { tokenUsage: USAGE, sessionStats: sessionStats({ turns: 1, steps: 1 }) }, {
-      ...DEFAULT_DISPLAY_FLAGS,
+      ...DEFAULT_STATS_DISPLAY_FLAGS,
       showStatsCacheHit: false,
     })} />)
     expect(view.container.textContent).toBe('1 turns · 1 steps| Uncached 10 · Input 100 · Output 5')
+  })
+
+  it('falls back to window-node counts and drops every token group without projections', () => {
+    const nodes = [
+      { kind: 'assistant', seq: 1, time: 1, turn: 1, step: 1, blocks: [] },
+      { kind: 'assistant', seq: 2, time: 2, turn: 1, step: 2, blocks: [], usage: { inputTokens: 4, outputTokens: 6 } },
+      { kind: 'assistant', seq: 3, time: 3, turn: 2, step: 1, blocks: [], usage: { inputTokens: 5 } },
+    ] as const
+    const { source } = makeSource({ nodes: [...nodes] as never })
+    const view = render(<StatsLine
+      {...props(source)}
+      useProjection={() => undefined}
+      t={t}
+    />)
+    expect(view.container.textContent).toBe('2 轮 · 3 步')
+  })
+
+  it('omits the cache-hit segment when no input accounting exists at all', () => {
+    const { source } = makeSource({
+      nodes: [{
+        kind: 'assistant', seq: 1, time: 1_000, turn: 1, step: 1, blocks: [], usage: { outputTokens: 10 },
+      } as never],
+    })
+    const view = render(<StatsLine {...props(source, {
+      tokenUsage: { uncachedInputTokens: 0, outputTokens: 10, cacheReadTokens: 0, cacheWriteTokens: 0 },
+      sessionStats: sessionStats({ turns: 1, steps: 1 }),
+    })} t={t} />)
+    expect(view.container.textContent).toBe('1 轮 · 1 步| 未缓存 0 · 输入 0 · 输出 10')
   })
 })

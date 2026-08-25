@@ -24,15 +24,10 @@ import { ComposerBlockRegistry } from './input/blocks.ts'
 import type { ComposerBlock } from './input/blocks.ts'
 import { InputHub } from './input/hub.ts'
 import { ComposerSubmissionPolicy } from './input/submission-policy.ts'
-import { ConversationDisplayPolicy } from './settings/display-policy.ts'
 import { InputBar } from './skeleton/InputBar.tsx'
 import { EnterBehaviorRow } from './settings/EnterBehaviorRow.tsx'
 import type { EnterBehaviorRowInjected } from './settings/EnterBehaviorRow.tsx'
-import { StatsDisplayRow } from './settings/StatsDisplayRow.tsx'
-import type { DisplayPreferenceRowInjected } from './settings/StatsDisplayRow.tsx'
 import { ChatView } from './chat/ChatView.tsx'
-import { StatsLine } from './chat/StatsLine.tsx'
-import type { StatsLineInjected } from './chat/StatsLine.tsx'
 import { ApprovalPanel } from './skeleton/ApprovalPanel.tsx'
 import { todoDockEntry } from './skeleton/TodoPanel.tsx'
 import { queueDockEntry } from './queue/QueueDock.tsx'
@@ -138,11 +133,6 @@ export function apply(ctx: Context): void {
     namespace: CONVERSATION_SETTINGS_NAMESPACE,
   })
   const submissionPolicy = new ComposerSubmissionPolicy(settingsScope)
-  const displayPolicy = new ConversationDisplayPolicy(settingsScope)
-  const displayInject = (): DisplayPreferenceRowInjected => ({
-    hooks: { display: displayPolicy.prefs },
-    setDisplay: (field, value) => { displayPolicy.set(field, value) },
-  })
 
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({
     name: 'settings.general.item',
@@ -154,14 +144,6 @@ export function apply(ctx: Context): void {
       setBusyEnter: (behavior) => { submissionPolicy.setBusyEnter(behavior) },
     }),
   }, EnterBehaviorRow))
-
-  ctx.slots.inject('settings.general.item', () => ctx.slots.register({
-    name: 'settings.general.item',
-    id: 'stats-display',
-    order: 30,
-    locale: NS,
-    inject: displayInject,
-  }, StatsDisplayRow))
 
   // Chat semantic reader positions by session, surviving view switches and
   // width reflow when the tab ring remounts the view. Deliberately not
@@ -221,7 +203,7 @@ export function apply(ctx: Context): void {
       'conversation.composer.bar': { kind: 'single', scope: 'session-maybe' },
       'conversation.input.overlay': { kind: 'list', scope: 'session' },
       'conversation.input.dock': { kind: 'list', scope: 'session' },
-      'conversation.composer.dock': { kind: 'list', scope: 'session' },
+      'conversation.composer.dock': { kind: 'single', scope: 'session' },
       'conversation.input.left': { kind: 'list', scope: 'session' },
       'conversation.input.right': { kind: 'list', scope: 'session' },
       'conversation.hero.brand.mark': { kind: 'single', scope: 'root' },
@@ -445,16 +427,9 @@ export function apply(ctx: Context): void {
     },
   }, ChatView)
 
-  // Session stats stick with the composer (composer.dock = stats-line family).
-  slots.register({
-    name: 'conversation.composer.dock',
-    id: 'stats',
-    order: 0,
-    locale: NS,
-    inject: (): StatsLineInjected => ({
-      hooks: { display: displayPolicy.prefs },
-    }),
-  }, StatsLine)
+  // conversation.composer.dock stays declared and empty here: a feature
+  // plugin (ui-stats) injects the optional ambient readout. Unoccupied, the
+  // band renders nothing.
 
   // Class-plugin mount (packages/AGENTS.md service form): the service
   // registers itself as `conversation` and lives on its own child fiber.

@@ -205,13 +205,15 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'conversation.input.dock': { kind: 'list'; scope: 'session'; owner: InputZone }
     /**
      * The band under the composer card, inside the bar's width column — the
-     * seat for an ambient readout about the conversation (the shipped stats
-     * line lives here). Same {@link InputZone} owner share as the other
-     * regions. Anything the user must click belongs in the tool row instead
-     * (`conversation.input.left` / `.right`); anything needing its own line
-     * above the card belongs in `conversation.input.dock`.
+     * optional single seat for an ambient readout about the conversation.
+     * Unoccupied renders nothing; one registrant owns the band (a second
+     * registration at the same priority fails loud). Same {@link InputZone}
+     * owner share as the other regions. Anything the user must click belongs
+     * in the tool row instead (`conversation.input.left` / `.right`);
+     * anything needing its own line above the card belongs in
+     * `conversation.input.dock`.
      */
-    'conversation.composer.dock': { kind: 'list'; scope: 'session'; owner: InputZone }
+    'conversation.composer.dock': { kind: 'single'; scope: 'session'; owner: InputZone }
     /**
      * The left end of the tool row INSIDE the composer card, after the
      * resident chrome (access mode, plan, attach) — the seat for a small
@@ -545,7 +547,7 @@ export interface ComposerBarOwnerProps {
   leftItems?: ReactNode
   /** input.right slot entries (tool row, before the primary button). */
   rightItems?: ReactNode
-  /** composer.dock entries (stats line), rendered under the card inside the bar's width column. */
+  /** Optional ambient readout under the card, inside the bar's width column. */
   footer?: ReactNode
 }
 

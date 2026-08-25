@@ -2,26 +2,26 @@
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import {
-  STATS_DISPLAY_FIELDS, type ConversationDisplayField, type ConversationDisplayPreferences,
-} from '../../submission-settings.ts'
-import type { ConversationKey } from '../locales.ts'
+  STATS_DISPLAY_FIELDS, type StatsDisplayField, type StatsDisplayPreferences,
+} from '../stats-display-settings.ts'
+import type { ConversationStatsKey } from './locales.ts'
 import css from './DisplayToggle.module.css'
 
 /** Registration-side display-preference face. */
-export interface DisplayPreferenceRowInjected {
+export interface StatsDisplayRowInjected {
   hooks: {
     /** Persisted display flags bound as useDisplay. */
-    display: SnapshotStore<ConversationDisplayPreferences>
+    display: SnapshotStore<StatsDisplayPreferences>
   }
   /** Change one display flag. */
-  setDisplay: (field: ConversationDisplayField, value: boolean) => void
+  setDisplay: (field: StatsDisplayField, value: boolean) => void
 }
 
 /** Full Settings-row props. */
 export type StatsDisplayRowProps =
   PropsRuntime<'settings.general.item'>
-  & PropsLocale<'conversation'>
-  & InjectFace<DisplayPreferenceRowInjected>
+  & PropsLocale<'conversationStats'>
+  & InjectFace<StatsDisplayRowInjected>
 
 const LABELS = {
   showStatsCounts: 'settings.stats.showStatsCounts',
@@ -29,7 +29,7 @@ const LABELS = {
   showStatsLatency: 'settings.stats.showStatsLatency',
   showStatsCacheHit: 'settings.stats.showStatsCacheHit',
   showStatsTokens: 'settings.stats.showStatsTokens',
-} as const satisfies Record<typeof STATS_DISPLAY_FIELDS[number], ConversationKey>
+} as const satisfies Record<typeof STATS_DISPLAY_FIELDS[number], ConversationStatsKey>
 
 /**
  * Render the stats-line display-preference switches.

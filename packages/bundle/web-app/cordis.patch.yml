@@ -228,6 +228,10 @@
     - id: ui-conversation
       name: '@deepseek-ai/dsh-client-ui-conversation'
 
+    # Composer stats line and its General Settings toggles.
+    - id: ui-stats
+      name: '@deepseek-ai/dsh-client-ui-stats'
+
     # Session-header workspace git chrome and its General Settings toggles.
     - id: ui-workspace-git
       name: '@deepseek-ai/dsh-client-ui-workspace-git'

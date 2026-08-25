@@ -1,16 +1,14 @@
 // @vitest-environment jsdom
 // Remaining chat branch tails: MessageItem context/unknown arms,
-// user IconActions, StatsLine no-cache join,
+// user IconActions,
 // AssistantMarkdown single-line reasoning. (Tool-row dispatch tails live
 // with the keyed-slot machinery specs since the tool ring dissolved into
 // renderSlot.)
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-test-runtime'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
-import { createSnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import type {
   ChatConversationViewNode, ConversationNode,
 } from '@deepseek-ai/dsh-client-runtime/client'
@@ -23,12 +21,9 @@ import {
   UserMessageNodeView,
 } from '../src/client/chat/MessageItem.tsx'
 import { AssistantMarkdown, type AssistantMarkdownProps } from '../src/client/chat/AssistantMarkdown.tsx'
-import { StatsLine, type StatsLineProps } from '../src/client/chat/StatsLine.tsx'
-import { DEFAULT_DISPLAY_FLAGS } from '../src/submission-settings.ts'
 import { zh } from '../src/client/locales.ts'
-import { chatSnapshotFixture } from './chat-snapshot-fixture.client.ts'
 
-/** jsdom has no ResizeObserver; StatsLine watches its row for ellipsis truncation through one. */
+/** jsdom has no ResizeObserver; some chrome watches layout through one. */
 class ResizeObserverStub {
   observe(): void {}
   unobserve(): void {}
@@ -1024,24 +1019,4 @@ describe('small branch tails', () => {
     expect(view.getByText('one-liner')).toBeTruthy()
   })
 
-  it('StatsLine omits the cache-hit segment when no input accounting exists at all', () => {
-    // Cache hit is null only when all three prompt buckets are zero (pure
-    // output accounting) — any billed input makes it a real 0%.
-    const nodes = [{
-      kind: 'assistant', seq: 1, time: 1_000, turn: 1, step: 1, blocks: [], usage: { outputTokens: 10 },
-    }] as const
-    const snap = { chat: chatSnapshotFixture({ nodes }), nodes }
-    const source = { getSnapshot: () => snap, subscribe: () => () => {} }
-    const view = render(
-      <StatsLine
-        t={t}
-        useSession={bindSnapshotSelector(source) as unknown as StatsLineProps['useSession']}
-        useProjection={(key: string) => key === 'tokenUsage'
-          ? { uncachedInputTokens: 0, outputTokens: 10, cacheReadTokens: 0, cacheWriteTokens: 0 }
-          : undefined}
-        useDisplay={bindSnapshotSelector(createSnapshotStore(DEFAULT_DISPLAY_FLAGS))}
-      />,
-    )
-    expect(view.container.textContent).toBe('1 轮 · 1 步| 未缓存 0 · 输入 0 · 输出 10')
-  })
 })
