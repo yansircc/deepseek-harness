@@ -31,9 +31,11 @@ async function files(root: string, directory = root): Promise<string[]> {
 async function extensionZip(): Promise<Uint8Array> {
   if (!(await stat(artifactRoot)).isDirectory()) throw new Error('Chrome extension artifact is unavailable')
   const chunks: Uint8Array[] = []
-  const archive = new Zip((error, data) => {
+  let finished = false
+  const archive = new Zip((error, data, final) => {
     if (error !== null) throw error
     if (data !== undefined && data.byteLength > 0) chunks.push(data)
+    if (final) finished = true
   })
   for (const file of await files(artifactRoot)) {
     const deflate = new ZipDeflate(file, { level: 6 })
@@ -41,6 +43,7 @@ async function extensionZip(): Promise<Uint8Array> {
     deflate.push(await readFile(join(artifactRoot, file)), true)
   }
   archive.end()
+  if (!finished) throw new Error('Chrome extension ZIP did not finalize')
   const total = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0)
   const output = new Uint8Array(total)
   let offset = 0

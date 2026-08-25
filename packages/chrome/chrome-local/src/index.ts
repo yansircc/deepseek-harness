@@ -1,4 +1,7 @@
 /** Cordis provider plugin for the local DSH Chrome connector. */
+import { readFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { fileURLToPath } from 'node:url'
 import type { Context } from '@deepseek-ai/cordis'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import { Config, resolveConfig } from './config.ts'
@@ -19,12 +22,20 @@ export const name = 'chrome-local'
 /** Required Service Definition and credential provider. */
 export const inject = ['chrome', 'credentials']
 
-const defaultArtifact: ExtensionArtifactMetadata = {
-  extensionId: 'ncikkhgopjmpkkcbgndgmolkfkiehlnm',
-  displayVersion: '0.5.3',
-  protocolFingerprint: 'a03e43dd3b080201e832077f83bef54751d80eb75a23be6507e1d918cffc4d4c',
-  kernelBuildId: 'legacy-0.5.3',
-  operationRevision: 'legacy-a03e43dd',
+const artifactDirectory = fileURLToPath(new URL('../../chrome-extension/dist/browser-extension/', import.meta.url))
+
+async function extensionArtifact(): Promise<ExtensionArtifactMetadata> {
+  const evidence = JSON.parse(await readFile(`${artifactDirectory}/evidence.json`, 'utf8')) as {
+    extensionId: string
+    displayVersion: string
+    protocolFingerprint: string
+  }
+  const worker = await readFile(`${artifactDirectory}/service-worker.js`)
+  return {
+    ...evidence,
+    kernelBuildId: createHash('sha256').update(worker).digest('hex').slice(0, 16),
+    operationRevision: evidence.protocolFingerprint.slice(0, 16),
+  }
 }
 
 /** Resolve credentials, bind the provider, then register it on `ctx.chrome`. */
@@ -38,7 +49,7 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
   if (existing === undefined) {
     await credentials.set(credentialRef(resolved.ownerCredentialRef), mintOwnerSecret())
   }
-  const provider = new LocalChromeProvider(resolved, defaultArtifact)
+  const provider = new LocalChromeProvider(resolved, await extensionArtifact())
   const dispose = await ctx.chrome.registerProvider(provider)
   ctx.effect(() => dispose, 'chrome-local provider registration')
 }
