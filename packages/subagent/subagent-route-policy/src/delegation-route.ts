@@ -67,7 +67,10 @@ function parentActiveRoute(parent: ResolveDelegationRouteInput['parent']): {
   }
 }
 
-/** Model-facing route parameter schemas. */
+/**
+ * Build the model-facing route parameter schemas.
+ * @returns provider, model, and reasoning-effort schema properties.
+ */
 export function delegationRouteParameters(): SubagentRouteParameters {
   return {
     provider: {
@@ -92,7 +95,10 @@ export function delegationRouteParameters(): SubagentRouteParameters {
   }
 }
 
-/** Description suffix when route fields are exposed. */
+/**
+ * Build the description suffix used when route fields are exposed.
+ * @returns model-facing guidance for selecting a child route.
+ */
 export function delegationRouteDescriptionSuffix(): string {
   return ' Optional provider, model, and reasoning_effort select the child LLM route; omit them to inherit this conversation\'s active route. Call list_models before choosing a different route. A different provider requires model. A different provider or model drops inherited effort unless this call names one.'
 }
