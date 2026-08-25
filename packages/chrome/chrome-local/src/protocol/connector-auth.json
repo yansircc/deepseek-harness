@@ -1,0 +1,17 @@
+{
+  "extensionPublicKey": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxOM4CMNraddlpkOjrntKxTQZth8PQVBPo8fF3jMETPAecXJc1WMV58kG4MYkELqJI2PF2tNhsHLX6M013uPhqL1WEFpInAvX3v0+vMj+IeLWtyy5I/TR2AcRWnKi+UBn/x9chtZ/8iZF9iNXHu7gY8S4F9atScM1BvbpDJmYm48UDjV5YTTEOqLFonCdMEeW3l1EMSTM6uJ68aiXdemAAHzQbVd1Hu8TI5oawPyW3uPhe0clKN1r2O/lu7Xf/HOgo8OvArIfacICEdlcEoBR/WKxK7ENtwbEHQjqYUghjHLyLLuc1uk9ze9c2d6RRRFYmdVfJnwC8JOKccsE5Fb0FQIDAQAB",
+  "storageKey": "dshChromeConnectorIdentity",
+  "headers": {
+    "id": "x-dsh-chrome-connector-id",
+    "extensionId": "x-dsh-chrome-extension-id",
+    "clientNonce": "x-dsh-chrome-connector-client-nonce",
+    "bridgeEpoch": "x-dsh-chrome-connector-bridge-epoch",
+    "requestNonce": "x-dsh-chrome-connector-request-nonce",
+    "bodySha256": "x-dsh-chrome-connector-body-sha256",
+    "proof": "x-dsh-chrome-connector-proof"
+  },
+  "metadataHeaders": {
+    "displayVersion": "x-dsh-chrome-extension-version",
+    "protocolFingerprint": "x-dsh-chrome-protocol-fingerprint"
+  }
+}
