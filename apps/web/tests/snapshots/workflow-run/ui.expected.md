@@ -5,6 +5,10 @@
   - img
   - img
   - text: Context injection @deepseek-ai/dsh-system-prompt
+- button "Context injection time-context":
+  - img
+  - img
+  - text: Context injection time-context
 - button "Think The user wants me to use the workflow tool exactly once with specific parameters. Let me carefully follow the instructions:":
   - img
   - img
@@ -16,6 +20,10 @@
 - button "snapshot-flow 1 member Completed":
   - img
   - text: snapshot-flow 1 member Completed
+- button "Context injection time-context":
+  - img
+  - img
+  - text: Context injection time-context
 - button "Think The workflow returned successfully with the reply \"WF_CHILD_OK\". Now I need to reply with exactly \"WORKFLOW_DONE\" and stop.":
   - img
   - img

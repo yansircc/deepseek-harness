@@ -24,12 +24,11 @@ export interface ConfigurablePluginsTabState {
    */
   loaded: boolean
   /**
-   * Namespaces to dispatch, in the order their cards registered, narrowed to
-   * those the Host serves. Card registration order rather than the Host's
-   * description order: the latter follows plugin activation, which async
-   * settings injection can reorder between boots, and a settings page whose
-   * cards move between visits is worse than one whose order a registrant
-   * chose.
+   * Namespaces to dispatch, sorted by namespace id and narrowed to those the
+   * Host serves. Lexicographic order rather than card-registration or Host
+   * description order: both of those follow async plugin activation and can
+   * reorder Chrome/zeroY (and any later peer cards) between boots, which
+   * makes the settings page and its aria goldens non-deterministic.
    */
   namespaces: string[]
 }
@@ -89,6 +88,7 @@ export class ConfigurablePluginsTabController {
     const served = new Set(mirrored.view?.namespaces.map(view => view.ns) ?? [])
     const namespaces = this.entries().flatMap(entry =>
       entry.options.key !== undefined && served.has(entry.options.key) ? [entry.options.key] : [])
+      .toSorted((left, right) => left.localeCompare(right))
     const previous = this.store.getSnapshot()
     // Every settings-document commit refreshes the mirror, and most commits
     // change nothing this section shows. An observable source must keep its

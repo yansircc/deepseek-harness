@@ -16,6 +16,10 @@
   - img
   - img
   - text: Context injection @deepseek-ai/dsh-system-prompt
+- button "Context injection time-context":
+  - img
+  - img
+  - text: Context injection time-context
 - button "Think The user wants me to ask them a checkpoint question first, then continue with whatever they interject. Let me do exactly that.":
   - img
   - img
@@ -30,6 +34,10 @@
 - text: "Interjection: include the word ORANGE in your final reply. {{clock}}"
 - button "Copy":
   - img
+- button "Context injection time-context":
+  - img
+  - img
+  - text: Context injection time-context
 - paragraph: "Got it: BANANA and ORANGE."
 - button "Copy":
   - img
@@ -49,4 +57,4 @@
   - img
 - button "0% of context used"
 - button "Send message" [disabled]
-- text: 1 turns · 2 steps LLM {{duration}} · Tool call {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 0% Input 20 tok · Output 20 tok
+- text: 1 turns · 2 steps LLM {{duration}} · Tools 1× {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 0% Uncached 20 · Input 20 · Output 20

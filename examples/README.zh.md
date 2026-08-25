@@ -22,7 +22,7 @@
 
 ## web-schedule
 
-用于持久、仅限 Session 内提醒的可选 Web overlay。它通过 `schedule_create`、`schedule_list` 和 `schedule_delete` 支持正整数秒的 `after_seconds` 延时与绝对 `at` 目标；活动提醒保存在原 Session 中，该 Session 再次 live 时恢复，而 cold 期间不会运行。使用 `dsh web --patch examples/web-schedule/cordis.yml` 启动；绝对时间 authority 以及交付与恢复边界详见 [web-schedule/README.md](web-schedule/README.zh.md)。
+默认 Web 组合通过 Schedule 提供持久、仅限 Session 内的提醒，并通过 time-context 解释浏览器时区。保留的空 overlay 支持 schedule-after e2e 启动路径且不重复交付条目；时间、交付与恢复行为详见 [web-schedule/README](web-schedule/README.zh.md)。
 
 ## acp-agent
 

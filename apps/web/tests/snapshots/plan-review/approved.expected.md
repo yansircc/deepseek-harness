@@ -17,6 +17,10 @@
   - img
   - img
   - text: Context injection @deepseek-ai/dsh-system-prompt
+- button "Context injection time-context":
+  - img
+  - img
+  - text: Context injection time-context
 - 'button "Think The user wants me to plan a small change to add a `--greeting` flag to a CLI. They explicitly told me not to read or write any files, and to call exit_plan_mode with a short plan. Let me do that directly."':
   - img
   - img
@@ -29,6 +33,10 @@
   - img
   - img
   - text: "Tool call exit_plan_mode · # Add `--greeting` flag to CLI"
+- button "Context injection time-context":
+  - img
+  - img
+  - text: Context injection time-context
 - 'button "Think The plan was approved. The user''s last instruction says: \"Once the plan is approved, reply with the single word DONE and stop.\" So I should just reply with DONE and stop."':
   - img
   - img
@@ -52,4 +60,4 @@
   - img
 - button "4% of context used"
 - button "Send message" [disabled]
-- text: 1 turns · 2 steps LLM {{duration}} · Tool call {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 51% Input 10.2K tok · Output 346 tok
+- text: 1 turns · 2 steps LLM {{duration}} · Tools 1× {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 51% Uncached 5K · Input 10.2K · Output 346

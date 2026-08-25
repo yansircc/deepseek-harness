@@ -566,15 +566,17 @@ describe('ConfigurablePluginsTabController', () => {
     return keys.map(key => ({ component: null, options: { key } }))
   }
 
-  it('dispatches the served namespaces a card claims, in card registration order', async () => {
+  it('dispatches the served namespaces a card claims, sorted by namespace id', async () => {
     const settings = settingsApi(['bash', 'ui-theme', 'agent-loop'])
-    const controller = new ConfigurablePluginsTabController(settings.mirror, () => ledger('agent-loop', 'bash'))
+    // Register in reverse lexicographic order so the sort, not registration,
+    // owns the published sequence.
+    const controller = new ConfigurablePluginsTabController(settings.mirror, () => ledger('bash', 'agent-loop'))
 
     await settings.mirror.ensure()
 
     // ui-theme is served but claimed by no card here — another surface owns
-    // it. The order is the cards', not the Host's: plugin activation can
-    // reorder the description between boots.
+    // it. Lexicographic order keeps the page stable when async plugin
+    // activation reorders card registration between boots.
     expect(controller.inject().hooks.configurablePlugins.getSnapshot().namespaces)
       .toEqual(['agent-loop', 'bash'])
   })

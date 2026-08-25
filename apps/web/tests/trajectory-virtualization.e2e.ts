@@ -331,7 +331,10 @@ describe('web e2e: Trajectory virtualization over tail-paged history', () => {
         return (window as Window & { __trajectoryScrollCalls?: number })
           .__trajectoryScrollCalls ?? 0
       })
-      expect(streamingScrollCalls).toBeLessThanOrEqual(5)
+      // Shipped time-context injection rows add one more layout pass than the
+      // pre-schedule composition; keep the bound tight enough to catch runaway
+      // scroll storms without flaking on the extra context row.
+      expect(streamingScrollCalls).toBeLessThanOrEqual(6)
       expect(await mountedRows(page)).toBeLessThanOrEqual(MAX_MOUNTED_ROWS)
       expect({
         pageErrors: tripwire.pageErrors,

@@ -22,7 +22,7 @@ A self-referential agent that can inspect and change its in-memory Cordis plugin
 
 ## web-schedule
 
-An opt-in Web overlay for durable, Session-local reminders. It supports positive whole-second `after_seconds` delays and absolute `at` targets through `schedule_create`, `schedule_list`, and `schedule_delete`; active reminders persist in the original Session, resume when that Session becomes live again, and do not run while it is cold. Run `dsh web --patch examples/web-schedule/cordis.yml`; see [web-schedule/README.md](web-schedule/README.md) for absolute-time authority, delivery, and recovery boundaries.
+The default Web composition provides durable, Session-local reminders through Schedule and browser-zone interpretation through time-context. The retained empty overlay supports the schedule-after e2e launch path without duplicating shipped entries; see [web-schedule/README.md](web-schedule/README.md) for timing, delivery, and recovery behavior.
 
 ## acp-agent
 

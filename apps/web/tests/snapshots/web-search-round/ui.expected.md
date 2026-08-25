@@ -16,10 +16,18 @@
   - img
   - img
   - text: Context injection @deepseek-ai/dsh-system-prompt
+- button "Context injection time-context":
+  - img
+  - img
+  - text: Context injection time-context
 - button "Search DeepSeek Harness snapshot search, DeepSeek Harness multi-query search":
   - img
   - img
   - text: Search DeepSeek Harness snapshot search, DeepSeek Harness multi-query search
+- button "Context injection time-context":
+  - img
+  - img
+  - text: Context injection time-context
 - paragraph: SEARCH_DONE
 - button "Copy":
   - img
@@ -39,4 +47,4 @@
   - img
 - button "0% of context used"
 - button "Send message" [disabled]
-- text: 1 turns · 2 steps LLM {{duration}} · Tool call {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 0% Input 22 tok · Output 7 tok
+- text: 1 turns · 2 steps LLM {{duration}} · Tools 1× {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 0% Uncached 22 · Input 22 · Output 7

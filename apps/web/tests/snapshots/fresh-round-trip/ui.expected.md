@@ -16,6 +16,10 @@
   - img
   - img
   - text: Context injection @deepseek-ai/dsh-system-prompt
+- button "Context injection time-context":
+  - img
+  - img
+  - text: Context injection time-context
 - button "Think The user wants me to run a simple bash command and reply with \"DONE\".":
   - img
   - img
@@ -24,6 +28,10 @@
   - img
   - img
   - text: Bash Echo the test string
+- button "Context injection time-context":
+  - img
+  - img
+  - text: Context injection time-context
 - button "Think The command executed successfully and output \"WEB_E2E_OK\". I just need to reply with \"DONE\".":
   - img
   - img
@@ -47,4 +55,4 @@
   - img
 - button "6% of context used"
 - button "Send message" [disabled]
-- text: 1 turns · 2 steps LLM {{duration}} · Tool call {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 99% Input 15.7K tok · Output 111 tok
+- text: 1 turns · 2 steps LLM {{duration}} · Tools 1× {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 99% Uncached 219 · Input 15.7K · Output 111
