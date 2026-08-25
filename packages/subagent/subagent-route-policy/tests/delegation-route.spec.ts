@@ -13,7 +13,7 @@ import {
   hasDelegationRouteArgs,
   honorsLlmRoute,
   resolveDelegationAgentOptions,
-} from '../src/route.ts'
+} from '../src/delegation-route.ts'
 
 class CatalogAdapter extends LlmAdapter {
   constructor(
@@ -323,6 +323,65 @@ describe('delegation LLM route resolution', () => {
       llm: catalog(),
       signal,
     })).rejects.toThrow(/does not support reasoning effort "max"/)
+  })
+
+  it('rejects effort on a model that has no reasoning metadata', async () => {
+    const llm = fakeLlm(
+      new CatalogAdapter(
+        { 'zai-coding-cn': [zaiFlash] },
+        {
+          'zai-coding-cn/glm-5.3': {
+            provider: 'zai-coding-cn',
+            id: 'glm-5.3',
+            name: 'GLM 5.3',
+          },
+        },
+      ),
+      ['zai-coding-cn'],
+    )
+    await expect(resolveDelegationAgentOptions({
+      parent: parentOn({ provider: 'zai-coding-cn', model: 'glm-5.3' }),
+      transport: inProcess,
+      args: { reasoning_effort: 'high' },
+      configAgentOptions: undefined,
+      llm,
+      signal,
+    })).rejects.toThrow(/does not support reasoning effort$/)
+  })
+
+  it('rejects an unknown explicit provider', async () => {
+    await expect(resolveDelegationAgentOptions({
+      parent: parentOn({ provider: 'zai-coding-cn', model: 'glm-5.3' }),
+      transport: inProcess,
+      args: { provider: 'missing', model: 'x' },
+      configAgentOptions: undefined,
+      llm: catalog(),
+      signal,
+    })).rejects.toThrow(/unknown provider "missing"/)
+  })
+
+  it('rejects an explicit model when the inherited provider is unknown to the catalog', async () => {
+    const llm = fakeLlm(new CatalogAdapter({}), [])
+    await expect(resolveDelegationAgentOptions({
+      parent: parentOn({ provider: 'ghost', model: 'old' }),
+      transport: inProcess,
+      args: { model: 'new' },
+      configAgentOptions: undefined,
+      llm,
+      signal,
+    })).rejects.toThrow(/unknown provider "ghost"/)
+  })
+
+  it('rejects an explicit model when the provider catalog is empty', async () => {
+    const llm = fakeLlm(new CatalogAdapter({ 'zai-coding-cn': [] }), ['zai-coding-cn'])
+    await expect(resolveDelegationAgentOptions({
+      parent: parentOn({ provider: 'zai-coding-cn', model: 'glm-5.3' }),
+      transport: inProcess,
+      args: { model: 'glm-5.3' },
+      configAgentOptions: undefined,
+      llm,
+      signal,
+    })).rejects.toThrow(/has no catalog models/)
   })
 
   it('rejects a parent with no route when the call names only effort', async () => {

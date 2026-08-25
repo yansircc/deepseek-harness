@@ -1773,6 +1773,37 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'subagentRoute',
+    summary: 'Provides `ctx.subagentRoute` and owns the `subagent/resolve-child-options` waterfall for active logged-route inheritance.',
+    description: 'Provides `ctx.subagentRoute` and owns the `subagent/resolve-child-options` waterfall for active logged-route inheritance.',
+    methods: [
+      {
+        signature: 'honors(provider: SubagentProvider): boolean',
+        description: 'Whether this transport composes a local child that honors `AgentOptions`.',
+        parameters: [{ name: 'provider', description: 'the selected subagent transport.' }],
+        returns: 'true when the child can apply provider, model, and effort.',
+      },
+      {
+        signature: 'descriptionSuffix(): string',
+        description: 'Suffix appended to the tool description when honors is true.',
+        parameters: [],
+        returns: 'the description fragment, including a leading space.',
+      },
+      {
+        signature: 'parameters(): SubagentRouteParameters',
+        description: 'Model-facing `provider` / `model` / `reasoning_effort` parameter schemas.',
+        parameters: [],
+        returns: 'the three optional route parameters.',
+      },
+      {
+        signature: 'resolve(input: ResolveDelegationRouteInput): Promise<AgentOptions | undefined>',
+        description: 'Resolve child `agentOptions` from tool config plus optional model-facing route fields.',
+        parameters: [{ name: 'input', description: 'parent, transport, call args, config, and catalog.' }],
+        returns: 'the child options, or the config options when the call names none.',
+      },
+    ],
+  },
+  {
     key: 'subagents',
     summary: 'Named provider registry with one-shot runs, durable discovery, and continuable-child operations.',
     description: 'Named provider registry with one-shot runs, durable discovery, and continuable-child operations.',
@@ -2723,6 +2754,14 @@ export const EVENT_API: readonly EventApiEntry[] = [
     parameters: [{ name: 'name', description: 'the provider name that no longer resolves.' }],
   },
   {
+    name: 'subagent/resolve-child-options',
+    mode: 'waterfall',
+    signature: '\'subagent/resolve-child-options\'( input: ResolveChildAgentOptionsInput, next: () => AgentOptions, ): AgentOptions',
+    summary: 'Resolve child `AgentOptions` before in-process creation.',
+    description: 'Resolve child `AgentOptions` before in-process creation. `next()` yields create-time parent options plus request overrides (baselineChildAgentOptions); return a replacement to apply logged route inheritance, default-model fallback, or effort policy.',
+    parameters: [{ name: 'input', description: 'parent, request overrides, and child depth.' }, { name: 'next', description: 'the baseline resolver.' }],
+  },
+  {
     name: 'subagent/start',
     mode: 'emit',
     signature: '\'subagent/start\'(this: Scoped<SubagentRuntime>, info: SubagentRunInfo): void',
@@ -3237,6 +3276,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'CredentialRef',
     declaration: 'export type CredentialRef = Branded<\'CredentialRef\'>;',
+  },
+  {
+    name: 'DelegationLlmCatalog',
+    declaration: 'export interface DelegationLlmCatalog {\n    listProviders(): ReadonlyArray<{\n        id: string;\n    }>;\n    listModels(provider: string): Promise<ReadonlyArray<{\n        id: string;\n    }>>;\n    resolveModelInfo(provider: string, model: string, signal?: AbortSignal): Promise<LlmResolvedModelInfo>;\n}',
+  },
+  {
+    name: 'DelegationRouteArgs',
+    declaration: 'export interface DelegationRouteArgs {\n    readonly provider?: string;\n    readonly model?: string;\n    readonly reasoning_effort?: string;\n}',
   },
   {
     name: 'DiffCallView',
@@ -3935,12 +3982,20 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type RequestRunOutcome = \'approved\' | \'completed\' | \'rejected\' | \'cancelled\' | \'failed\';',
   },
   {
+    name: 'ResolveChildAgentOptionsInput',
+    declaration: 'export interface ResolveChildAgentOptionsInput {\n    readonly parent: Agent;\n    readonly requested: AgentOptions | undefined;\n    readonly childDepth: number;\n}',
+  },
+  {
     name: 'ResolvedAlwaysRetryPolicy',
     declaration: 'export interface ResolvedAlwaysRetryPolicy extends ResolvedRetryBackoff {\n    readonly mode: \'always\';\n}',
   },
   {
     name: 'ResolvedCredential',
     declaration: 'export interface ResolvedCredential {\n    value: string;\n    source: string;\n}',
+  },
+  {
+    name: 'ResolveDelegationRouteInput',
+    declaration: 'export interface ResolveDelegationRouteInput {\n    readonly parent: Agent;\n    readonly transport: SubagentProvider;\n    readonly args: DelegationRouteArgs;\n    readonly configAgentOptions: AgentOptions | undefined;\n    readonly llm: DelegationLlmCatalog | undefined;\n    readonly signal: AbortSignal;\n}',
   },
   {
     name: 'ResolvedNormalRetryPolicy',
@@ -4493,6 +4548,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SubagentResult',
     declaration: 'export interface SubagentResult {\n    readonly output: ContentBlock[];\n    readonly structured?: unknown;\n    readonly diagnostic?: string;\n    readonly stopReason: SubagentStopReason;\n}',
+  },
+  {
+    name: 'SubagentRouteParameter',
+    declaration: 'export interface SubagentRouteParameter {\n    readonly type: \'string\';\n    readonly description: string;\n}',
+  },
+  {
+    name: 'SubagentRouteParameters',
+    declaration: 'export interface SubagentRouteParameters {\n    readonly provider: SubagentRouteParameter;\n    readonly model: SubagentRouteParameter;\n    readonly reasoning_effort: SubagentRouteParameter;\n}',
   },
   {
     name: 'SubagentRun',

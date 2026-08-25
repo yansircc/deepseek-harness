@@ -7,6 +7,7 @@
 | 包 | 职责 | ctx 键 |
 |---|---|---|
 | [`subagent/`](subagent/README.zh.md) | 定义提供方注册、委派和继续执行 | `ctx.subagents` |
+| [`subagent-route-policy/`](subagent-route-policy/README.zh.md) | 已记录路由继承与每次调用的 LLM 路由校验 | `ctx.subagentRoute` |
 | [`subagent-inprocess/`](subagent-in-process-driver/README.zh.md) | 提供共享的进程内运行驱动器 | 无 |
 | [`subagent-spawn-in-process/`](subagent-spawn-in-process/README.zh.md) | 启动全新的进程内子 agent | 注册到 `ctx.subagents` |
 | [`subagent-fork-in-process/`](subagent-fork-in-process/README.zh.md) | 从父 agent 已完成的历史记录启动进程内子 agent | 注册到 `ctx.subagents` |

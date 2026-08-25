@@ -10,7 +10,9 @@ In-process children inherit a provider/model so they authenticate on the same ro
 
 ## Decision
 
-`resolveChildAgentOptions()` takes the parent's latest logged `request/header` provider/model as the ACTIVE route and falls back to create-time options only when the parent has not yet logged a request. `agentDefaultModel` remains the last resort when both are absent. A per-child `request.agentOptions` override still wins.
+`resolveChildAgentOptions()` dispatches `subagent/resolve-child-options`. With `@deepseek-ai/dsh-subagent-route-policy` mounted, the parent's latest logged `request/header` provider/model is the ACTIVE route and create-time options apply only when the parent has not yet logged a request. `agentDefaultModel` remains the last resort when both are absent. A per-child `request.agentOptions` override still wins. Without that plugin, the baseline keeps create-time parent options only.
+
+See [pluginize subagent route policy](../architecture/2026-08-25-pluginize-subagent-route-policy.md).
 
 ## Alternatives considered
 
@@ -26,4 +28,4 @@ A Web parent that switched models after create delegates on the logged route, so
 
 ## Testing
 
-`subagent-in-process-driver.spec.ts` asserts a parent whose options name a stale default and whose log names a different route produces a child on the logged route.
+`packages/subagent/subagent-route-policy/tests/child-options.spec.ts` asserts a parent whose options name a stale default and whose log names a different route produces a child on the logged route.

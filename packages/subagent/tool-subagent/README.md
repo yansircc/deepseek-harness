@@ -2,7 +2,7 @@
 
 English | [中文](README.zh.md)
 
-The model-facing delegation tool over one configured `ctx.subagents` provider. Changing the provider changes transport without changing the execution contract.
+The model-facing delegation tool over one configured `ctx.subagents` provider. Changing the provider changes transport without changing the execution contract. Optional per-call `provider` / `model` / `reasoning_effort` fields appear only when `@deepseek-ai/dsh-subagent-route-policy` is mounted and the transport honors LLM routes; see that package for schemas and validation.
 
 ## Provider selection and lifecycle
 
@@ -37,7 +37,7 @@ Foreground and background calls are concurrency-safe: sibling delegations in one
 
 #### What the model sees
 
-The generated default [`subagent` schema](../../../docs/tool-catalog.md#deepseek-aidsh-tool-subagent) under this instance's configured name while its provider exists. Provider context inheritance changes the tool and prompt descriptions. Enabled background mode adds `run_in_background`: continuable mode documents its `true` default, runtime settlement notice, and explicit foreground override, while one-shot mode documents its `false` default and the job id collected with `job_output` or stopped with `job_kill`. While the tool is visible in an assembly's scope, a `tool:<toolName>` system-prompt section tells the model to start independent continuable delegations together, keep working while they run, and choose foreground only when its next action depends on the result; a tool restriction removes both its schema and this guidance.
+The generated default [`subagent` schema](../../../docs/tool-catalog.md#deepseek-aidsh-tool-subagent) under this instance's configured name while its provider exists. Provider context inheritance changes the tool and prompt descriptions. With `@deepseek-ai/dsh-subagent-route-policy` mounted on an in-process transport, the schema also includes optional `provider`, `model`, and `reasoning_effort`; product transports omit those fields. Enabled background mode adds `run_in_background`: continuable mode documents its `true` default, runtime settlement notice, and explicit foreground override, while one-shot mode documents its `false` default and the job id collected with `job_output` or stopped with `job_kill`. While the tool is visible in an assembly's scope, a `tool:<toolName>` system-prompt section tells the model to start independent continuable delegations together, keep working while they run, and choose foreground only when its next action depends on the result; a tool restriction removes both its schema and this guidance.
 
 #### Token effect
 

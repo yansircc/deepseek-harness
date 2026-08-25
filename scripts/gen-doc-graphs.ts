@@ -492,7 +492,16 @@ const SERVICE_ROLES: ServiceRole[] = [
     mode: 'seam',
     implementations: ['subagent-spawn-in-process', 'subagent-fork-in-process', 'subagent-acp', 'subagent-codex', 'subagent-claude-code', 'subagent-dsh-sdk'],
     consumers: ['tool-subagent', 'tool-subagent-control', 'tool-ralph'],
-    note: 'Providers implement transports; the service also owns optional Activation-based continuation orchestration, tool-subagent selects one-shot or continuable delegation, tool-subagent-control delivers follow-ups, and tool-ralph requires one fresh structured-output route.',
+    companions: ['subagent-route-policy'],
+    note: 'Providers implement transports; the service also owns optional Activation-based continuation orchestration, tool-subagent selects one-shot or continuable delegation, tool-subagent-control delivers follow-ups, and tool-ralph requires one fresh structured-output route. Optional subagent-route-policy owns logged-route inheritance and per-call route schemas.',
+  },
+  {
+    key: 'subagentRoute',
+    pkg: 'subagent-route-policy',
+    title: 'Subagent LLM route policy',
+    mode: 'core',
+    consumers: ['tool-subagent'],
+    note: 'Optional fork policy: short-circuits subagent/resolve-child-options with logged active-route inheritance and supplies per-call provider/model/effort schemas for in-process delegation Consumers.',
   },
   {
     key: 'agentTeams',

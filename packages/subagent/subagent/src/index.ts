@@ -36,7 +36,8 @@ import { scopeTarget } from '@deepseek-ai/dsh-scope'
 import type { Scoped } from '@deepseek-ai/dsh-scope'
 import { assertObjectJsonSchema } from '@deepseek-ai/dsh-tools'
 import type { ContentBlock, MessageId } from '@deepseek-ai/dsh-llm'
-import type { Agent } from '@deepseek-ai/dsh-agent'
+import type { Agent, AgentOptions } from '@deepseek-ai/dsh-agent'
+import type { ResolveChildAgentOptionsInput } from './child-agent.ts'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import type {
   ContinuableCreateRequest,
@@ -103,13 +104,25 @@ export { assertSubagentMaxDepth, delegationDepthOf } from './depth.ts'
 export {
   appendDelegatedPolicyOverrides,
   applyChildComposition,
+  baselineChildAgentOptions,
   captureDelegatedPolicyOverrides,
   childSessionMeta,
   resolveChildAgentOptions,
   resolveChildDepth,
   SubagentDepthError,
 } from './child-agent.ts'
-export type { ChildComposition, DelegatedPolicyOverrides } from './child-agent.ts'
+export type {
+  ChildComposition,
+  DelegatedPolicyOverrides,
+  ResolveChildAgentOptionsInput,
+} from './child-agent.ts'
+export type {
+  DelegationLlmCatalog,
+  DelegationRouteArgs,
+  ResolveDelegationRouteInput,
+  SubagentRoute,
+  SubagentRouteParameters,
+} from './route.ts'
 export type {
   ContinuableStart,
   ContinuableStartSpec,
@@ -164,6 +177,20 @@ declare module '@deepseek-ai/cordis' {
      * @mode emit
      */
     'subagent/end'(this: Scoped<SubagentRuntime>, info: SubagentRunEndInfo): void
+    /**
+     * Resolve child `AgentOptions` before in-process creation. `next()` yields
+     * create-time parent options plus request overrides
+     * ({@link baselineChildAgentOptions}); return a replacement to apply logged
+     * route inheritance, default-model fallback, or effort policy.
+     * @param input - parent, request overrides, and child depth.
+     * @param next - the baseline resolver.
+     * @mode waterfall
+     * @returns the options stamped onto `ctx.agents.create()`.
+     */
+    'subagent/resolve-child-options'(
+      input: ResolveChildAgentOptionsInput,
+      next: () => AgentOptions,
+    ): AgentOptions
   }
 }
 

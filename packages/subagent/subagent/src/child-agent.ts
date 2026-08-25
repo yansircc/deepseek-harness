@@ -27,16 +27,6 @@ import type {} from '@deepseek-ai/dsh-user-approval'
 import type {} from '@deepseek-ai/dsh-agent-presets'
 import { delegationDepthOf } from './depth.ts'
 
-/**
- * Minimal shape of the `agentDefaultModel` service's `currentSelection()` return.
- * Declared locally to avoid adding a peerDependency on `@deepseek-ai/dsh-agent-default-model`:
- * the service is read opportunistically via `ctx.get()` and may be absent.
- */
-interface DefaultModelSelection {
-  provider: string
-  model: string
-}
-
 /** Thrown when starting a child would exceed the requested depth cap. */
 export class SubagentDepthError extends Error {
   constructor(public readonly attemptedDepth: number, public readonly maxDepth: number) {
@@ -66,19 +56,49 @@ export function resolveChildDepth(parent: Agent, maxDepth: number | undefined): 
   return childDepth
 }
 
+/** Inputs for the `subagent/resolve-child-options` waterfall. */
+export interface ResolveChildAgentOptionsInput {
+  /** The delegating parent whose create-time options seed the baseline. */
+  readonly parent: Agent
+  /** Per-child overrides from the start request, if any. */
+  readonly requested: AgentOptions | undefined
+  /** The resolved delegation depth to stamp. */
+  readonly childDepth: number
+}
+
 /**
- * Resolve the child's `AgentOptions`: the parent's provider/model/maxTokens
- * route unless the request overrides it, stamped with the child's own
- * delegation depth. The parent's ACTIVE session route — its latest logged
- * request header, the provider/model the parent is really running — wins
- * over create-time `AgentOptions`. Host entry points seed those options from
- * the deployment default and leave a per-session UI pick in the log only; a
- * child that preferred options would inherit a key the parent is not using.
- * Only when the parent has neither a logged route nor an option does the
- * live `agentDefaultModel` selection apply. Reasoning effort follows the
- * active route when the child stays on that route; a provider/model override
- * drops the inherited effort so the new model keeps its own default unless
- * the request names one.
+ * Baseline child `AgentOptions`: the parent's create-time provider/model/
+ * maxTokens route unless the request overrides it, stamped with the child's
+ * own delegation depth. Plugins replace this through the
+ * `subagent/resolve-child-options` waterfall when a deployment needs logged
+ * route inheritance, default-model fallback, or effort policy.
+ * @param parent - the delegating parent whose create-time options seed the child.
+ * @param requested - per-child overrides, if any.
+ * @param childDepth - the resolved delegation depth to stamp.
+ * @returns the upstream-simple options for `ctx.agents.create()`.
+ */
+export function baselineChildAgentOptions(
+  parent: Agent,
+  requested: AgentOptions | undefined,
+  childDepth: number,
+): AgentOptions {
+  const parentProvider = parent.options.provider
+  const parentModel = parent.options.model
+  const parentMaxTokens = parent.options.maxTokens
+  return {
+    ...parentProvider !== undefined ? { provider: parentProvider } : {},
+    ...parentModel !== undefined ? { model: parentModel } : {},
+    ...parentMaxTokens !== undefined ? { maxTokens: parentMaxTokens } : {},
+    ...requested,
+    subagentDepth: childDepth,
+  }
+}
+
+/**
+ * Resolve the child's `AgentOptions` through the
+ * `subagent/resolve-child-options` waterfall. With no listeners, the result is
+ * {@link baselineChildAgentOptions}. A listener that returns without calling
+ * `next()` owns the full resolution.
  * @param parent - the delegating parent whose route the child inherits.
  * @param requested - per-child overrides, if any.
  * @param childDepth - the resolved delegation depth to stamp.
@@ -89,43 +109,11 @@ export function resolveChildAgentOptions(
   requested: AgentOptions | undefined,
   childDepth: number,
 ): AgentOptions {
-  const parentProvider = parent.options.provider
-  const parentModel = parent.options.model
-  const parentMaxTokens = parent.options.maxTokens
-  const parentEffort = parent.options.reasoningEffort
-  const headerConfig = parent.session.requestHeader()?.config
-  const activeProvider = headerConfig?.provider ?? parentProvider
-  const activeModel = headerConfig?.model ?? parentModel
-  const activeEffort = headerConfig?.reasoningEffort ?? parentEffort
-  const defaultSelection = activeModel === undefined
-    ? (parent.ctx.get('agentDefaultModel') as { currentSelection(): DefaultModelSelection } | undefined)?.currentSelection()
-    : undefined
-  const override = requested ?? {}
-  const routeChanged = (override.provider !== undefined && override.provider !== activeProvider)
-    || (override.model !== undefined && override.model !== activeModel)
-  const {
-    provider: _requestedProvider,
-    model: _requestedModel,
-    maxTokens: requestedMaxTokens,
-    reasoningEffort: requestedEffort,
-    ...requestedRest
-  } = override
-  const provider = override.provider ?? activeProvider ?? defaultSelection?.provider
-  const model = override.model ?? activeModel ?? defaultSelection?.model
-  const effort = requestedEffort !== undefined
-    ? requestedEffort
-    : routeChanged
-      ? undefined
-      : activeEffort
-  return {
-    ...provider !== undefined ? { provider } : {},
-    ...model !== undefined ? { model } : {},
-    ...parentMaxTokens !== undefined ? { maxTokens: parentMaxTokens } : {},
-    ...requestedMaxTokens !== undefined ? { maxTokens: requestedMaxTokens } : {},
-    ...effort !== undefined ? { reasoningEffort: effort } : {},
-    ...requestedRest,
-    subagentDepth: childDepth,
-  }
+  const input: ResolveChildAgentOptionsInput = { parent, requested, childDepth }
+  const next = (): AgentOptions => baselineChildAgentOptions(parent, requested, childDepth)
+  // Partial Agent mocks in unit tests may omit waterfall; fall back to baseline.
+  if (typeof parent.ctx.waterfall !== 'function') return next()
+  return parent.ctx.waterfall('subagent/resolve-child-options', input, next)
 }
 
 /**

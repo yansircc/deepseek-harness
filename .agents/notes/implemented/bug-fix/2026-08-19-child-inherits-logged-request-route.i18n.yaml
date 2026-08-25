@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-08-19-child-inherits-logged-request-route.md
-2026-08-19-child-inherits-logged-request-route.md: bb60b3ecff6195179451f5708a8df2d2e757bc06
-2026-08-19-child-inherits-logged-request-route.zh.md: 0f748c59f0dda62067c04d2579a7b5eed3e4f30b
+2026-08-19-child-inherits-logged-request-route.md: 1dff1fa19796475fbdb318bd08d39122006e1505
+2026-08-19-child-inherits-logged-request-route.zh.md: 3e78d3bae0bb199b20ff38e6b98a47c3e6232488
