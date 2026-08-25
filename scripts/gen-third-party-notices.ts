@@ -69,6 +69,16 @@ const OVERRIDES: Record<string, { license?: string; repo?: string }> = {
   // Rust workspaces publishing npm bins without `license` in package.json.
   'oxlint': { license: 'MIT', repo: 'https://github.com/oxc-project/oxc' },
   'oxlint-tsgolint': { license: 'MIT', repo: 'https://github.com/oxc-project/tsgolint' },
+  // Optional platform package published without license/repository metadata.
+  '@effect/tsgo': { license: 'MIT', repo: 'https://github.com/Effect-TS/tsgo' },
+  // Published Effect development packages omit repository/license fields.
+  '@effect/vitest': { license: 'MIT', repo: 'https://github.com/Effect-TS/effect' },
+  // DefinitelyTyped packages publish without complete repository metadata.
+  '@types/chrome': { license: 'MIT', repo: 'https://github.com/DefinitelyTyped/DefinitelyTyped' },
+  // Effect beta manifests omit package metadata required by this generator.
+  'effect': { license: 'MIT', repo: 'https://github.com/Effect-TS/effect' },
+  // Vite Plus beta manifests omit package metadata required by this generator.
+  'vite-plus': { license: 'MIT', repo: 'https://github.com/voidzero-dev/vite-plus' },
   // `license: SEE LICENSE IN LICENSE`: the servers repo is mid MIT→Apache-2.0
   // relicensing, so the effective terms are per-contribution.
   '@modelcontextprotocol/server-everything': { license: 'MIT / Apache-2.0', repo: 'https://github.com/modelcontextprotocol/servers' },

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DSH Chrome Connector</title>
+    <link rel="stylesheet" href="{{extension-asset:popupStyles}}" />
+  </head>
+  <body>
+    <main>
+      <h1>DSH Chrome Connector</h1>
+      <p id="identity" class="muted">Loading connector identity…</p>
+      <p id="state" role="status">Inspecting local status…</p>
+      <section id="stale-recovery" hidden>
+        <p id="stale-status" class="muted"></p>
+        <button type="button" id="clear-stale">Clear stale ownership</button>
+        <p class="muted">Tabs are never closed or adopted.</p>
+      </section>
+    </main>
+    <script src="{{extension-asset:popupScript}}"></script>
+  </body>
+</html>

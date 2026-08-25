@@ -1,5 +1,12 @@
-# Chrome capability family
+# chrome/ — signed-in Chrome capability
 
-The Chrome capability family separates provider-neutral command ownership from the local bridge implementation and model-facing tools. `@deepseek-ai/dsh-chrome-protocol` owns executable command and health vocabulary; `@deepseek-ai/dsh-chrome` owns the Cordis Service Definition and exact-Agent lifecycle; `@deepseek-ai/dsh-chrome-local` provides the loopback connector, authenticated single slot, abort-aware command store, and process lifecycle. The `chrome_*` Consumer migrates into this family in a subsequent slice.
+The Chrome capability family separates provider-neutral command ownership, local connector transport, authored browser code, and model-facing Consumers.
 
-Chrome remains a host-plane capability because its local bridge owns process-wide browser connector state. The Web UI card is a separate client Consumer.
+| Package | Role | ctx key |
+|---|---|---|
+| [`chrome-protocol/`](chrome-protocol/README.md) | Executable command, result, revision, and health vocabulary shared across peers | none |
+| [`chrome/`](chrome/README.md) | Exact-Agent Cordis Service Definition and provider lifecycle | `ctx.chrome` |
+| [`chrome-local/`](chrome-local/README.md) | Loopback connector, authenticated single slot, abort-aware command store, and process lifecycle | registers on `ctx.chrome` |
+| [`chrome-extension/`](chrome-extension/README.md) | Authored Manifest V3 connector source, deterministic build, and committed browser artifact | none; loaded by Chrome |
+
+Chrome remains a host-plane capability because its local provider owns process-wide browser connector state. The model-facing tools and Web settings card are separate Consumers.
