@@ -1,0 +1,29 @@
+{
+  "$schema": "https://worktreectl.local/schemas/worktree-protocol-v1.schema.json",
+  "version": 1,
+  "lifecycle": {
+    "hydrate": {
+      "command": ["node", "scripts/worktree-lifecycle.mjs", "hydrate"],
+      "timeoutSeconds": 60
+    },
+    "bootstrap": {
+      "command": ["node", "scripts/worktree-lifecycle.mjs", "bootstrap"],
+      "timeoutSeconds": 1200
+    },
+    "verify": {
+      "command": ["node", "scripts/worktree-lifecycle.mjs", "verify"],
+      "timeoutSeconds": 300
+    },
+    "cleanup": {
+      "command": ["node", "scripts/worktree-lifecycle.mjs", "cleanup"],
+      "timeoutSeconds": 300
+    }
+  },
+  "residueChecks": [
+    {
+      "name": "checkout-local lifecycle residue",
+      "command": ["node", "scripts/worktree-lifecycle.mjs", "residue-check"],
+      "timeoutSeconds": 60
+    }
+  ]
+}
