@@ -18,6 +18,7 @@ Status: implemented
 - 仅刷新经评审的有意 aria 差异：time-context 注入行、StatsLine 的 Tools/Uncached 文案，以及 Chrome/zeroY 插件卡片。
 - Trajectory 流式滚动预算从 5 提到 6，以吸收已交付 time-context 行带来的额外布局轮次，同时仍能抓住失控滚动。
 - 可配置插件卡片按 namespace id 排序，避免异步 client 激活打乱注册顺序时 Chrome/zeroY（以及之后的同类卡片）在多次启动间互换位置。
+- `DSH_WEB_SNAPSHOT_WORKERS=1` 为并行浏览器 scaffold 会耗尽临时端口的宿主选择串行 built runner；大于一的值继续使用有界 CI runner。
 
 ## Alternatives considered
 

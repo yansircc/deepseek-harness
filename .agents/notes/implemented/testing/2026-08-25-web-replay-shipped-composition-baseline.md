@@ -18,6 +18,7 @@ Treat the currently shipped Web composition as the replay baseline:
 - Aria goldens are refreshed only for reviewed intentional diffs: time-context injection rows, StatsLine Tools/Uncached text, and the Chrome/zeroY plugin cards.
 - Trajectory streaming scroll budget rises from 5 to 6 to absorb the extra layout pass from shipped time-context rows without loosening runaway-scroll detection.
 - Configurable plugin cards sort by namespace id so Chrome/zeroY (and later peers) cannot swap order across boots when async client activation rearranges registration.
+- `DSH_WEB_SNAPSHOT_WORKERS=1` selects the serial built runner for hosts whose parallel browser scaffolds exhaust ephemeral ports; values above one keep the bounded CI runner.
 
 ## Alternatives considered
 
