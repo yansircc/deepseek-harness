@@ -25,8 +25,6 @@ import { SubagentError } from '@deepseek-ai/dsh-subagent'
 import type { SubagentListEntry as CatalogSubagentListEntry } from '@deepseek-ai/dsh-subagent'
 import { isUserInvocable } from '@deepseek-ai/dsh-skill'
 import type { Workspace, WorkspaceRecord } from '@deepseek-ai/dsh-workspace'
-// Type-only: resolves `ctx.get('workspaceGit')` without pending assemblies that omit the plugin.
-import type {} from '@deepseek-ai/dsh-workspace-git'
 import {
   workspaceDomainState, workspaceRecord, WorkspaceId as brandWorkspaceId,
   WorkspaceMoveInvalidError, WorkspaceOrderInvalidError, WorkspaceUnknownSessionError,
@@ -2819,26 +2817,6 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
           })
         }
         return ok(request, { archivedSessionIds: [...ctx.workspaceRegistry.archivedSessionIds] })
-      },
-
-      async gitStatus(request) {
-        const { path } = request.payload
-        if (path === '') {
-          return err(request, {
-            code: 'workspace-invalid-path',
-            message: 'workspace.gitStatus requires a non-empty path',
-            details: { path },
-          })
-        }
-        const workspaceGit = ctx.get('workspaceGit')
-        if (workspaceGit === undefined) {
-          return err(request, {
-            code: 'internal',
-            message: 'workspace.gitStatus requires @deepseek-ai/dsh-workspace-git',
-            details: {},
-          })
-        }
-        return ok(request, await workspaceGit.sample(path))
       },
     },
 

@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-08-25-ui-workspace-git-client-plugin.md
+2026-08-25-ui-workspace-git-client-plugin.md: c1a3346dcfe82325ef61fec1e9cc0c9d8b4cec12
+2026-08-25-ui-workspace-git-client-plugin.zh.md: 13da00d2ae088c9423795a1daa1d0624e7b0af3a

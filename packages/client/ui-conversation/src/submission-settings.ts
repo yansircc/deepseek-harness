@@ -18,7 +18,7 @@ export type BusyEnterBehavior = typeof BUSY_ENTER_BEHAVIORS[number]
 export const DEFAULT_BUSY_ENTER_BEHAVIOR: BusyEnterBehavior = 'queue'
 
 /**
- * Boolean fields that hide one stats-line group or one workspace-git chip.
+ * Boolean fields that hide one stats-line group.
  * Each defaults on; a group with no data still hides itself when its flag is on.
  */
 export const DISPLAY_FLAG_FIELDS = [
@@ -27,16 +27,12 @@ export const DISPLAY_FLAG_FIELDS = [
   'showStatsLatency',
   'showStatsCacheHit',
   'showStatsTokens',
-  'showGitBranch',
-  'showGitDirty',
-  'showGitUpstream',
-  'showGitDiffstat',
 ] as const
 
 /** One durable display-preference field. */
 export type ConversationDisplayField = typeof DISPLAY_FLAG_FIELDS[number]
 
-/** Live display flags the stats line and workspace-git chrome read. */
+/** Live display flags the stats line reads. */
 export type ConversationDisplayPreferences = Record<ConversationDisplayField, boolean>
 
 /** Stats-line groups, in strip order. */
@@ -48,14 +44,6 @@ export const STATS_DISPLAY_FIELDS = [
   'showStatsTokens',
 ] as const satisfies readonly ConversationDisplayField[]
 
-/** Workspace-git chips, in header order. */
-export const GIT_DISPLAY_FIELDS = [
-  'showGitBranch',
-  'showGitDirty',
-  'showGitUpstream',
-  'showGitDiffstat',
-] as const satisfies readonly ConversationDisplayField[]
-
 /** Every display flag on — the schema default and the no-preference fallback. */
 export const DEFAULT_DISPLAY_FLAGS: ConversationDisplayPreferences = {
   showStatsCounts: true,
@@ -63,10 +51,6 @@ export const DEFAULT_DISPLAY_FLAGS: ConversationDisplayPreferences = {
   showStatsLatency: true,
   showStatsCacheHit: true,
   showStatsTokens: true,
-  showGitBranch: true,
-  showGitDirty: true,
-  showGitUpstream: true,
-  showGitDiffstat: true,
 }
 
 /** Durable conversation section shared by the Host schema and the browser scope. */
@@ -85,14 +69,10 @@ export const ConversationSettingsSchema: z<ConversationSettings> = z.object({
   showStatsLatency: displayFlagSchema,
   showStatsCacheHit: displayFlagSchema,
   showStatsTokens: displayFlagSchema,
-  showGitBranch: displayFlagSchema,
-  showGitDirty: displayFlagSchema,
-  showGitUpstream: displayFlagSchema,
-  showGitDiffstat: displayFlagSchema,
 })
 
 /**
- * Copy the nine display flags out of a validated section.
+ * Copy the five display flags out of a validated section.
  * @param section - Host-accepted conversation settings.
  * @returns the display-preference record the browser stores live.
  */
@@ -103,9 +83,5 @@ export function displayFlagsOf(section: ConversationSettings): ConversationDispl
     showStatsLatency: section.showStatsLatency,
     showStatsCacheHit: section.showStatsCacheHit,
     showStatsTokens: section.showStatsTokens,
-    showGitBranch: section.showGitBranch,
-    showGitDirty: section.showGitDirty,
-    showGitUpstream: section.showGitUpstream,
-    showGitDiffstat: section.showGitDiffstat,
   }
 }

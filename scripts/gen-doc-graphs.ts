@@ -112,8 +112,8 @@ const SERVICE_ROLES: ServiceRole[] = [
     title: 'LLM adapter registry',
     mode: 'seam',
     implementations: ['llm-deepseek', 'llm-pi-ai', 'llm-replay'],
-    consumers: ['agent-loop', 'compaction-basic'],
-    note: 'Adapters register provider implementations; the loop and compaction call the provider-neutral stream service.',
+    consumers: ['agent-loop', 'compaction-basic', 'tool-list-models'],
+    note: 'Adapters register provider implementations; the loop and compaction call the provider-neutral stream service, and tool-list-models projects the live catalog to the model.',
   },
   {
     key: 'tokenMeter',
@@ -244,8 +244,7 @@ const SERVICE_ROLES: ServiceRole[] = [
     pkg: 'workspace-git',
     title: 'Host cwd git sample',
     mode: 'core',
-    consumers: ['apiproxy'],
-    note: 'Samples one cwd for session-header chrome; the sample is never written to a session log.',
+    note: 'Samples one cwd for session-header chrome through the Host unary Remote contract; the sample is never written to a session log.',
   },
   {
     key: 'sessionQuery',

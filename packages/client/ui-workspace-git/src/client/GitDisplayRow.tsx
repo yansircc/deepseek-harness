@@ -1,22 +1,32 @@
 /** General Settings block for the four workspace-git header chips. */
+import type { SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import { GIT_DISPLAY_FIELDS } from '../../submission-settings.ts'
-import type { ConversationKey } from '../locales.ts'
-import type { DisplayPreferenceRowInjected } from './StatsDisplayRow.tsx'
-import css from './DisplayToggle.module.css'
+import { GIT_DISPLAY_FIELDS, type WorkspaceGitDisplayField, type WorkspaceGitDisplayPreferences } from '../git-display-settings.ts'
+import type { WorkspaceGitKey } from './locales.ts'
+import css from './GitDisplayRow.module.css'
+
+/** Registration-side display-preference face. */
+export interface GitDisplayRowInjected {
+  hooks: {
+    /** Persisted display flags bound as useDisplay. */
+    display: SnapshotStore<WorkspaceGitDisplayPreferences>
+  }
+  /** Change one display flag. */
+  setDisplay: (field: WorkspaceGitDisplayField, value: boolean) => void
+}
 
 /** Full Settings-row props. */
 export type GitDisplayRowProps =
   PropsRuntime<'settings.general.item'>
-  & PropsLocale<'conversation'>
-  & InjectFace<DisplayPreferenceRowInjected>
+  & PropsLocale<'workspaceGit'>
+  & InjectFace<GitDisplayRowInjected>
 
 const LABELS = {
   showGitBranch: 'settings.git.showGitBranch',
   showGitDirty: 'settings.git.showGitDirty',
   showGitUpstream: 'settings.git.showGitUpstream',
   showGitDiffstat: 'settings.git.showGitDiffstat',
-} as const satisfies Record<typeof GIT_DISPLAY_FIELDS[number], ConversationKey>
+} as const satisfies Record<typeof GIT_DISPLAY_FIELDS[number], WorkspaceGitKey>
 
 /**
  * Render the workspace-git display-preference switches.

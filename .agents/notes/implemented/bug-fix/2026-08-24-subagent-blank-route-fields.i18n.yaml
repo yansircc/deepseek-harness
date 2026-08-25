@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-08-24-subagent-blank-route-fields.md
-2026-08-24-subagent-blank-route-fields.md: 57dadff6d875fc39d90931069ec2f83cf651a558
-2026-08-24-subagent-blank-route-fields.zh.md: e76efa3671c6c87b104d0311c527463bcf022ffb
+2026-08-24-subagent-blank-route-fields.md: 5e3b70bef5ef4201d62cb9070128945bf34e0ad0
+2026-08-24-subagent-blank-route-fields.zh.md: c28bd0b714bba89f2f12a26c7cd6f7b00e1aa0fb

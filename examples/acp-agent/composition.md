@@ -45,8 +45,8 @@ flowchart LR
   cfg --> plugin_acp_tool_subagent_control
   plugin_acp_tool_subagent_list_agents["tool-subagent-list-agents<br/>@deepseek-ai/dsh-tool-subagent-control/list-agents"]
   cfg --> plugin_acp_tool_subagent_list_agents
-  plugin_acp_tool_subagent_list_models["tool-subagent-list-models<br/>@deepseek-ai/dsh-tool-subagent-control/list-models"]
-  cfg --> plugin_acp_tool_subagent_list_models
+  plugin_acp_tool_list_models["tool-list-models<br/>@deepseek-ai/dsh-tool-list-models"]
+  cfg --> plugin_acp_tool_list_models
   plugin_acp_tool_subagent_report["tool-subagent-report<br/>@deepseek-ai/dsh-tool-subagent-report"]
   cfg --> plugin_acp_tool_subagent_report
   plugin_acp_tool_subagent["tool-subagent<br/>@deepseek-ai/dsh-tool-subagent"]
@@ -92,7 +92,7 @@ flowchart LR
 | `subagent-fork-in-process` | `@deepseek-ai/dsh-subagent-fork-in-process` |
 | `tool-subagent-control` | `@deepseek-ai/dsh-tool-subagent-control` |
 | `tool-subagent-list-agents` | `@deepseek-ai/dsh-tool-subagent-control/list-agents` |
-| `tool-subagent-list-models` | `@deepseek-ai/dsh-tool-subagent-control/list-models` |
+| `tool-list-models` | `@deepseek-ai/dsh-tool-list-models` |
 | `tool-subagent-report` | `@deepseek-ai/dsh-tool-subagent-report` |
 | `tool-subagent` | `@deepseek-ai/dsh-tool-subagent` |
 | `tool-subagent-fork` | `@deepseek-ai/dsh-tool-subagent` |

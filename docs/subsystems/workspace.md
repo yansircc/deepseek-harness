@@ -153,15 +153,16 @@ Source: [`packages/host/directory-picker/src/index.ts`](../../packages/host/dire
 
 ### `ctx.workspaceGit` — `WorkspaceGit`
 
-Host git sample for one cwd. A missing git binary, a path that is not a work tree, or a timeout resolves `{ present: false }` rather than throwing.
+Host git sample for one cwd. A missing git binary, a path that is not a work tree, or a timeout resolves `{ present: false }` rather than throwing. Caller cancellation rides the final `signal` parameter of the Remote face.
 
 ```ts cordis-catalog
 /**
  * Sample one cwd. Empty cwd returns `{ present: false }` without spawning git.
  * @param cwd - directory to sample, usually a session cwd.
+ * @param signal - caller cancellation combined with `timeoutMs`.
  * @returns the sample for header chrome.
  */
-sample(cwd: string): Promise<WorkspaceGitSample>
+@Remote('sample') sample(cwd: string, signal: AbortSignal): Promise<WorkspaceGitSample>
 ```
 
 Source: [`packages/workspace/workspace-git/src/index.ts`](../../packages/workspace/workspace-git/src/index.ts)

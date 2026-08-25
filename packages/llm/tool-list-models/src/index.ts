@@ -1,16 +1,16 @@
 /**
- * The globally named `list_models` tool: a thin model-facing adapter over
- * `ctx.llm.listProviders()`, `listModels()`, and `resolveModelInfo()`. It
- * stays separately loadable from the continuation-control tools so a
- * deployment can expose the live LLM catalog without child discovery.
- * @module @deepseek-ai/dsh-tool-subagent-control/list-models
+ * The globally named `list_models` tool: a thin model-facing Consumer over
+ * `ctx.llm.listProviders()`, `listModels()`, and `resolveModelInfo()`. It is
+ * independently loadable so a deployment can expose the live LLM catalog
+ * without mounting subagent continuation controls.
+ * @module @deepseek-ai/dsh-tool-list-models
  */
 
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { LlmProviderInfo, LlmResolvedModelInfo } from '@deepseek-ai/dsh-llm'
 
-export const name = 'tool-subagent-list-models'
+export const name = 'tool-list-models'
 export const inject = ['tools', 'llm']
 
 interface ListModelsRequest {

@@ -191,9 +191,6 @@ function fakeApi(overrides: Partial<{ muxFrames: MuxFrame[]; hostFrames: HostFra
       async archiveSession(request) {
         return { rpcId: request.rpcId, result: { ok: true, value: { archivedSessionIds: [request.payload.sessionId] } } }
       },
-      async gitStatus(request) {
-        return { rpcId: request.rpcId, result: { ok: true, value: { present: false as const } } }
-      },
     },
     agentPresets: {
       list(request: RpcRequest<{}>) {

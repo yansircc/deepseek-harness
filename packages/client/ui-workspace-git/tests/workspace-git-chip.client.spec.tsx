@@ -5,10 +5,10 @@ import { bindSnapshotSelector, makeTranslate } from '@deepseek-ai/dsh-client-tes
 import {
   createSnapshotStore, type SessionId, type SessionListState, type SessionSummary,
 } from '@deepseek-ai/dsh-client-runtime/client'
-import type { WorkspaceGitStatus } from '@deepseek-ai/dsh-client-connection/client'
-import { gitChips, GIT_STATUS_POLL_MS, WorkspaceGitChip } from '../src/client/skeleton/WorkspaceGitChip.tsx'
-import type { WorkspaceGitChipProps } from '../src/client/skeleton/WorkspaceGitChip.tsx'
-import { DEFAULT_DISPLAY_FLAGS, type ConversationDisplayPreferences } from '../src/submission-settings.ts'
+import type { WorkspaceGitSample } from '../src/client/sample-status.ts'
+import { gitChips, GIT_STATUS_POLL_MS, WorkspaceGitChip } from '../src/client/WorkspaceGitChip.tsx'
+import type { WorkspaceGitChipProps } from '../src/client/WorkspaceGitChip.tsx'
+import { DEFAULT_GIT_DISPLAY_FLAGS, type WorkspaceGitDisplayPreferences } from '../src/git-display-settings.ts'
 import { en } from '../src/client/locales.ts'
 
 afterEach(() => {
@@ -19,7 +19,7 @@ afterEach(() => {
 const SID = 's1' as SessionId
 const t = makeTranslate(en)
 
-const present: Extract<WorkspaceGitStatus, { present: true }> = {
+const present: Extract<WorkspaceGitSample, { present: true }> = {
   present: true,
   shortHead: '4a2c1f',
   dirty: 3,
@@ -46,15 +46,15 @@ function sessions(cwd?: string) {
 }
 
 function chipProps(
-  sampleGit: (path: string, signal?: AbortSignal) => Promise<WorkspaceGitStatus>,
+  sampleGit: (path: string, signal?: AbortSignal) => Promise<WorkspaceGitSample>,
   options: {
-    display?: ConversationDisplayPreferences
+    display?: WorkspaceGitDisplayPreferences
     cwd?: string | undefined
     /** When true, omit cwd on the session summary entirely. */
     omitCwd?: boolean
   } = {},
 ): WorkspaceGitChipProps {
-  const display = options.display ?? DEFAULT_DISPLAY_FLAGS
+  const display = options.display ?? DEFAULT_GIT_DISPLAY_FLAGS
   const useSessions = options.omitCwd
     ? sessions(undefined)
     : sessions(options.cwd ?? '/tmp/ws')
@@ -68,8 +68,8 @@ function chipProps(
 }
 
 function mount(
-  sampleGit: (path: string, signal?: AbortSignal) => Promise<WorkspaceGitStatus>,
-  display: ConversationDisplayPreferences = DEFAULT_DISPLAY_FLAGS,
+  sampleGit: (path: string, signal?: AbortSignal) => Promise<WorkspaceGitSample>,
+  display: WorkspaceGitDisplayPreferences = DEFAULT_GIT_DISPLAY_FLAGS,
   cwd: string | undefined = '/tmp/ws',
 ) {
   return render(<WorkspaceGitChip {...chipProps(sampleGit, { display, cwd })} />)
@@ -77,46 +77,46 @@ function mount(
 
 describe('gitChips', () => {
   it('joins the four facts and hides zero sides', () => {
-    expect(gitChips(present, DEFAULT_DISPLAY_FLAGS, t))
+    expect(gitChips(present, DEFAULT_GIT_DISPLAY_FLAGS, t))
       .toEqual(['feat/stats', '3', '↑2 ↓1', '+120 −30'])
-    expect(gitChips({ present: false }, DEFAULT_DISPLAY_FLAGS, t)).toEqual([])
+    expect(gitChips({ present: false }, DEFAULT_GIT_DISPLAY_FLAGS, t)).toEqual([])
     expect(gitChips({
       present: true, shortHead: '4a2c1f', dirty: 0, insertions: 0, deletions: 0,
-    }, DEFAULT_DISPLAY_FLAGS, t)).toEqual(['HEAD 4a2c1f'])
+    }, DEFAULT_GIT_DISPLAY_FLAGS, t)).toEqual(['HEAD 4a2c1f'])
     expect(gitChips(present, {
-      ...DEFAULT_DISPLAY_FLAGS,
+      ...DEFAULT_GIT_DISPLAY_FLAGS,
       showGitBranch: false, showGitDirty: false, showGitUpstream: false, showGitDiffstat: false,
     }, t)).toEqual([])
     expect(gitChips({
       ...present, ahead: 0, behind: 2, insertions: 5, deletions: 0,
-    }, DEFAULT_DISPLAY_FLAGS, t)).toEqual(['feat/stats', '3', '↓2', '+5'])
+    }, DEFAULT_GIT_DISPLAY_FLAGS, t)).toEqual(['feat/stats', '3', '↓2', '+5'])
   })
 })
 
 describe('WorkspaceGitChip', () => {
   it('renders joined chips and hides a miss', async () => {
-    const sampleGit = vi.fn(async (): Promise<WorkspaceGitStatus> => present)
+    const sampleGit = vi.fn(async (): Promise<WorkspaceGitSample> => present)
     mount(sampleGit)
     expect((await screen.findByLabelText('Workspace Git')).textContent)
       .toBe('feat/stats · 3 · ↑2 ↓1 · +120 −30')
     expect(screen.getByLabelText('Workspace Git').getAttribute('title'))
       .toBe('Working-tree added and deleted lines versus HEAD, not this conversation')
     cleanup()
-    mount(vi.fn(async (): Promise<WorkspaceGitStatus> => ({ present: false })))
+    mount(vi.fn(async (): Promise<WorkspaceGitSample> => ({ present: false })))
     await act(async () => { await Promise.resolve() })
     expect(screen.queryByLabelText('Workspace Git')).toBeNull()
   })
 
   it('does not sample when every git flag is off or cwd is missing', async () => {
-    const sampleGit = vi.fn(async (): Promise<WorkspaceGitStatus> => present)
+    const sampleGit = vi.fn(async (): Promise<WorkspaceGitSample> => present)
     mount(sampleGit, {
-      ...DEFAULT_DISPLAY_FLAGS,
+      ...DEFAULT_GIT_DISPLAY_FLAGS,
       showGitBranch: false, showGitDirty: false, showGitUpstream: false, showGitDiffstat: false,
     })
     await act(async () => { await Promise.resolve() })
     expect(sampleGit).not.toHaveBeenCalled()
     cleanup()
-    mount(sampleGit, DEFAULT_DISPLAY_FLAGS, '')
+    mount(sampleGit, DEFAULT_GIT_DISPLAY_FLAGS, '')
     await act(async () => { await Promise.resolve() })
     expect(sampleGit).not.toHaveBeenCalled()
     cleanup()
@@ -139,9 +139,9 @@ describe('WorkspaceGitChip', () => {
 
   it('waits for each sample to settle before scheduling the next poll', async () => {
     vi.useFakeTimers()
-    let resolveSample!: (value: WorkspaceGitStatus) => void
+    let resolveSample!: (value: WorkspaceGitSample) => void
     const sampleGit = vi.fn(
-      (_path: string, _signal?: AbortSignal) => new Promise<WorkspaceGitStatus>((resolve) => { resolveSample = resolve }),
+      (_path: string, _signal?: AbortSignal) => new Promise<WorkspaceGitSample>((resolve) => { resolveSample = resolve }),
     )
     mount(sampleGit)
     await act(async () => { await Promise.resolve() })
@@ -159,10 +159,10 @@ describe('WorkspaceGitChip', () => {
 
   it('ignores a late sample after cwd change and aborts the prior signal', async () => {
     vi.useFakeTimers()
-    let resolveFirst!: (value: WorkspaceGitStatus) => void
-    const first = new Promise<WorkspaceGitStatus>((resolve) => { resolveFirst = resolve })
+    let resolveFirst!: (value: WorkspaceGitSample) => void
+    const first = new Promise<WorkspaceGitSample>((resolve) => { resolveFirst = resolve })
     const sampleGit = vi.fn(
-      (_path: string, _signal?: AbortSignal): Promise<WorkspaceGitStatus> => Promise.resolve(present),
+      (_path: string, _signal?: AbortSignal): Promise<WorkspaceGitSample> => Promise.resolve(present),
     )
       .mockImplementationOnce(() => first)
       .mockResolvedValue({ ...present, branch: 'next' })
@@ -175,7 +175,7 @@ describe('WorkspaceGitChip', () => {
     const props = {
       sessionId: SID,
       useSessions: bindSnapshotSelector(sessionsStore),
-      useDisplay: bindSnapshotSelector(createSnapshotStore(DEFAULT_DISPLAY_FLAGS)),
+      useDisplay: bindSnapshotSelector(createSnapshotStore(DEFAULT_GIT_DISPLAY_FLAGS)),
       sampleGit,
       t,
     } as unknown as WorkspaceGitChipProps
@@ -203,8 +203,8 @@ describe('WorkspaceGitChip', () => {
   })
 
   it('aborts the in-flight sample on unmount and drops its late write', async () => {
-    let resolveSample!: (value: WorkspaceGitStatus) => void
-    const pending = new Promise<WorkspaceGitStatus>((resolve) => { resolveSample = resolve })
+    let resolveSample!: (value: WorkspaceGitSample) => void
+    const pending = new Promise<WorkspaceGitSample>((resolve) => { resolveSample = resolve })
     const sampleGit = vi.fn(
       (_path: string, _signal?: AbortSignal) => pending,
     )

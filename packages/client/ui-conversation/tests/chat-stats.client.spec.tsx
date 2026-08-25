@@ -174,12 +174,17 @@ describe('formatters', () => {
 describe('StatsLine', () => {
   const USAGE = { uncachedInputTokens: 10, outputTokens: 5, cacheReadTokens: 90, cacheWriteTokens: 0 }
 
-  /** A whole-log sessionStats value: zeros plus overrides. */
+  /** A whole-log sessionStats value: zeros plus overrides (no toolCalls — that rides sessionToolStats). */
   function sessionStats(overrides: Record<string, number>): Record<string, number> {
     return {
-      turns: 0, steps: 0, llmMs: 0, toolMs: 0, toolCalls: 0, ttftMs: 0, ttftSteps: 0, decodeMs: 0, decodeTokens: 0,
+      turns: 0, steps: 0, llmMs: 0, toolMs: 0, ttftMs: 0, ttftSteps: 0, decodeMs: 0, decodeTokens: 0,
       ...overrides,
     }
+  }
+
+  /** A whole-log sessionToolStats value: zeros plus overrides. */
+  function sessionToolStats(overrides: Record<string, number> = {}): Record<string, number> {
+    return { toolCalls: 0, ...overrides }
   }
 
   /** Stub the projection seat: a key-addressed table of whole values. */
@@ -354,9 +359,10 @@ describe('StatsLine', () => {
     const view = render(<StatsLine {...props(source, {
       tokenUsage: USAGE,
       sessionStats: sessionStats({
-        turns: 200, steps: 200, llmMs: 100_000, toolMs: 62_000, toolCalls: 47,
+        turns: 200, steps: 200, llmMs: 100_000, toolMs: 62_000,
         ttftMs: 1_600, ttftSteps: 2, decodeMs: 3_000, decodeTokens: 60,
       }),
+      sessionToolStats: sessionToolStats({ toolCalls: 47 }),
     })} />)
     expect(view.container.textContent).toBe(
       '200 turns · 200 steps| LLM 1m40s · Tools 47× 1m2s| TTFT avg 0.8s · 20 tok/s| Cache hit 90%| Uncached 10 · Input 100 · Output 5',

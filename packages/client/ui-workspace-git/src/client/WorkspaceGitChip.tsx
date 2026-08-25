@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
-import type { WorkspaceGitStatus } from '@deepseek-ai/dsh-client-connection/client'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { ConversationDisplayPreferences } from '../../submission-settings.ts'
+import type { WorkspaceGitDisplayPreferences } from '../git-display-settings.ts'
+import type { WorkspaceGitSample } from './sample-status.ts'
 import css from './WorkspaceGitChip.module.css'
 
 /** Presentation cadence for a cwd sample; not a deployment knob. */
@@ -14,33 +14,33 @@ export const GIT_STATUS_POLL_MS = 5_000
 export interface WorkspaceGitChipInjected {
   hooks: {
     /** Persisted display flags bound as useDisplay. */
-    display: SnapshotStore<ConversationDisplayPreferences>
+    display: SnapshotStore<WorkspaceGitDisplayPreferences>
   }
   /**
-   * Sample git status for one cwd. RPC failures become `{ present: false }`.
+   * Sample git status for one cwd. Remote failures become `{ present: false }`.
    * @param path - session cwd.
    * @param signal - optional abort for cwd/settings teardown; ignored writers
    *   still drop results when the effect has cleaned up.
    */
-  sampleGit: (path: string, signal?: AbortSignal) => Promise<WorkspaceGitStatus>
+  sampleGit: (path: string, signal?: AbortSignal) => Promise<WorkspaceGitSample>
 }
 
 /** Full header-utility props. */
 export type WorkspaceGitChipProps =
   PropsRuntime<'conversation.session.header.utilities'>
-  & PropsLocale<'conversation'>
+  & PropsLocale<'workspaceGit'>
   & InjectFace<WorkspaceGitChipInjected>
 
 /**
  * Build the visible chips from one sample and the four git flags.
  * @param status - latest Host sample.
  * @param display - live display flags.
- * @param t - conversation locale seat.
+ * @param t - workspace-git locale seat.
  * @returns ordered chip texts, empty when nothing should render.
  */
 export function gitChips(
-  status: WorkspaceGitStatus,
-  display: ConversationDisplayPreferences,
+  status: WorkspaceGitSample,
+  display: WorkspaceGitDisplayPreferences,
   t: WorkspaceGitChipProps['t'],
 ): string[] {
   if (!status.present) return []
@@ -84,7 +84,7 @@ export function WorkspaceGitChip({
     || display.showGitDirty
     || display.showGitUpstream
     || display.showGitDiffstat
-  const [status, setStatus] = useState<WorkspaceGitStatus | null>(null)
+  const [status, setStatus] = useState<WorkspaceGitSample | null>(null)
 
   useEffect(() => {
     if (!gitOn || cwd === undefined || cwd === '') {

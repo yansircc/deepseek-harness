@@ -37,8 +37,6 @@ interface SessionStatsTotals {
   llmMs: number
   /** Summed matched tool call→result wall time, ms. */
   toolMs: number
-  /** Matched tool pairs that contributed to `toolMs`. */
-  toolCalls: number
   /** Summed first-token latency over `ttftSteps`, ms. */
   ttftMs: number
   /** Steps carrying a recorded first token. */
@@ -75,13 +73,18 @@ const sessionStatsSchema = z.object({
   steps: z.number().int().nonnegative(),
   llmMs: z.number().nonnegative(),
   toolMs: z.number().nonnegative(),
-  toolCalls: z.number().int().nonnegative(),
   ttftMs: z.number().nonnegative(),
   ttftSteps: z.number().int().nonnegative(),
   decodeMs: z.number().nonnegative(),
   decodeTokens: z.number().nonnegative(),
 }).strict()
 
+/**
+ * The fold state's shape (totals plus in-flight boundaries), validated on
+ * persisted-cache rows after their `ver` gate — the unit's input boundary.
+ * The view is a strict subset of the state, so this schema extends
+ * `sessionStatsSchema` (the wire output boundary) with the boundary fields.
+ */
 const sessionStatsStateSchema = sessionStatsSchema.extend({
   lastTurn: z.number().int().nonnegative().nullable(),
   openStep: z.object({
@@ -108,14 +111,13 @@ function usageOutputTokens(usage: unknown): number | null {
 /** The `sessionStats` unit registered on `ctx.sessionProjections` (exported for the unit spec). */
 export const sessionStatsProjectionDefinition = {
   key: 'sessionStats',
-  stateVersion: 2,
+  stateVersion: 1,
   stateSchema: sessionStatsStateSchema,
   init: () => ({
     turns: 0,
     steps: 0,
     llmMs: 0,
     toolMs: 0,
-    toolCalls: 0,
     ttftMs: 0,
     ttftSteps: 0,
     decodeMs: 0,
@@ -172,12 +174,7 @@ export const sessionStatsProjectionDefinition = {
         const pendingCalls = Object.fromEntries(
           Object.entries(state.pendingCalls).filter(([id]) => id !== callId),
         )
-        return {
-          ...state,
-          toolMs: state.toolMs + Math.max(0, event.time - dispatched),
-          toolCalls: state.toolCalls + 1,
-          pendingCalls,
-        }
+        return { ...state, toolMs: state.toolMs + Math.max(0, event.time - dispatched), pendingCalls }
       }
       case 'step/end':
         return {
@@ -203,7 +200,6 @@ export const sessionStatsProjectionDefinition = {
       steps: state.steps,
       llmMs: state.llmMs,
       toolMs: state.toolMs,
-      toolCalls: state.toolCalls,
       ttftMs: state.ttftMs,
       ttftSteps: state.ttftSteps,
       decodeMs: state.decodeMs,

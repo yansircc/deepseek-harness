@@ -26,6 +26,7 @@ Serves current, log-derived per-session state to client carriers.
 | [`session-projection/`](session-projection/README.md) | Defines and drives session projection units | `ctx.sessionProjections` |
 | [`session-projection-cache/`](session-projection-cache/README.md) | Persists and restores projection checkpoints | `ctx.sessionProjectionCache` |
 | [`session-stats/`](session-stats/README.md) | Serves whole-log conversation counts and wall times (`sessionStats` unit) | registers on `ctx.sessionProjections` |
+| [`session-tool-stats/`](session-tool-stats/README.md) | Serves the whole-log matched tool-call count (`sessionToolStats` unit) | registers on `ctx.sessionProjections` |
 
 ## Titles
 

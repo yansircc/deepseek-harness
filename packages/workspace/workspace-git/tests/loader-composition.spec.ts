@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
 import Include from '@deepseek-ai/cordis-plugin-include'
+import { remoteMethods } from '@deepseek-ai/dsh-typert-protocol'
 import WorkspaceGit from '@deepseek-ai/dsh-workspace-git'
 
 let root: string | undefined
@@ -53,6 +54,8 @@ describe('real Loader composition', () => {
       .filter(entry => entry.fiber === undefined && !entry.disabled)
       .map(entry => entry.options.name)
     expect(unloaded).toEqual([])
-    expect(await context.workspaceGit.sample('')).toEqual({ present: false })
+    expect(context.workspaceGit.typertRemote.namespace).toBe('workspaceGit')
+    expect(remoteMethods(context.workspaceGit).map(marker => marker.method)).toEqual(['sample'])
+    expect(await context.workspaceGit.sample('', AbortSignal.timeout(5_000))).toEqual({ present: false })
   })
 })

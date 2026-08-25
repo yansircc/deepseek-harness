@@ -11,7 +11,7 @@ import LlmRuntime, {
 } from '@deepseek-ai/dsh-llm'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
-import * as tool from '../src/list-models.ts'
+import * as tool from '../src/index.ts'
 
 class CatalogAdapter extends LlmAdapter {
   constructor(
@@ -86,7 +86,7 @@ async function setup() {
   return ctx
 }
 
-describe('dsh-tool-subagent-control/list-models', () => {
+describe('dsh-tool-list-models', () => {
   it('registers list_models once, globally, with only the optional provider parameter', async () => {
     const ctx = await setup()
     const schemas = ctx.tools.schemas().filter(schema => schema.name === 'list_models')
@@ -170,9 +170,55 @@ describe('dsh-tool-subagent-control/list-models', () => {
     expect(text(missing)).toContain('unknown provider "missing"')
   })
 
+  it('renders an empty provider detail and models without optional metadata', async () => {
+    const ctx = await setup()
+    ctx.llm.registerAdapter(['plain'], new CatalogAdapter(
+      { id: 'plain', name: 'Plain' },
+      [{ provider: 'plain', id: 'plain-1', name: 'Plain 1' }],
+      {
+        'plain-1': { provider: 'plain', id: 'plain-1', name: 'Plain 1' },
+      },
+    ))
+    const empty = await callTool(ctx, { provider: 'empty' })
+    expect(empty.isError).toBe(false)
+    if (empty.isError) throw new Error('expected list_models success')
+    expect(empty.value).toEqual({
+      provider: { id: 'empty', name: 'Empty' },
+      models: [],
+    })
+    expect(text(empty)).toBe('empty (Empty)\n(no models)')
+
+    const plain = await callTool(ctx, { provider: 'plain' })
+    expect(plain.isError).toBe(false)
+    if (plain.isError) throw new Error('expected list_models success')
+    expect(plain.value).toEqual({
+      provider: { id: 'plain', name: 'Plain' },
+      models: [{ id: 'plain-1', name: 'Plain 1' }],
+    })
+    expect(text(plain)).toBe('plain (Plain)\nplain-1 (Plain 1)')
+  })
+
+  it('renders (no providers) when no adapters are registered', async () => {
+    const ctx = new Context()
+    await ctx.plugin(LlmRuntime)
+    await ctx.plugin(SystemPrompt)
+    await ctx.plugin(ToolRuntime)
+    await ctx.plugin(tool)
+    const result = await callTool(ctx, {})
+    expect(result.isError).toBe(false)
+    if (result.isError) throw new Error('expected list_models success')
+    expect(result.value).toEqual({ providers: [] })
+    expect(text(result)).toBe('(no providers)')
+  })
+
+  it('declares concurrency safety', async () => {
+    const ctx = await setup()
+    expect(ctx.tools.get('list_models')?.isConcurrencySafe?.({})).toBe(true)
+  })
+
   it('has the namespace-plugin export shape', () => {
     expect('default' in tool).toBe(false)
-    expect(tool.name).toBe('tool-subagent-list-models')
+    expect(tool.name).toBe('tool-list-models')
     expect(tool.inject).toEqual(['tools', 'llm'])
     expect(typeof tool.apply).toBe('function')
   })

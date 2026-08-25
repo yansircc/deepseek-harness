@@ -4,9 +4,9 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-test-runtime'
 import { createSnapshotStore, type SessionListState, type WorkspaceListState } from '@deepseek-ai/dsh-client-runtime/client'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
-import { GitDisplayRow } from '../src/client/settings/GitDisplayRow.tsx'
-import type { GitDisplayRowProps } from '../src/client/settings/GitDisplayRow.tsx'
-import { ConversationDisplayPolicy } from '../src/client/settings/display-policy.ts'
+import { GitDisplayRow } from '../src/client/GitDisplayRow.tsx'
+import type { GitDisplayRowProps } from '../src/client/GitDisplayRow.tsx'
+import { WorkspaceGitDisplayPolicy } from '../src/client/display-policy.ts'
 import { en } from '../src/client/locales.ts'
 
 afterEach(() => {
@@ -28,7 +28,7 @@ function emptyWorkspaces() {
 }
 
 function mount() {
-  const policy = new ConversationDisplayPolicy()
+  const policy = new WorkspaceGitDisplayPolicy()
   const setDisplay = vi.fn((field: Parameters<GitDisplayRowProps['setDisplay']>[0], value: boolean) => {
     policy.set(field, value)
   })

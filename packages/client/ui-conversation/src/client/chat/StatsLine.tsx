@@ -8,6 +8,8 @@ import type { ConversationSnapshot, SnapshotStore, UseProjection } from '@deepse
 import type { InjectFace, SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 // Type-only: merges the sessionStats key into SessionProjectionMap for useProjection.
 import type {} from '@deepseek-ai/dsh-session-stats/client'
+// Type-only: merges the sessionToolStats key into SessionProjectionMap for useProjection.
+import type {} from '@deepseek-ai/dsh-session-tool-stats/client'
 import type { ContextPressureProjection, TokenUsageProjection } from '@deepseek-ai/dsh-token-meter/client'
 import type { ComposerBarProps } from '../contract/slots.ts'
 import type { ConversationDisplayPreferences } from '../../submission-settings.ts'
@@ -233,12 +235,21 @@ export const StatsLine = memo(function StatsLine({
   const settledNodes = useSession(s => s.chat.legacy.nodes)
   const usage = useProjection('tokenUsage')
   const display = useDisplay(value => value)
-  // Every figure rides the durable sessionStats projection, so paging and
-  // compaction cannot change any of them; an assembly without the unit falls
-  // back to the window-scoped fold wholesale (same field names), paid only
-  // while no projection value is served.
+  // Counts and wall times ride the durable sessionStats projection; the
+  // matched tool-call count rides sessionToolStats. An assembly without
+  // sessionStats falls back to the window-scoped fold wholesale (same field
+  // names), paid only while no sessionStats value is served. When sessionStats
+  // is present, toolCalls come from sessionToolStats (0 when that unit is not
+  // composed).
   const projected = useProjection('sessionStats')
-  const stats = useMemo(() => projected ?? deriveStats(settledNodes), [projected, settledNodes])
+  const toolProjected = useProjection('sessionToolStats')
+  const stats = useMemo(() => {
+    if (projected === undefined) return deriveStats(settledNodes)
+    return {
+      ...projected,
+      toolCalls: toolProjected?.toolCalls ?? 0,
+    }
+  }, [projected, toolProjected, settledNodes])
   // Pipe-separated groups (figma stats strip); a group with no data drops out whole.
   const groups: string[] = []
   if (display.showStatsCounts && stats.steps > 0) {

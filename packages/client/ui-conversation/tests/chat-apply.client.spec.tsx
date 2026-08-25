@@ -13,7 +13,6 @@ import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
 import { apply, inject } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { StatsLineInjected } from '../src/client/chat/StatsLine.tsx'
 import type { DisplayPreferenceRowInjected } from '../src/client/settings/StatsDisplayRow.tsx'
-import type { WorkspaceGitChipInjected } from '../src/client/skeleton/WorkspaceGitChip.tsx'
 
 // The service reads its initial locale from the browser; these specs assert
 // the shipped Chinese copy, so they state the browser they assume.
@@ -22,16 +21,8 @@ usePinnedBrowserLanguages('zh-CN')
 const ROOT = 'root-1' as SessionId
 const CHILD = 'child-1' as SessionId
 
-async function bench(
-  gitStatus: (
-    payload: { path: string },
-    signal?: AbortSignal,
-  ) => Promise<{ result: { ok: true; value: unknown } | { ok: false } }> = async () => ({
-    result: { ok: true, value: { present: false } },
-  }),
-) {
+async function bench() {
   const runtime = await SlotTestRuntime.create()
-  runtime.provide('connection', { api: { settings: {}, workspace: { gitStatus } }, isLoopback: false })
   // The plugin injects both; these specs exercise no settings path.
   runtime.provide('remote', { $on: () => () => {} })
   runtime.provide('settingsScope', { bind: () => stubSettingsScope().scope } as never)
@@ -105,9 +96,8 @@ describe('apply wiring', () => {
     expect(b.slots.spec('conversation.hero.workspace')).toEqual({ kind: 'single', scope: 'root' })
     expect(b.slots.spec('conversation.hero.agentPreset')).toEqual({ kind: 'single', scope: 'root' })
     expect(b.slots.entries('settings.general.item').map(entry => entry.options.id))
-      .toEqual(['composer-enter', 'stats-display', 'git-display'])
-    expect(b.slots.entries('conversation.session.header.utilities').map(entry => entry.options.id))
-      .toEqual(['workspace-git'])
+      .toEqual(['composer-enter', 'stats-display'])
+    expect(b.slots.entries('conversation.session.header.utilities')).toHaveLength(0)
     await b.runtime.dispose()
   })
 
@@ -138,38 +128,13 @@ describe('apply wiring', () => {
     await b.runtime.dispose()
   })
 
-  it('samples git through the header inject and writes display flags', async () => {
-    const gitStatus = vi.fn()
-      .mockResolvedValueOnce({
-        result: {
-          ok: true,
-          value: { present: true, shortHead: 'abc123', dirty: 0, insertions: 0, deletions: 0 },
-        },
-      })
-      .mockResolvedValueOnce({ result: { ok: false } })
-      .mockResolvedValue({ result: { ok: false } })
-    const b = await bench(gitStatus)
-    const git = (b.slots.entries('conversation.session.header.utilities')[0]!.inject as unknown as () => WorkspaceGitChipInjected)()
-    expect(await git.sampleGit('/proj')).toEqual({
-      present: true, shortHead: 'abc123', dirty: 0, insertions: 0, deletions: 0,
-    })
-    expect(await git.sampleGit('/proj')).toEqual({ present: false })
-    expect(gitStatus).toHaveBeenCalledWith({ path: '/proj' })
-
-    const abort = new AbortController()
-    await git.sampleGit('/proj', abort.signal)
-    expect(gitStatus).toHaveBeenLastCalledWith({ path: '/proj' }, abort.signal)
-
+  it('writes display flags through the stats General row', async () => {
+    const b = await bench()
     const general = b.slots.entries('settings.general.item')
     const stats = (general.find(entry => entry.options.id === 'stats-display')!.inject as unknown as () => DisplayPreferenceRowInjected)()
-    const gitRow = (general.find(entry => entry.options.id === 'git-display')!.inject as unknown as () => DisplayPreferenceRowInjected)()
     expect(stats.hooks.display.getSnapshot().showStatsCounts).toBe(true)
     stats.setDisplay('showStatsCounts', false)
-    gitRow.setDisplay('showGitBranch', false)
-    expect(stats.hooks.display.getSnapshot()).toMatchObject({
-      showStatsCounts: false,
-      showGitBranch: false,
-    })
+    expect(stats.hooks.display.getSnapshot().showStatsCounts).toBe(false)
 
     const line = (b.slots.entries('conversation.composer.dock')[0]!.inject as unknown as () => StatsLineInjected)()
     expect(line.hooks.display.getSnapshot().showStatsCounts).toBe(false)

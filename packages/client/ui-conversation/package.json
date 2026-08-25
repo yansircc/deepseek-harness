@@ -32,7 +32,6 @@
   "dsh": {
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-client-connection",
         "@deepseek-ai/dsh-client-locale",
         "@deepseek-ai/dsh-client-runtime",
         "@deepseek-ai/dsh-client-ui-settings",
@@ -67,6 +66,7 @@
     "@deepseek-ai/dsh-invariants": "workspace:^",
     "@deepseek-ai/dsh-llm-retry": "workspace:^",
     "@deepseek-ai/dsh-session-stats": "workspace:^",
+    "@deepseek-ai/dsh-session-tool-stats": "workspace:^",
     "@deepseek-ai/dsh-token-meter": "workspace:^",
     "@deepseek-ai/dsh-tools": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
@@ -100,6 +100,7 @@
     "@deepseek-ai/dsh-plan-mode": "workspace:^",
     "@deepseek-ai/dsh-session-projection": "workspace:^",
     "@deepseek-ai/dsh-session-stats": "workspace:^",
+    "@deepseek-ai/dsh-session-tool-stats": "workspace:^",
     "@deepseek-ai/dsh-token-meter": "workspace:^",
     "@deepseek-ai/dsh-tool-todo": "workspace:^",
     "@deepseek-ai/dsh-tools": "workspace:^",

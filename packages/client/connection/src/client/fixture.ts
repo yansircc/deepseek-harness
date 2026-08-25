@@ -894,14 +894,13 @@ function sessionStatsOf(log: readonly SessionEvent[]): {
   steps: number
   llmMs: number
   toolMs: number
-  toolCalls: number
   ttftMs: number
   ttftSteps: number
   decodeMs: number
   decodeTokens: number
 } {
   const value = {
-    turns: 0, steps: 0, llmMs: 0, toolMs: 0, toolCalls: 0,
+    turns: 0, steps: 0, llmMs: 0, toolMs: 0,
     ttftMs: 0, ttftSteps: 0, decodeMs: 0, decodeTokens: 0,
   }
   let lastTurn: number | null = null
@@ -942,7 +941,6 @@ function sessionStatsOf(log: readonly SessionEvent[]): {
         if (dispatched === undefined) break
         pendingCalls.delete(callId)
         value.toolMs += Math.max(0, event.time - dispatched)
-        value.toolCalls += 1
         break
       }
       case 'step/end':
@@ -961,6 +959,32 @@ function sessionStatsOf(log: readonly SessionEvent[]): {
     }
   }
   return value
+}
+
+/** Fixture parallel of session-tool-stats' whole-log matched tool-call count. */
+function sessionToolStatsOf(log: readonly SessionEvent[]): { toolCalls: number } {
+  let toolCalls = 0
+  const pendingCalls = new Set<string>()
+  for (const event of log) {
+    switch (event.type) {
+      case 'tool/call':
+        pendingCalls.add(event.data.callId)
+        break
+      case 'tool/result': {
+        const callId = event.data.message.source.callId
+        if (!pendingCalls.has(callId)) break
+        pendingCalls.delete(callId)
+        toolCalls += 1
+        break
+      }
+      case 'turn/end':
+        pendingCalls.clear()
+        break
+      default:
+        break
+    }
+  }
+  return { toolCalls }
 }
 
 interface FixtureRequestContext {
@@ -1083,6 +1107,8 @@ function projectionValuesOf(log: readonly SessionEvent[]): Record<string, unknow
   values['contextBreakdown'] = contextBreakdownOf(log)
   // Always present (session-stats unit composed): whole-log turn/step counts.
   values['sessionStats'] = sessionStatsOf(log)
+  // Always present (session-tool-stats unit composed): matched tool-call count.
+  values['sessionToolStats'] = sessionToolStatsOf(log)
   // Always present (attachment service composed): the deployment image
   // limits, constant per boot (mirrors the attachment-local defaults).
   // Deliberate host divergence: the real gateway never pushes an imageLimits
@@ -1132,13 +1158,24 @@ function projectionFramesOf(id: SessionId, log: readonly SessionEvent[], event: 
     })
   }
   // The stats fold's view advances on message assembly and tool settlement
-  // (wall times) and on step close (counts).
+  // (wall times) and on step close (counts). The tool-count unit advances on
+  // tool settlement (and turn/end prune, which leaves the view unchanged when
+  // no leftovers remain).
   if (type === 'assistant/message' || type === 'tool/result' || type === 'step/end') {
     frames.push({
       type: 'session/projection',
       sessionId: id,
       key: 'sessionStats',
       value: sessionStatsOf(log),
+      seq: event.seq,
+    })
+  }
+  if (type === 'tool/result') {
+    frames.push({
+      type: 'session/projection',
+      sessionId: id,
+      key: 'sessionToolStats',
+      value: sessionToolStatsOf(log),
       seq: event.seq,
     })
   }
@@ -2793,7 +2830,6 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
         }
         return ok(request, { archivedSessionIds: [...archivedSessionIds] })
       },
-      gitStatus: request => ok(request, { present: false as const }),
     },
     agentPresets: {
       // Both trusts appear, because a surface must present a locally authored
@@ -3209,7 +3245,6 @@ export class FixtureApiClient extends AbstractApiClient {
       case 'workspace.insertBefore': return this.api.workspace.insertBefore(request)
       case 'workspace.insertSessionBefore': return this.api.workspace.insertSessionBefore(request)
       case 'workspace.archiveSession': return this.api.workspace.archiveSession(request)
-      case 'workspace.gitStatus': return this.api.workspace.gitStatus(request)
       case 'skill.list': return this.api.skills.list(request)
       case 'agentPreset.list': return this.api.agentPresets.list(request)
       case 'agentPreset.select': return this.api.agentPresets.select(request)

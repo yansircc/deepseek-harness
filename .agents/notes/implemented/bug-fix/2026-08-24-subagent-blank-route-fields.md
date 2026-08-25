@@ -12,7 +12,7 @@ English | [中文](2026-08-24-subagent-blank-route-fields.zh.md)
 
 Each optional route string is trimmed. Empty or whitespace values are treated as omitted. On `subagent` and `subagent_fork`, that restores inherit-the-parent-active-route. On `list_models`, that restores the all-routes overview. A non-empty unknown id still fails. Surviving values keep their trimmed text, so `"  ccc-gpt  "` matches `ccc-gpt`.
 
-The helper is local to each package. `@deepseek-ai/dsh-tool-subagent-control` must not import `@deepseek-ai/dsh-tool-subagent`. Model-facing schema descriptions stay "omit to inherit" / "omit to list every route"; empty-as-omit is how those tools interpret the JSON they already receive.
+The helper is local to each package. `@deepseek-ai/dsh-tool-list-models` must not import `@deepseek-ai/dsh-tool-subagent`. Model-facing schema descriptions stay "omit to inherit" / "omit to list every route"; empty-as-omit is how those tools interpret the JSON they already receive.
 
 ## Alternatives considered
 
@@ -20,7 +20,7 @@ The helper is local to each package. `@deepseek-ai/dsh-tool-subagent-control` mu
 
 **Change the schema strings to mention empty values.** Rejected: that regenerates `docs/tool-catalog` and the assembled system-prompt snapshots without changing the behavior models already expect from "omit".
 
-**Share one helper across the two packages.** Rejected: the function is four lines, and a control-to-delegation import would invert the package graph.
+**Share one helper across the two packages.** Rejected: the function is four lines, and a list-models-to-delegation import would couple unrelated Consumers.
 
 **Map empty or guessed brand names onto a default route.** Rejected: registered ids are deployment route ids. A non-empty unknown id must stay a loud failure.
 
@@ -30,4 +30,4 @@ A call that sends blank route fields follows the same path as a call that omits 
 
 ## Testing
 
-`packages/subagent/tool-subagent/tests/route.spec.ts` pins blank inherit, product-transport blanks, and trimmed explicit ids. `packages/subagent/tool-subagent-control/tests/list-models.spec.ts` pins blank overview, trimmed known ids, and unknown-id rejection.
+`packages/subagent/tool-subagent/tests/route.spec.ts` pins blank inherit, product-transport blanks, and trimmed explicit ids. `packages/llm/tool-list-models/tests/list-models.spec.ts` pins blank overview, trimmed known ids, and unknown-id rejection.

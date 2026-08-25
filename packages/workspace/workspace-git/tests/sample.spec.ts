@@ -13,6 +13,7 @@ import { Context } from '@deepseek-ai/cordis'
 import WorkspaceGit, {
   parsePorcelain, parseShortstat, sampleWorkspaceGit, type GitRunner,
 } from '@deepseek-ai/dsh-workspace-git'
+import { remoteMethods } from '@deepseek-ai/dsh-typert-protocol'
 
 const execFile = promisify(execFileCb)
 
@@ -183,21 +184,40 @@ describe('sampleWorkspaceGit', () => {
 })
 
 describe('WorkspaceGit service', () => {
-  it('publishes ctx.workspaceGit and samples through the default runner', async () => {
+  it('publishes ctx.workspaceGit, the Remote binding, and samples through the default runner', async () => {
     const cwd = await initRepo()
     const ctx = new Context()
     await ctx.plugin(WorkspaceGit)
-    const sample = await ctx.workspaceGit.sample(cwd)
+    expect(ctx.workspaceGit.typertRemote.namespace).toBe('workspaceGit')
+    expect(remoteMethods(ctx.workspaceGit)).toEqual([
+      { method: 'sample', invocation: { kind: 'direct' } },
+    ])
+    const sample = await ctx.workspaceGit.sample(cwd, AbortSignal.timeout(5_000))
     expect(sample.present).toBe(true)
     if (!sample.present) throw new Error('unreachable')
     expect(sample.branch).toBe('main')
-    await ctx.workspaceGit.sample('')
+    await ctx.workspaceGit.sample('', AbortSignal.timeout(5_000))
   })
 
   it('accepts a configured timeoutMs', async () => {
     const ctx = new Context()
     await ctx.plugin(WorkspaceGit, { timeoutMs: 1_000 })
-    expect(await ctx.workspaceGit.sample('')).toEqual({ present: false })
+    expect(await ctx.workspaceGit.sample('', AbortSignal.timeout(1_000))).toEqual({ present: false })
+  })
+
+  it('honors caller cancellation without waiting for timeoutMs', async () => {
+    const hang: GitRunner = (_cwd, _args, signal) => new Promise((_, reject) => {
+      const fail = (): void => { reject(signal.reason ?? new Error('aborted')) }
+      if (signal.aborted) {
+        fail()
+        return
+      }
+      signal.addEventListener('abort', fail, { once: true })
+    })
+    const controller = new AbortController()
+    const pending = sampleWorkspaceGit('/repo', 60_000, hang, controller.signal)
+    controller.abort()
+    expect(await pending).toEqual({ present: false })
   })
 })
 

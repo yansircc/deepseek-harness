@@ -10,15 +10,15 @@ The composer stats line always showed every group that had data, and the session
 
 ## Decision
 
-`ConversationSettings` (`ui-conversation` in `$DSH_HOME/settings.yaml`) carries nine booleans, all default on, next to `busyEnter`. Old documents that only store `busyEnter` resolve the flags through schema defaults. `ConversationDisplayPolicy` owns the live record; `ComposerSubmissionPolicy` stays busy-Enter only.
+`ConversationSettings` (`ui-conversation` in `$DSH_HOME/settings.yaml`) carries `busyEnter` plus five stats-line booleans, all default on. Old documents that only store `busyEnter` resolve the flags through schema defaults. `ConversationDisplayPolicy` owns the live stats record; `ComposerSubmissionPolicy` stays busy-Enter only. Workspace-git display flags live in `@deepseek-ai/dsh-client-ui-workspace-git` under the `ui-workspace-git` namespace ([ownership](../architecture/2026-08-25-ui-workspace-git-client-plugin.md)).
 
-General settings registers two blocks: stats-display (order 30) and git-display (order 40). Each switch is `role="switch"`. A group or chip with no data still hides itself when its flag is on. All five stats flags off hide the stats line; all four git flags off hide the git chrome.
+General settings registers stats-display (order 30, `ui-conversation`) and git-display (order 40, `ui-workspace-git`). Each switch is `role="switch"`. A group or chip with no data still hides itself when its flag is on. All five stats flags off hide the stats line; all four git flags off hide the git chrome.
 
-The stats line stays in `conversation.composer.dock`. Context occupancy stays on `ContextMeter`. Provider / model / effort stay on the composer model seat. The duration group adds the matched tool-call count (`Tools {count}× {duration}`). The token group is `Uncached · Input · Output` (billed input remains uncached + cacheRead + cacheWrite). `sessionStats` adds `toolCalls` on the same matched `tool/call` → `tool/result` pairing as `toolMs`, `stateVersion` 2. Unmatched leftovers at `turn/end` do not count. The window fallback counts `tool-result` nodes that carry `callTime`.
+The stats line stays in `conversation.composer.dock`. Context occupancy stays on `ContextMeter`. Provider / model / effort stay on the composer model seat. The duration group adds the matched tool-call count (`Tools {count}× {duration}`). The token group is `Uncached · Input · Output` (billed input remains uncached + cacheRead + cacheWrite). `@deepseek-ai/dsh-session-tool-stats` owns `sessionToolStats.toolCalls` on the same matched `tool/call` → `tool/result` pairing as `sessionStats.toolMs`. Unmatched leftovers at `turn/end` do not count. The window fallback counts `tool-result` nodes that carry `callTime`.
 
-Workspace git is a Host sample, not a session projection, and is never written to the session log. `@deepseek-ai/dsh-workspace-git` publishes `ctx.workspaceGit.sample(cwd)` (`timeoutMs`, default 5000). The handwritten `workspace.gitStatus({ path })` method re-declares `WorkspaceGitStatus` in apiproxy so the browser contract stays host-package-free. The gateway uses `ctx.get('workspaceGit')` and does not inject the service. A missing plugin fails with `internal`; an empty path fails with `workspace-invalid-path`; any client RPC error becomes `{ present: false }`. The assembled fixture and `FakeApiClient` always return `{ present: false }` so snapshots do not sample the real tree.
+Workspace git is a Host sample, not a session projection, and is never written to the session log. `@deepseek-ai/dsh-workspace-git` publishes `ctx.workspaceGit.sample(cwd, signal)` (`timeoutMs`, default 5000) as the Typert Remote `workspaceGit.sample` ([ownership](../architecture/2026-08-25-workspace-git-typert-remote.md)). `@deepseek-ai/dsh-client-ui-workspace-git` calls that Remote; any failure becomes `{ present: false }`. Assemblies without the Host plugin still boot; the header stays empty. Snapshot replay never samples the real work tree.
 
-Header chrome occupies `conversation.session.header.utilities` (`workspace-git`). Detached HEAD is how the branch chip renders (`HEAD {sha}`), not a tenth toggle. `+N −M` is versus HEAD; the chip title says so. The client polls every `GIT_STATUS_POLL_MS` (5000), a UI constant, only while at least one git flag is on and the session cwd is a non-empty string.
+Header chrome occupies `conversation.session.header.utilities` (`workspace-git`) via the `ui-workspace-git` client plugin. Detached HEAD is how the branch chip renders (`HEAD {sha}`), not a tenth toggle. `+N −M` is versus HEAD; the chip title says so. The client polls every `GIT_STATUS_POLL_MS` (5000), a UI constant, only while at least one git flag is on and the session cwd is a non-empty string.
 
 ## Alternatives considered
 
@@ -26,7 +26,7 @@ Header chrome occupies `conversation.session.header.utilities` (`workspace-git`)
 
 **Put git facts on the session projection or the session log.** Rejected because model-visible input must be reconstructable from the log, and this chrome is a Host filesystem read, not a conversation event.
 
-**Typert remotes for `workspace.gitStatus`.** Rejected because the workspace domain is already a handwritten `IApiClient` face; a second remote stack would split one domain across two registries.
+**Typert remotes for `workspace.gitStatus`.** Initially rejected while the call lived on the handwritten workspace `IApiClient` face; superseded by moving the sample off that face onto `workspaceGit.sample` ([Remote ownership](../architecture/2026-08-25-workspace-git-typert-remote.md)).
 
 **Inject `workspaceGit` on `ApiProxyService`.** Rejected because every assembly without the plugin would pend the gateway.
 
@@ -36,8 +36,8 @@ Header chrome occupies `conversation.session.header.utilities` (`workspace-git`)
 
 ## Consequences
 
-Operators hide individual stats-line groups and git chips without losing the others. Assemblies without `workspace-git` still boot; the header stays empty. Snapshot replay never sees a real work tree. `sessionStats` caches bump to `stateVersion` 2 and rebuild.
+Operators hide individual stats-line groups and git chips without losing the others. Assemblies without `workspace-git` still boot; the header stays empty. Snapshot replay never sees a real work tree.
 
 ## Testing
 
-Package tests cover schema defaults, display-policy adopt/write, both General rows, StatsLine group gating plus the new token and tool-count copy, `toolCalls` pairing, git porcelain/shortstat parsing, real temp-repo samples, Loader composition, `workspace.gitStatus` empty-path and missing-plugin codes, fixture `{ present: false }`, and header-chip polling. Assembled settings-chrome dialog snapshots include the two General blocks.
+Package tests cover schema defaults, display-policy adopt/write, both General rows (stats in `ui-conversation`, git in `ui-workspace-git`), StatsLine group gating plus the new token and tool-count copy, `toolCalls` pairing, git porcelain/shortstat parsing, real temp-repo samples, Loader composition, `workspaceGit.sample` Remote binding and cancellation, and header-chip polling. Assembled settings-chrome dialog snapshots include the two General blocks.

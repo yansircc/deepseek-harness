@@ -35,15 +35,15 @@ describe('ConversationDisplayPolicy', () => {
     const policy = new ConversationDisplayPolicy(host.scope)
     host.publish({
       status: 'ready',
-      value: { ...allOn, showGitBranch: false },
+      value: { ...allOn, showStatsCounts: false },
       revision: 1,
       writable: true,
     })
-    expect(policy.prefs.getSnapshot().showGitBranch).toBe(false)
-    policy.set('showGitBranch', false)
+    expect(policy.prefs.getSnapshot().showStatsCounts).toBe(false)
+    policy.set('showStatsCounts', false)
     expect(host.set).not.toHaveBeenCalled()
-    host.publish({ value: { ...allOn, showGitBranch: false }, revision: 2 })
-    expect(policy.prefs.getSnapshot().showGitBranch).toBe(false)
+    host.publish({ value: { ...allOn, showStatsCounts: false }, revision: 2 })
+    expect(policy.prefs.getSnapshot().showStatsCounts).toBe(false)
   })
 
   it('adopts a section already standing at construction', () => {

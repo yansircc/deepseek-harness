@@ -310,8 +310,8 @@
     - id: tool-subagent-list-agents
       name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
 
-    - id: tool-subagent-list-models
-      name: '@deepseek-ai/dsh-tool-subagent-control/list-models'
+    - id: tool-list-models
+      name: '@deepseek-ai/dsh-tool-list-models'
 
     - id: tool-subagent
       name: '@deepseek-ai/dsh-tool-subagent'

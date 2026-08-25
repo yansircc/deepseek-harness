@@ -1,12 +1,16 @@
 /**
  * Host cwd git sample (`ctx.workspaceGit`): porcelain dirty count, branch or
  * detached SHA, upstream ahead/behind, and shortstat versus HEAD. The sample
- * is a client-facing Host read; it is never written to the session log.
+ * is a client-facing Host read published as the `workspaceGit.sample` Remote;
+ * it is never written to the session log.
  * @module @deepseek-ai/dsh-workspace-git
  */
 
-import { Context, Service } from '@deepseek-ai/cordis'
+import { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
+import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol'
+// Typert-generated ./typert and ./remote artifacts import Zod at runtime.
+import type {} from 'zod'
 import { sampleWorkspaceGit, type WorkspaceGitSample } from './sample.ts'
 
 export {
@@ -37,8 +41,9 @@ declare module '@deepseek-ai/cordis' {
 /**
  * Host git sample for one cwd. A missing git binary, a path that is not a
  * work tree, or a timeout resolves `{ present: false }` rather than throwing.
+ * Caller cancellation rides the final `signal` parameter of the Remote face.
  */
-export class WorkspaceGit extends Service {
+export class WorkspaceGit extends TypertRemoteService {
   static Config: z<Config> = z.object({
     timeoutMs: z.natural().min(1).default(5000),
   })
@@ -59,10 +64,12 @@ export class WorkspaceGit extends Service {
   /**
    * Sample one cwd. Empty cwd returns `{ present: false }` without spawning git.
    * @param cwd - directory to sample, usually a session cwd.
+   * @param signal - caller cancellation combined with `timeoutMs`.
    * @returns the sample for header chrome.
    */
-  sample(cwd: string): Promise<WorkspaceGitSample> {
-    return sampleWorkspaceGit(cwd, this.config.timeoutMs)
+  @Remote('sample')
+  sample(cwd: string, signal: AbortSignal): Promise<WorkspaceGitSample> {
+    return sampleWorkspaceGit(cwd, this.config.timeoutMs, undefined, signal)
   }
 }
 

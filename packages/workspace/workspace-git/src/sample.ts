@@ -5,33 +5,9 @@
  */
 
 import { runNativeCommand } from '@deepseek-ai/dsh-native-command'
+import type { WorkspaceGitSample } from './types.ts'
 
-/**
- * One cwd's git facts for header chrome. Structurally matches the
- * `workspace.gitStatus` wire type; this package never imports the browser
- * contract. `present: false` when the path is empty, not a work tree, git is
- * missing, or the sample timed out. Added and deleted lines are
- * `git diff --shortstat HEAD`; untracked files raise `dirty` only.
- */
-export type WorkspaceGitSample =
-  | { present: false }
-  | {
-    present: true
-    /** Short HEAD SHA. */
-    shortHead: string
-    /** Porcelain v1 entry count, including untracked. */
-    dirty: number
-    /** Insertions versus HEAD. */
-    insertions: number
-    /** Deletions versus HEAD. */
-    deletions: number
-    /** Symbolic-ref short name when attached; omitted when detached. */
-    branch?: string
-    /** Commits ahead of upstream; omitted when no upstream. */
-    ahead?: number
-    /** Commits behind upstream; omitted when no upstream. */
-    behind?: number
-  }
+export type { WorkspaceGitSample } from './types.ts'
 
 /**
  * Testable git argv runner. Implementations must not invoke a shell.
@@ -97,32 +73,35 @@ export function parseShortstat(text: string): { insertions: number; deletions: n
  * @param cwd - directory to sample.
  * @param timeoutMs - budget for the whole sample, including every git child.
  * @param run - git runner; production uses `git -C` through native-command.
+ * @param signal - optional caller cancellation, combined with the timeout budget.
  * @returns the sample, or `{ present: false }` on any miss.
  */
 export async function sampleWorkspaceGit(
   cwd: string,
   timeoutMs: number,
   run: GitRunner = defaultRun,
+  signal?: AbortSignal,
 ): Promise<WorkspaceGitSample> {
   if (cwd === '') return { present: false }
-  const signal = AbortSignal.timeout(timeoutMs)
+  const budget = AbortSignal.timeout(timeoutMs)
+  const combined = signal === undefined ? budget : AbortSignal.any([budget, signal])
   try {
-    const inside = (await run(cwd, ['rev-parse', '--is-inside-work-tree'], signal)).stdout.trim()
+    const inside = (await run(cwd, ['rev-parse', '--is-inside-work-tree'], combined)).stdout.trim()
     if (inside !== 'true') return { present: false }
-    const shortHead = (await run(cwd, ['rev-parse', '--short', 'HEAD'], signal)).stdout.trim()
+    const shortHead = (await run(cwd, ['rev-parse', '--short', 'HEAD'], combined)).stdout.trim()
     if (shortHead === '') return { present: false }
     let branch: string | undefined
     try {
-      const name = (await run(cwd, ['symbolic-ref', '--short', 'HEAD'], signal)).stdout.trim()
+      const name = (await run(cwd, ['symbolic-ref', '--short', 'HEAD'], combined)).stdout.trim()
       if (name !== '') branch = name
     } catch (error) {
       // Shared sample abort/timeout must not be treated as detached HEAD.
-      if (signal.aborted) throw error
+      if (combined.aborted) throw error
       // Detached HEAD: symbolic-ref exits non-zero; omit branch and continue.
     }
-    const statusText = (await run(cwd, ['status', '--porcelain=v1', '--branch'], signal)).stdout
+    const statusText = (await run(cwd, ['status', '--porcelain=v1', '--branch'], combined)).stdout
     const { dirty, ahead, behind } = parsePorcelain(statusText)
-    const shortstat = (await run(cwd, ['diff', '--shortstat', 'HEAD'], signal)).stdout
+    const shortstat = (await run(cwd, ['diff', '--shortstat', 'HEAD'], combined)).stdout
     const { insertions, deletions } = parseShortstat(shortstat)
     return {
       present: true,

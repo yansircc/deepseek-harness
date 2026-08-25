@@ -1,6 +1,6 @@
 /**
- * Live conversation display preferences. Owns the nine stats-line and
- * workspace-git flags and writes each change through the Host settings scope.
+ * Live conversation display preferences. Owns the five stats-line flags and
+ * writes each change through the Host settings scope.
  */
 import {
   createSnapshotStore, type SettingsScope, type SnapshotStore,
@@ -19,15 +19,10 @@ const sameFlags = (left: ConversationDisplayPreferences, right: ConversationDisp
   && left.showStatsLatency === right.showStatsLatency
   && left.showStatsCacheHit === right.showStatsCacheHit
   && left.showStatsTokens === right.showStatsTokens
-  && left.showGitBranch === right.showGitBranch
-  && left.showGitDirty === right.showGitDirty
-  && left.showGitUpstream === right.showGitUpstream
-  && left.showGitDiffstat === right.showGitDiffstat
 
 /**
- * Display-preference policy used by the General Settings rows, the stats
- * line, and the workspace-git header chip. A missing Host scope stays
- * process-local.
+ * Display-preference policy used by the General Settings stats row and the
+ * stats line. A missing Host scope stays process-local.
  */
 export class ConversationDisplayPolicy {
   /** Reactive preference source for Settings rows and chrome. */
@@ -50,8 +45,8 @@ export class ConversationDisplayPolicy {
 
   /**
    * Change one display flag; the live record publishes before the durable write starts.
-   * @param field - one of the nine display flags.
-   * @param value - whether that group or chip should render when it has data.
+   * @param field - one of the five display flags.
+   * @param value - whether that group should render when it has data.
    */
   set(field: ConversationDisplayField, value: boolean): void {
     const current = this.prefs.getSnapshot()
