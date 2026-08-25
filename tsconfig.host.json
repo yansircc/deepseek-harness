@@ -297,6 +297,7 @@
     { "path": "./packages/guard/repeat-tool-reminder" },
     { "path": "./packages/chrome/chrome-protocol" },
     { "path": "./packages/chrome/chrome" },
+    { "path": "./packages/chrome/chrome-local" },
     { "path": "./packages/extensions/cordis-host-runner" },
     { "path": "./packages/extensions/tool-cordis" },
     { "path": "./packages/extensions/tool-chrome" },
