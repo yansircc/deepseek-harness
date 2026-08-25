@@ -71,6 +71,7 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'packages/client/ui-layout': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
   'packages/client/ui-sidebar': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
   'packages/client/ui-brand-official': { kind: 'none', reason: 'Browser-side presentation occupants; registers nothing model-facing.' },
+  'packages/chrome/chrome-extension': { kind: 'none', reason: 'Browser extension artifact; the Chrome tool Consumer owns every model-facing schema and result.' },
   'packages/client/ui-chrome': { kind: 'none', reason: 'Browser-side settings card; tool-chrome owns every model-facing effect.' },
   'packages/client/ui-conversation': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
   'packages/client/ui-workspace-git': { kind: 'none', reason: 'Browser-side workspace status chrome; registers nothing model-facing.' },
