@@ -3,7 +3,7 @@ import { Context } from '@deepseek-ai/cordis'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
 import InvariantRegistry from '@deepseek-ai/dsh-invariants'
 import * as AgentLoopInvariant from '@deepseek-ai/dsh-agent-loop/invariant'
-import { createUserMessage, markAgentLoopRequest, type GenerateOptions  } from '@deepseek-ai/dsh-llm'
+import { createUserMessage, markAgentLoopRequest, ReasoningEffortId, type GenerateOptions } from '@deepseek-ai/dsh-llm'
 
 async function setup(): Promise<Context> {
   const ctx = new Context()
@@ -73,6 +73,36 @@ describe('request-reconstruction invariant', () => {
       .toThrow(/diverges from the dispatch-time durable derivation/)
     expect(() => { dispatch(ctx, loopRequest({ model: 'other', messages: Object.freeze(boundary), sessionId: session.id })) })
       .toThrow(/diverges from the folded request header/)
+  })
+
+  it('rejects reasoningEffort divergence from the folded request header', async () => {
+    const { ctx, session, boundary } = await requestSetup()
+    session.append('request/header', {
+      header: {
+        config: {
+          provider: 'mock',
+          model: 'm',
+          reasoningEffort: ReasoningEffortId('high'),
+        },
+      },
+      reason: 'change',
+    })
+    expect(() => {
+      dispatch(ctx, loopRequest({
+        model: 'm',
+        reasoningEffort: ReasoningEffortId('max'),
+        messages: Object.freeze(boundary),
+        sessionId: session.id,
+      }))
+    }).toThrow(/diverges from the folded request header/)
+    expect(() => {
+      dispatch(ctx, loopRequest({
+        model: 'm',
+        reasoningEffort: ReasoningEffortId('high'),
+        messages: Object.freeze(boundary),
+        sessionId: session.id,
+      }))
+    }).not.toThrow()
   })
 
   it('rejects loop requests with no boundary or header', async () => {

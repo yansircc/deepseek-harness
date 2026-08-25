@@ -172,7 +172,7 @@ interface AgentOptions {
 }
 ```
 
-在 `agent/request` 之后，分发要求 `provider` 与 `model` 都存在。提供 `reasoningEffort` 时，它是对话模型请求的适配器侧努力程度 id。提供 `maxTokens` 时，它必须是正安全整数，并限制每次对话模型请求的输出；省略时，系统会在写入请求 header 前填入确切模型的适配器默认值，否则提供方行为保持不变。agent 作用域的 `deployment:persona` 提示词段落可以遮蔽全局默认 persona。
+在 `agent/request` 之后，分发要求 `provider` 与 `model` 都存在。提供 `reasoningEffort` 时，它是对话模型请求的适配器侧努力程度 id：创建时的 `AgentOptions.reasoningEffort` 只在循环实例的首次提议中、在 `agent/request` 之前写入种子，之后由已记录的 header（以及后续 waterfall 替换）持有该强度。提供 `maxTokens` 时，它必须是正安全整数，并限制每次对话模型请求的输出；省略时，系统会在写入请求 header 前填入确切模型的适配器默认值，否则提供方行为保持不变。agent 作用域的 `deployment:persona` 提示词段落可以遮蔽全局默认 persona。
 
 inbox 即投递词汇——agent 以持久投影形式拥有的两条有序待处理消息列表：
 

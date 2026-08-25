@@ -434,7 +434,8 @@ export class ReactLoopAgent implements Agent {
     const { session } = this
 
     // A loop instance starts from its declared route, restoring only an explicit
-    // effort owned by that exact model. Later steps re-resolve marked defaults.
+    // effort owned by that exact model (or create-time AgentOptions.reasoningEffort
+    // on the first proposal). Later steps re-resolve marked defaults.
     const persistedHeader = session.requestHeader()
     const persistedConfig = persistedHeader?.config
     const route = { provider: this.options.provider ?? '', model: this.options.model ?? '' }
