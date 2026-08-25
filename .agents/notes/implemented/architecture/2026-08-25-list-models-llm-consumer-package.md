@@ -26,8 +26,8 @@ This is the first ownership slice that returns LLM catalog discovery to the `llm
 
 Bought: the catalog tool can mount without subagent control; package, catalog, and composition ownership match the LLM seam; `dsh-tool-subagent-control` returns to continuation tooling.
 
-Cost: one more package and composition row; every preset, base patch, example, and generator that named the old subpath must name `@deepseek-ai/dsh-tool-list-models`.
+Cost: one more package and composition row; every preset, fork-base patch, example, and generator that named the old subpath must name `@deepseek-ai/dsh-tool-list-models`.
 
 ## Testing
 
-`packages/llm/tool-list-models/tests/list-models.spec.ts` owns the tool behavior. `packages/core/tools/tests/gen-tool-catalog.spec.ts` pins catalog package ownership. Composition rows in `packages/bundle/base`, `examples/acp-agent`, and the shipped agent presets load the new package name.
+`packages/llm/tool-list-models/tests/list-models.spec.ts` owns the tool behavior. `packages/core/tools/tests/gen-tool-catalog.spec.ts` pins catalog package ownership. Composition rows in `packages/bundle/fork-base`, `examples/acp-agent`, and the shipped agent presets load the new package name.

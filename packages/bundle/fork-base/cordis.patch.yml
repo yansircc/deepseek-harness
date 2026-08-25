@@ -1,0 +1,18 @@
+# Fork-owned Host-plane tool rows over dsh-base. Shipped in the default web
+# and headless Profile templates after dsh-base; absent from upstream dsh-base.
+
+- insert:
+    - id: tool-list-models
+      name: '@deepseek-ai/dsh-tool-list-models'
+
+    # WordPress site management (zeroY): inspect/checkout/push sites. The
+    # plugin exposes its settings namespace so the WebUI shows a card only
+    # when the user has bound sites.
+    - id: tool-zeroy
+      name: '@deepseek-ai/dsh-tool-zeroy'
+
+    # Real Chrome control: 25 chrome_* tools through a local bridge. The
+    # bridge starts with the plugin; the credential (DSH_CHROME_OWNER_CREDENTIAL)
+    # and extension install are user-facing, shown in the WebUI card.
+    - id: tool-chrome
+      name: '@deepseek-ai/dsh-tool-chrome'

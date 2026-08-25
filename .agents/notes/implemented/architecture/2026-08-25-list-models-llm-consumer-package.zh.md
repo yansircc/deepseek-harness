@@ -26,8 +26,8 @@ Status: implemented
 
 获得：目录工具可以在没有 subagent 控制的情况下挂载；包、目录与组合归属与 LLM seam 一致；`dsh-tool-subagent-control` 回到延续工具。
 
-代价：多一个包和组合行；所有命名旧子路径的 preset、base patch、example 与生成器都必须改为 `@deepseek-ai/dsh-tool-list-models`。
+代价：多一个包和组合行；所有命名旧子路径的 preset、fork-base patch、example 与生成器都必须改为 `@deepseek-ai/dsh-tool-list-models`。
 
 ## Testing
 
-`packages/llm/tool-list-models/tests/list-models.spec.ts` 拥有工具行为。`packages/core/tools/tests/gen-tool-catalog.spec.ts` 固定目录包归属。`packages/bundle/base`、`examples/acp-agent` 与随附 agent preset 中的组合行加载新包名。
+`packages/llm/tool-list-models/tests/list-models.spec.ts` 拥有工具行为。`packages/core/tools/tests/gen-tool-catalog.spec.ts` 固定目录包归属。`packages/bundle/fork-base`、`examples/acp-agent` 与随附 agent preset 中的组合行加载新包名。

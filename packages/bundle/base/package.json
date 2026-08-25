@@ -102,7 +102,6 @@
     "@deepseek-ai/dsh-tool-str-replace-editor": "workspace:^",
     "@deepseek-ai/dsh-tool-subagent": "workspace:^",
     "@deepseek-ai/dsh-tool-subagent-control": "workspace:^",
-    "@deepseek-ai/dsh-tool-list-models": "workspace:^",
     "@deepseek-ai/dsh-tool-subagent-report": "workspace:^",
     "@deepseek-ai/dsh-tool-jobs": "workspace:^",
     "@deepseek-ai/dsh-tool-todo": "workspace:^",
@@ -116,9 +115,7 @@
     "@deepseek-ai/dsh-web": "workspace:^",
     "@deepseek-ai/dsh-web-search-deepseek": "workspace:^",
     "@deepseek-ai/dsh-workflow-worker-thread": "workspace:^",
-    "@deepseek-ai/dsh-agent-instructions": "workspace:^",
-    "@deepseek-ai/dsh-tool-zeroy": "workspace:^",
-    "@deepseek-ai/dsh-tool-chrome": "workspace:^"
+    "@deepseek-ai/dsh-agent-instructions": "workspace:^"
   },
   "peerDependencies": {
     "@deepseek-ai/dsh-invariants": "workspace:^",

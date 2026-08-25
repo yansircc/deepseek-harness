@@ -23,9 +23,11 @@ import type {} from '@deepseek-ai/dsh-token-meter'
 
 const CONFIG_DIR = fileURLToPath(new URL('../config/', import.meta.url))
 const REPO_ROOT = fileURLToPath(new URL('../../..', import.meta.url))
-/** The shipped Web surface: the dsh-base and dsh-web-app bundle patches over an empty preset root. */
+/** The shipped Web surface: the default web Profile bundle stack over an empty preset root. */
 const BASE_PATCH = join(REPO_ROOT, 'packages/bundle/base/cordis.patch.yml')
+const FORK_BASE_PATCH = join(REPO_ROOT, 'packages/bundle/fork-base/cordis.patch.yml')
 const WEB_PATCH = join(REPO_ROOT, 'packages/bundle/web-app/cordis.patch.yml')
+const FORK_WEB_PATCH = join(REPO_ROOT, 'packages/bundle/fork-web/cordis.patch.yml')
 const CODEX_PACKAGE_DIR = join(REPO_ROOT, 'packages/subagent/subagent-codex')
 const CLAUDE_CODE_PACKAGE_DIR = join(REPO_ROOT, 'packages/subagent/subagent-claude-code')
 /** The installation anchor whose dependency surface the preset module fallback mirrors. */
@@ -129,7 +131,9 @@ async function bootWeb(
   }
   let bundlePatches: PatchOptions[] = [
     ...loadOverlayPatches('dsh-test', BASE_PATCH),
+    ...loadOverlayPatches('dsh-test', FORK_BASE_PATCH),
     ...loadOverlayPatches('dsh-test', WEB_PATCH),
+    ...loadOverlayPatches('dsh-test', FORK_WEB_PATCH),
   ]
   if (profileBundles !== undefined) {
     await writeFile(join(profileDir, 'package.json'), JSON.stringify({

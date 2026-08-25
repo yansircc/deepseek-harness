@@ -177,6 +177,12 @@ importers:
       '@deepseek-ai/dsh-cordis-client-runner':
         specifier: workspace:^
         version: link:../../packages/extensions/cordis-client-runner
+      '@deepseek-ai/dsh-fork-base':
+        specifier: workspace:^
+        version: link:../../packages/bundle/fork-base
+      '@deepseek-ai/dsh-fork-web':
+        specifier: workspace:^
+        version: link:../../packages/bundle/fork-web
       '@deepseek-ai/dsh-fs-local':
         specifier: workspace:^
         version: link:../../packages/fs/fs-local
@@ -1177,9 +1183,6 @@ importers:
       '@deepseek-ai/dsh-tool-call-timeout-policy':
         specifier: workspace:^
         version: link:../../guard/timeout-policy
-      '@deepseek-ai/dsh-tool-chrome':
-        specifier: workspace:^
-        version: link:../../extensions/tool-chrome
       '@deepseek-ai/dsh-tool-fs':
         specifier: workspace:^
         version: link:../../fs/tool-fs
@@ -1192,9 +1195,6 @@ importers:
       '@deepseek-ai/dsh-tool-jobs':
         specifier: workspace:^
         version: link:../../jobs/tool-jobs
-      '@deepseek-ai/dsh-tool-list-models':
-        specifier: workspace:^
-        version: link:../../llm/tool-list-models
       '@deepseek-ai/dsh-tool-pwsh':
         specifier: workspace:^
         version: link:../../shell/tool-pwsh
@@ -1225,9 +1225,6 @@ importers:
       '@deepseek-ai/dsh-tool-workflow':
         specifier: workspace:^
         version: link:../../workflow/tool-workflow
-      '@deepseek-ai/dsh-tool-zeroy':
-        specifier: workspace:^
-        version: link:../../extensions/tool-zeroy
       '@deepseek-ai/dsh-tools':
         specifier: workspace:^
         version: link:../../core/tools
@@ -1252,6 +1249,59 @@ importers:
       '@deepseek-ai/dsh-workflow-worker-thread':
         specifier: workspace:^
         version: link:../../workflow/workflow-worker-thread
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
+
+  packages/bundle/fork-base:
+    dependencies:
+      '@deepseek-ai/dsh-tool-chrome':
+        specifier: workspace:^
+        version: link:../../extensions/tool-chrome
+      '@deepseek-ai/dsh-tool-list-models':
+        specifier: workspace:^
+        version: link:../../llm/tool-list-models
+      '@deepseek-ai/dsh-tool-zeroy':
+        specifier: workspace:^
+        version: link:../../extensions/tool-zeroy
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
+
+  packages/bundle/fork-web:
+    dependencies:
+      '@deepseek-ai/dsh-client-ui-chrome':
+        specifier: workspace:^
+        version: link:../../client/ui-chrome
+      '@deepseek-ai/dsh-client-ui-schedule':
+        specifier: workspace:^
+        version: link:../../client/ui-schedule
+      '@deepseek-ai/dsh-client-ui-workspace-git':
+        specifier: workspace:^
+        version: link:../../client/ui-workspace-git
+      '@deepseek-ai/dsh-client-ui-zeroy':
+        specifier: workspace:^
+        version: link:../../client/ui-zeroy
+      '@deepseek-ai/dsh-schedule':
+        specifier: workspace:^
+        version: link:../../schedule/schedule
+      '@deepseek-ai/dsh-session-tool-stats':
+        specifier: workspace:^
+        version: link:../../session/session-tool-stats
+      '@deepseek-ai/dsh-time-context':
+        specifier: workspace:^
+        version: link:../../context/time-context
+      '@deepseek-ai/dsh-workspace-git':
+        specifier: workspace:^
+        version: link:../../workspace/workspace-git
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -1332,9 +1382,6 @@ importers:
       '@deepseek-ai/dsh-client-ui-brand-official':
         specifier: workspace:^
         version: link:../../client/ui-brand-official
-      '@deepseek-ai/dsh-client-ui-chrome':
-        specifier: workspace:^
-        version: link:../../client/ui-chrome
       '@deepseek-ai/dsh-client-ui-commands':
         specifier: workspace:^
         version: link:../../client/ui-commands
@@ -1383,9 +1430,6 @@ importers:
       '@deepseek-ai/dsh-client-ui-renderer':
         specifier: workspace:^
         version: link:../../client/ui-renderer
-      '@deepseek-ai/dsh-client-ui-schedule':
-        specifier: workspace:^
-        version: link:../../client/ui-schedule
       '@deepseek-ai/dsh-client-ui-settings':
         specifier: workspace:^
         version: link:../../client/ui-settings
@@ -1428,12 +1472,6 @@ importers:
       '@deepseek-ai/dsh-client-ui-workspace':
         specifier: workspace:^
         version: link:../../client/ui-workspace
-      '@deepseek-ai/dsh-client-ui-workspace-git':
-        specifier: workspace:^
-        version: link:../../client/ui-workspace-git
-      '@deepseek-ai/dsh-client-ui-zeroy':
-        specifier: workspace:^
-        version: link:../../client/ui-zeroy
       '@deepseek-ai/dsh-cmdline':
         specifier: workspace:^
         version: link:../../boot/cmdline
@@ -1479,9 +1517,6 @@ importers:
       '@deepseek-ai/dsh-message-feedback':
         specifier: workspace:^
         version: link:../../feedback/message-feedback
-      '@deepseek-ai/dsh-schedule':
-        specifier: workspace:^
-        version: link:../../schedule/schedule
       '@deepseek-ai/dsh-session-log-export':
         specifier: workspace:^
         version: link:../../session-query/session-log-export
@@ -1494,9 +1529,6 @@ importers:
       '@deepseek-ai/dsh-session-stats':
         specifier: workspace:^
         version: link:../../session/session-stats
-      '@deepseek-ai/dsh-session-tool-stats':
-        specifier: workspace:^
-        version: link:../../session/session-tool-stats
       '@deepseek-ai/dsh-storage':
         specifier: workspace:^
         version: link:../../storage/storage
@@ -1509,18 +1541,12 @@ importers:
       '@deepseek-ai/dsh-subprocess':
         specifier: workspace:^
         version: link:../../subprocess/subprocess
-      '@deepseek-ai/dsh-time-context':
-        specifier: workspace:^
-        version: link:../../context/time-context
       '@deepseek-ai/dsh-web-frontend':
         specifier: workspace:^
         version: link:../../../apps/web
       '@deepseek-ai/dsh-workspace':
         specifier: workspace:^
         version: link:../../workspace/workspace
-      '@deepseek-ai/dsh-workspace-git':
-        specifier: workspace:^
-        version: link:../../workspace/workspace-git
       '@deepseek-ai/schemastery':
         specifier: link:../../../vendor/schemastery
         version: link:../../../vendor/schemastery
