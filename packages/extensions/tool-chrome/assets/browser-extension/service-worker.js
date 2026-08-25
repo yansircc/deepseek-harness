@@ -18794,7 +18794,7 @@
 		...identity,
 		extensionId: chrome.runtime.id,
 		extensionDisplayVersion: chrome.runtime.getManifest().version,
-		protocolFingerprint: "5cdf33d5c0f5594efe5917af839023d6b06fd3e59d05924bbc62ed204de4d0ce"
+		protocolFingerprint: "a03e43dd3b080201e832077f83bef54751d80eb75a23be6507e1d918cffc4d4c"
 	}).pipe(flatMap(decodeUnknownEffect(ProfileConnector)), mapError((cause) => cause instanceof ConnectorIdentityFailure ? cause : new ConnectorIdentityFailure({
 		message: "Live connector metadata is invalid",
 		cause
@@ -19385,7 +19385,7 @@
 	}
 	//#endregion
 	//#region src/browser/injected/actions.ts
-	var PAGE_HELPERS = [getPiChromeState];
+	var PAGE_HELPERS = [getPiChromeState, installPiChromeInstrumentation];
 	//#endregion
 	//#region src/browser/platform-resource-lease.ts
 	async function withResourceLease(acquire, use, release) {
@@ -21937,7 +21937,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 					if (typeof snapshotPage !== "function") throw new Error("Snapshot bundle did not install __dshChromeSnapshotPage");
 					return {
 						ok: true,
-						value: snapshotPage(...invocationArgs)
+						value: await snapshotPage(...invocationArgs)
 					};
 				} catch (error) {
 					return {
@@ -22798,7 +22798,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 			})))));
 			return true;
 		}
-		const response = handleChromeExtensionProbe(message, chrome.runtime, "5cdf33d5c0f5594efe5917af839023d6b06fd3e59d05924bbc62ed204de4d0ce");
+		const response = handleChromeExtensionProbe(message, chrome.runtime, "a03e43dd3b080201e832077f83bef54751d80eb75a23be6507e1d918cffc4d4c");
 		if (response === void 0) return false;
 		sendResponse(response);
 		return false;

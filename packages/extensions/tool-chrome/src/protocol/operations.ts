@@ -632,14 +632,7 @@ const resultDocuments: Record<string, Record<string, OperationResultContract>> =
       properties: { tab: formattedTabSchema, url: { type: 'string' } },
     }),
     evaluate: opaque(),
-    wait: schema({
-      type: 'object',
-      properties: {
-        satisfied: { type: 'boolean' },
-        elapsedMs: { type: 'integer' },
-        observation: { type: 'object' },
-      },
-    }),
+    wait: opaque(),
     console: opaque(),
     'network-list': opaque(),
     'network-get': opaque(),

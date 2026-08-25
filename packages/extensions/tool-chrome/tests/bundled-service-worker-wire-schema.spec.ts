@@ -60,6 +60,13 @@ describe('bundled service-worker PageCall/InputCall wire schema', () => {
   })
 })
 
+describe('bundled service-worker result contracts', () => {
+  it('keeps dynamic wait observations opaque at the bridge boundary', async () => {
+    const { operationResultProtocolContract } = await import('../src/protocol/operations.ts')
+    expect(operationResultProtocolContract.page.wait).toMatchObject({ mode: 'opaque' })
+  })
+})
+
 describe('bundled service-worker poll-decode diagnostics', () => {
   it('formats secret-free poll diagnostics and posts poll-response-invalid for recoverable ids', () => {
     expect(serviceWorkerSource).toContain('POLL_RESPONSE_INVALID_CODE = "poll-response-invalid"')
@@ -74,6 +81,13 @@ describe('bundled service-worker poll-decode diagnostics', () => {
     )
     expect(serviceWorkerSource).toContain('summarizePollBodyForDiagnostic')
     expect(serviceWorkerSource).toContain('secretFreeSchemaLeafMessage')
+  })
+
+  it('injects instrumentation helpers and awaits asynchronous snapshot projection', () => {
+    expect(serviceWorkerSource).toContain(
+      'var PAGE_HELPERS = [getPiChromeState, installPiChromeInstrumentation]',
+    )
+    expect(serviceWorkerSource).toContain('value: await snapshotPage(...invocationArgs)')
   })
 
   it('cancels response.body on readResponseText interrupt without referencing reader', () => {
