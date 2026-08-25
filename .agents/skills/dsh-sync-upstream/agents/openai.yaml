@@ -1,0 +1,4 @@
+interface:
+  display_name: "DSH Upstream Sync"
+  short_description: "Plan and merge official upstream releases into the fork"
+  default_prompt: "Use $dsh-sync-upstream to plan and integrate an official DeepSeek Harness upstream release into this fork."
