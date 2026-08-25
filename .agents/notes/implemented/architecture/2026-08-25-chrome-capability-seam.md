@@ -1,18 +1,20 @@
 # Agent Note: Chrome capability seam owns bridge, extension protocol, browser-session ownership, and atomic tool consumers
 
-Status: proposed
+Status: implemented
+
+English | [中文](2026-08-25-chrome-capability-seam.zh.md)
 
 ## Problem
 
-Chrome automation currently combines model-facing tools, local bridge, credentials, connector ownership, protocol vocabulary, extension distribution, and Web status routes in one package. The browser extension is a generated artifact without authored source in this repository, while Host and extension operation contracts can drift even when their manually synchronized fingerprint is equal. Cancellation, startup, connector adoption, wire decoding, and disposal lack one capability owner.
+Chrome automation combined the model-facing tools, local bridge, credentials, connector ownership, protocol vocabulary, extension distribution, and Web status routes in one package. The browser extension was a generated artifact without an authored source in this repository, and Host and extension operation contracts can drift while their manually synchronized fingerprint remains equal. Tool cancellation, provider startup, connector adoption, wire decoding, and disposal therefore lack one capability owner.
 
-## Proposal
+## Decision
 
-Split Chrome into a provider-neutral protocol, an owner-scoped `ctx.chrome` Service Definition, a local bridge provider, a model-facing atomic-tool Consumer, and a separate Web/UI Consumer. One canonical operation descriptor source generates model schemas, wire unions, result contracts, extension dispatch, protocol revisions, artifacts, and catalog inputs. The stable kernel protocol covers authentication, transport, journal, cancellation, acknowledgement, and executor envelopes; operation/page-program revisions change without extension reload.
+Chrome is split into a provider-neutral protocol, an owner-scoped `ctx.chrome` Service Definition, a local bridge provider, a model-facing atomic-tool Consumer, and a separate Web/UI Consumer. Authored extension operation contracts and the Host protocol packages own model schemas, wire unions, result contracts, extension dispatch, protocol revisions, artifacts, and catalog inputs. The stable kernel protocol covers authentication, transport, journal, cancellation, acknowledgement, and executor envelopes; operation/page-program revisions change without extension reload.
 
 The Service Definition accepts an exact initiating Agent and required AbortSignal. One provider starts completely before publication, rejects duplicates and missing providers, records command outcome semantics, and awaits provider quiescence during disposal. The local provider owns loopback HTTP/HMAC, credentials, connector lease, browser-session ownership, durable broker, extension artifacts, and bounded runtime decoding. Connector adoption commits only after challenge-response proof. The model Consumer owns tool names, model schemas, argument projection, cancellation forwarding, and presentation. The client UI consumes secret-free status and artifact metadata.
 
-Existing model-visible tool names and durable session semantics remain stable unless a separate breaking decision is recorded. Chrome remains host-plane because the bridge owns process-singleton browser state; moving tools behind agent presets is a separate decision. Existing Chrome notes remain authoritative for credential pinning, connector lease selection, page deadlines, mailbox recovery, stale ownership, and protocol diagnostics until this proposal ships and explicitly transfers each invariant.
+Existing model-visible tool names and durable session semantics remain stable unless a separate breaking decision is recorded. Chrome remains host-plane because the bridge owns process-singleton browser state; moving tools behind agent presets is a separate decision. Existing Chrome notes remain authoritative for credential pinning, connector lease selection, page deadlines, mailbox recovery, stale ownership, and protocol diagnostics and remain cross-referenced authorities for those invariants.
 
 ## Alternatives considered
 
@@ -26,7 +28,7 @@ Existing model-visible tool names and durable session semantics remain stable un
 
 ## Consequences
 
-The migration adds package boundaries and a build pipeline before it removes the legacy package. The extension kernel must retain strict authentication, bounded dynamic program execution, durable journal recovery, and fail-closed kernel compatibility. A real built-artifact Chrome smoke lane becomes required in addition to source and bundle tests. Provider-specific HTTP details no longer leak into tools or UI, while headless composition can omit the Web adapter explicitly.
+The package boundaries and deterministic extension build replace the legacy mixed package. The extension kernel must retain strict authentication, bounded dynamic program execution, durable journal recovery, and fail-closed kernel compatibility. A real built-artifact Chrome smoke lane becomes required in addition to source and bundle tests. Provider-specific HTTP details no longer leak into tools or UI, while headless composition can omit the Web adapter explicitly.
 
 Cross-reference authorities:
 
@@ -37,4 +39,4 @@ Cross-reference authorities:
 - [Chrome stale ownership recovery](../../implemented/bug-fix/2026-08-23-chrome-safe-stale-ownership-recovery.md)
 - [Chrome protocol and poll diagnostics](../../implemented/bug-fix/2026-08-23-chrome-protocol-fingerprint-poll-diagnostics.md)
 
-The proposal currently supersedes no implemented note. Any transfer or consolidation occurs only after the corresponding behavior and verification ship.
+This decision supersedes no implemented note; the linked security, lifecycle, and recovery records remain active authorities.
