@@ -513,6 +513,14 @@ async function getOrCreateAutomationTarget(sessionKey: string, groupTitle: strin
     const resolution =
       current.length === 0 ? undefined : (await resolveAutomationTargets(sessionKey))[0]
     if (resolution?.state === 'owned') {
+      if (isAllocationUrl(resolution.tab.url ?? '')) {
+        const foreground = (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))
+          .find(candidate => typeof candidate.id === 'number' && !isAllocationUrl(candidate.url ?? ''))
+        if (foreground?.url && typeof resolution.tab.id === 'number') {
+          await chrome.tabs.update(resolution.tab.id, { url: foreground.url })
+          return chrome.tabs.get(resolution.tab.id) as Promise<ResolvedTab>
+        }
+      }
       const groupId = resolution.tab.groupId
       if (typeof groupId === 'number' && groupId >= 0 && chrome.tabGroups) {
         const group = await chrome.tabGroups.get(groupId).catch(() => null)
