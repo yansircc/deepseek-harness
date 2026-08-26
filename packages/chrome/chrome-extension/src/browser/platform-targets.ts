@@ -39,6 +39,7 @@ type AllocatingAutomationTarget = Readonly<{
   epoch: string
   nonce: string
   label: string
+  originUrl?: string
 }>
 
 type OwnedAutomationTarget = Readonly<{
@@ -145,7 +146,13 @@ function decodeAutomationTarget(target: unknown, sessionKey: string): Automation
     candidate.state === 'allocating' &&
     typeof candidate.nonce === 'string' &&
     candidate.nonce.length > 0 &&
-    hasExactKeys(candidate, ['state', 'epoch', 'nonce', 'label'])
+    (candidate.originUrl === undefined || typeof candidate.originUrl === 'string') &&
+    hasExactKeys(
+      candidate,
+      candidate.originUrl === undefined
+        ? ['state', 'epoch', 'nonce', 'label']
+        : ['state', 'epoch', 'nonce', 'label', 'originUrl'],
+    )
   const ownedValid =
     candidate.state === 'owned' &&
     typeof candidate.tabId === 'number' &&
@@ -456,6 +463,10 @@ async function createAutomationTarget(
       tabId: tab.id,
       label: target.label,
     })
+    if (target.originUrl && isAllocationUrl(grouped.url ?? '')) {
+      await chrome.tabs.update(tab.id, { url: target.originUrl })
+      return chrome.tabs.get(tab.id)
+    }
     return grouped
   } catch (error) {
     try {
@@ -545,6 +556,12 @@ async function getOrCreateAutomationTarget(sessionKey: string, groupTitle: strin
           'Open the bound Chrome profile and try again.',
       )
     }
+    const source = (await chrome.tabs.query({ active: true }))
+      .find(candidate =>
+        typeof candidate.id === 'number' &&
+        !isAllocationUrl(candidate.url ?? '') &&
+        !candidate.url?.startsWith('chrome-extension://'),
+      )
     const target =
       resolution?.state === 'allocation-needed'
         ? resolution.target
@@ -553,6 +570,7 @@ async function getOrCreateAutomationTarget(sessionKey: string, groupTitle: strin
           epoch: await currentBrowserEpoch(),
           nonce: globalThis.crypto.randomUUID(),
           label,
+          ...(source?.url === undefined ? {} : { originUrl: source.url }),
         } as const)
     if (!resolution) await appendAutomationTarget(sessionKey, target)
     return createAutomationTarget(sessionKey, target, normalWindows)

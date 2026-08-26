@@ -19933,11 +19933,17 @@
 		if (typeof target !== "object" || target === null) throw invalidAutomationTargetState(`Invalid Chrome automation target state for DSH session ${sessionKey}`);
 		const candidate = target;
 		const commonValid = typeof candidate.epoch === "string" && candidate.epoch.length > 0 && typeof candidate.label === "string" && candidate.label.length > 0 && candidate.label.length <= 80;
-		const allocatingValid = candidate.state === "allocating" && typeof candidate.nonce === "string" && candidate.nonce.length > 0 && hasExactKeys(candidate, [
+		const allocatingValid = candidate.state === "allocating" && typeof candidate.nonce === "string" && candidate.nonce.length > 0 && (candidate.originUrl === void 0 || typeof candidate.originUrl === "string") && hasExactKeys(candidate, candidate.originUrl === void 0 ? [
 			"state",
 			"epoch",
 			"nonce",
 			"label"
+		] : [
+			"state",
+			"epoch",
+			"nonce",
+			"label",
+			"originUrl"
 		]);
 		const ownedValid = candidate.state === "owned" && typeof candidate.tabId === "number" && Number.isInteger(candidate.tabId) && hasExactKeys(candidate, [
 			"state",
@@ -20142,6 +20148,10 @@
 				tabId: tab.id,
 				label: target.label
 			});
+			if (target.originUrl && isAllocationUrl(grouped.url ?? "")) {
+				await chrome.tabs.update(tab.id, { url: target.originUrl });
+				return chrome.tabs.get(tab.id);
+			}
 			return grouped;
 		} catch (error) {
 			try {
@@ -20200,11 +20210,13 @@
 			if (resolution?.state === "stale") throw ownershipLost(sessionKey, resolution.target, resolution.reason);
 			const normalWindows = await regularNormalWindows();
 			if (normalWindows.length === 0) throw rejected("chrome-window-required", "No regular Chrome window is open in the bound Chrome profile. Open the bound Chrome profile and try again.");
+			const source = (await chrome.tabs.query({ active: true })).find((candidate) => typeof candidate.id === "number" && !isAllocationUrl(candidate.url ?? "") && !candidate.url?.startsWith("chrome-extension://"));
 			const target = resolution?.state === "allocation-needed" ? resolution.target : {
 				state: "allocating",
 				epoch: await currentBrowserEpoch(),
 				nonce: globalThis.crypto.randomUUID(),
-				label
+				label,
+				...source?.url === void 0 ? {} : { originUrl: source.url }
 			};
 			if (!resolution) await appendAutomationTarget(sessionKey, target);
 			return createAutomationTarget(sessionKey, target, normalWindows);
