@@ -134,6 +134,11 @@ async function bootWeb(
     ...loadOverlayPatches('dsh-test', FORK_BASE_PATCH),
     ...loadOverlayPatches('dsh-test', WEB_PATCH),
     ...loadOverlayPatches('dsh-test', FORK_WEB_PATCH),
+    { id: 'chrome-local', disabled: true },
+    { id: 'chrome-local-web', disabled: true },
+    { id: 'tool-chrome', disabled: true },
+    { id: 'tool-zeroy', disabled: true },
+    { id: 'schedule', disabled: true },
   ]
   if (profileBundles !== undefined) {
     await writeFile(join(profileDir, 'package.json'), JSON.stringify({
@@ -241,7 +246,7 @@ describe('the shipped Web composition', () => {
       // depend on ripgrep being present on the machine.
       expect(toolNames(ctx, handle.agent).filter(name => name !== 'glob' && name !== 'grep')).toEqual([
         'ask_user_question', 'bash', 'create_goal', 'edit', 'exit_plan_mode',
-        'get_goal', 'interrupt_agent', 'job_kill', 'job_list', 'job_output', 'list_agents', 'list_models', 'ralph', 'read', 'read_image', 'send_message', 'steer_agent', 'skill',
+        'get_goal', 'interrupt_agent', 'job_kill', 'job_list', 'job_output', 'list_agents', 'list_models', 'ralph', 'read', 'read_image', 'send_message', 'skill', 'steer_agent',
         'subagent', 'subagent_fork', 'todo_write', 'update_goal', 'web_search',
         'workflow', 'write',
       ])
@@ -503,6 +508,7 @@ describe('product Bundle and user-preset intersection', () => {
           includeUserRoot: false,
         },
       },
+      { id: 'chrome-local-web', disabled: true },
     ], installed.map(packageDir), [
       '@deepseek-ai/dsh-base',
       '@deepseek-ai/dsh-web-app',
