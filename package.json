@@ -147,7 +147,9 @@
     "mock:llm": "node --import tsx packages/test-support/llm-mock-server/src/bin.ts",
     "dev:web": "tsx scripts/dev-web.ts --poll",
     "dev:chrome": "tsx scripts/dev-chrome.ts",
-    "postinstall": "node scripts/install-lefthook.mjs"
+    "postinstall": "node scripts/install-lefthook.mjs",
+    "chrome:package": "tsx scripts/chrome-e2e/package-extension.ts",
+    "chrome:e2e:install": "tsx scripts/chrome-e2e/install-chrome-for-testing.ts"
   },
   "devDependencies": {
     "@agentclientprotocol/sdk": "0.25.1",
