@@ -68,19 +68,22 @@ export const decodeWireResult = (text: string): WireResult => {
   const id = ChromeCommandId(string(value, 'id'))
   if (value.ok) return { id, ok: true, value: jsonValue(value.value) }
   if (!isRecord(value.error)) throw new ProtocolFailure('wire result error is malformed')
-  const code = string(value.error, 'code')
+  const tag = string(value.error, '_tag')
   const message = string(value.error, 'message')
-  if (code === 'rejected') {
+  if (tag === 'CommandRejected') {
     return {
       id,
       ok: false,
       error: {
-        code,
+        _tag: tag,
+        code: string(value.error, 'code'),
         message,
         ...(value.error.details === undefined ? {} : { details: jsonValue(value.error.details) }),
       },
     }
   }
-  if (code === 'outcome-unknown' || code === 'cancelled') return { id, ok: false, error: { code, message } }
-  throw new ProtocolFailure('wire result error code is unsupported')
+  if (tag === 'CommandOutcomeUnknown') {
+    return { id, ok: false, error: { _tag: tag, message, cause: string(value.error, 'cause') } }
+  }
+  throw new ProtocolFailure('wire result error tag is unsupported')
 }

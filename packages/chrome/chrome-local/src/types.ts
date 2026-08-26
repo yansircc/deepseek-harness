@@ -1,6 +1,5 @@
 /** Internal wire types for the local Chrome connector provider. */
 import type {
-  ChromeCommand,
   ChromeCommandId,
   ChromeConnectorId,
   ChromeJsonValue,
@@ -27,18 +26,18 @@ export interface WireOwnerContext {
   readonly foreground: boolean
 }
 
-/** Command delivered to the Chrome extension. */
+/** Command delivered to the authored Chrome extension. */
 export interface WireCommand {
   readonly id: ChromeCommandId
-  readonly command: ChromeCommand
-  readonly owner: WireOwnerContext
+  readonly session: WireOwnerContext
+  readonly domain: 'tab' | 'page' | 'input' | 'system'
+  readonly call: { readonly op?: string; readonly operation?: { readonly kind: string }; readonly [key: string]: unknown }
 }
 
 /** Terminal connector failure. */
 export type WireCommandError =
-  | { readonly code: 'rejected'; readonly message: string; readonly details?: ChromeJsonValue }
-  | { readonly code: 'outcome-unknown'; readonly message: string }
-  | { readonly code: 'cancelled'; readonly message: string }
+  | { readonly _tag: 'CommandRejected'; readonly code: string; readonly message: string; readonly details?: ChromeJsonValue }
+  | { readonly _tag: 'CommandOutcomeUnknown'; readonly message: string; readonly cause: string }
 
 /** Result posted by the connector. */
 export type WireResult =

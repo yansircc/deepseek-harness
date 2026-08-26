@@ -10,6 +10,7 @@ import {
 } from '@deepseek-ai/dsh-chrome-protocol'
 import { ChromeError } from '@deepseek-ai/dsh-chrome'
 import type { LateResultRecord, PublicConnector, WireCommand, WireResult } from './types.ts'
+import { extensionWireCommand } from './wire-command.ts'
 
 interface Entry {
   readonly command: WireCommand
@@ -50,15 +51,11 @@ export class LocalCommandBroker {
     if (this.entries.size >= this.maximum) throw new ChromeError('Chrome connector command queue is full', 'CHROME_COMMAND_REJECTED')
     const id = ChromeCommandId(randomUUID())
     const ownerId = owner.id
-    const wire: WireCommand = {
-      id,
-      command,
-      owner: {
-        key: `agent:${ownerId}`,
-        groupTitle: 'DSH session',
-        foreground: true,
-      },
-    }
+    const wire: WireCommand = extensionWireCommand(id, command, {
+      key: `agent:${ownerId}`,
+      groupTitle: 'DSH session',
+      foreground: true,
+    })
     return new Promise<ChromeJsonValue>((resolve, reject) => {
       let settled = false
       const finish = (): void => {
@@ -145,8 +142,11 @@ export class LocalCommandBroker {
     entry.phase = 'settled'
     this.entries.delete(result.id)
     if (result.ok) entry.resolve(result.value)
-    else if (result.error.code === 'rejected') entry.reject(new ChromeError(result.error.message, 'CHROME_COMMAND_REJECTED'))
-    else entry.reject(new ChromeError(result.error.message, 'CHROME_COMMAND_OUTCOME_UNKNOWN'))
+    else if (result.error._tag === 'CommandRejected') {
+      entry.reject(new ChromeError(result.error.message, 'CHROME_COMMAND_REJECTED'))
+    } else {
+      entry.reject(new ChromeError(result.error.message, 'CHROME_COMMAND_OUTCOME_UNKNOWN'))
+    }
     return 'accepted'
   }
 
