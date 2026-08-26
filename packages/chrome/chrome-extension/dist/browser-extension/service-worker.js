@@ -19870,10 +19870,6 @@
 		};
 	}
 	//#endregion
-	//#region src/browser/extension-runtime-assets.ts
-	var SNAPSHOT_BUNDLE_PATH = "snapshot.js";
-	var TARGET_BOOTSTRAP_DOCUMENT_PATH = "target-bootstrap.html";
-	//#endregion
 	//#region src/browser/platform-targets.ts
 	var AutomationOwnershipLost = class extends BrowserRejected {
 		reason;
@@ -19933,28 +19929,16 @@
 		if (typeof target !== "object" || target === null) throw invalidAutomationTargetState(`Invalid Chrome automation target state for DSH session ${sessionKey}`);
 		const candidate = target;
 		const commonValid = typeof candidate.epoch === "string" && candidate.epoch.length > 0 && typeof candidate.label === "string" && candidate.label.length > 0 && candidate.label.length <= 80;
-		const allocatingValid = candidate.state === "allocating" && typeof candidate.nonce === "string" && candidate.nonce.length > 0 && (candidate.originUrl === void 0 || typeof candidate.originUrl === "string") && hasExactKeys(candidate, candidate.originUrl === void 0 ? [
-			"state",
-			"epoch",
-			"nonce",
-			"label"
-		] : [
-			"state",
-			"epoch",
-			"nonce",
-			"label",
-			"originUrl"
-		]);
-		const ownedValid = candidate.state === "owned" && typeof candidate.tabId === "number" && Number.isInteger(candidate.tabId) && hasExactKeys(candidate, [
+		const ownedValid = (candidate.state === "adopted" || candidate.state === "created") && typeof candidate.tabId === "number" && Number.isInteger(candidate.tabId) && hasExactKeys(candidate, [
 			"state",
 			"epoch",
 			"tabId",
 			"label"
 		]);
-		if (!commonValid || !allocatingValid && !ownedValid) throw invalidAutomationTargetState(`Invalid Chrome automation target state for DSH session ${sessionKey}`);
+		if (!commonValid || !ownedValid) throw invalidAutomationTargetState(`Invalid Chrome automation target state for DSH session ${sessionKey}`);
 		return target;
 	}
-	var targetIdentity = (target) => target.state === "allocating" ? `allocation:${target.nonce}` : `tab:${target.tabId}`;
+	var targetIdentity = (target) => `tab:${target.tabId}`;
 	async function readAutomationTargets() {
 		const stored = (await chrome.storage.local.get(AUTOMATION_TARGETS_STORAGE_KEY))[AUTOMATION_TARGETS_STORAGE_KEY];
 		if (stored === void 0) return {};
@@ -19993,16 +19977,6 @@
 			[sessionKey]: [...sessionTargets, target]
 		});
 	}
-	async function replaceAutomationTarget(sessionKey, previous, replacement) {
-		const targets = await readAutomationTargets();
-		const sessionTargets = targets[sessionKey] ?? [];
-		const identity = targetIdentity(previous);
-		if (!sessionTargets.some((target) => targetIdentity(target) === identity)) throw invalidAutomationTargetState(`DSH session ${sessionKey} lost automation target ${identity} during allocation`);
-		await persistAutomationTargets({
-			...targets,
-			[sessionKey]: sessionTargets.map((target) => targetIdentity(target) === identity ? replacement : target)
-		});
-	}
 	async function removeAutomationTarget(sessionKey, target) {
 		const targets = await readAutomationTargets();
 		const sessionTargets = targets[sessionKey];
@@ -20021,9 +19995,6 @@
 			[sessionKey]: retained
 		});
 	}
-	var targetBootstrapUrl = () => chrome.runtime.getURL(TARGET_BOOTSTRAP_DOCUMENT_PATH);
-	var allocationUrl = (target) => `${targetBootstrapUrl()}#${target.nonce}`;
-	var isAllocationUrl = (url) => url.startsWith(`${targetBootstrapUrl()}#`);
 	async function withTargetTurn(operation) {
 		const previous = targetTurn;
 		let release;
@@ -20045,7 +20016,7 @@
 		target,
 		reason
 	});
-	var ownershipLost = (sessionKey, target, reason) => new AutomationOwnershipLost(reason === "epoch-changed" ? `DSH session ${sessionKey} has automation ownership from a previous browser epoch. Run /chrome cleanup before creating a replacement; no existing tab was adopted or closed.` : reason === "tab-missing" ? `DSH session ${sessionKey} lost its exact automation tab. Run /chrome cleanup before creating a replacement; no other tab was adopted or closed.` : `DSH session ${sessionKey}'s automation tab left the active profile's regular windows. Run /chrome cleanup before creating a replacement; no other tab was adopted or closed.`, reason, target.state === "owned" ? target.tabId : null);
+	var ownershipLost = (sessionKey, target, reason) => new AutomationOwnershipLost(reason === "epoch-changed" ? `DSH session ${sessionKey} has automation ownership from a previous browser epoch. Run /chrome cleanup before creating a replacement; no existing tab was adopted or closed.` : reason === "tab-missing" ? `DSH session ${sessionKey} lost its exact automation tab. Run /chrome cleanup before creating a replacement; no other tab was adopted or closed.` : `DSH session ${sessionKey}'s automation tab left the active profile's regular windows. Run /chrome cleanup before creating a replacement; no other tab was adopted or closed.`, reason, target.tabId);
 	var resolutionDetails = (resolutions) => resolutions.map((resolution) => {
 		switch (resolution.state) {
 			case "owned": return {
@@ -20054,197 +20025,98 @@
 				title: resolution.tab.title ?? "",
 				url: resolution.tab.url ?? ""
 			};
-			case "allocation-needed": return {
-				state: "allocating",
-				tabId: null
-			};
 			case "stale": return {
 				state: "stale",
-				tabId: resolution.target.state === "owned" ? resolution.target.tabId : null,
+				tabId: resolution.target.tabId,
 				reason: resolution.reason
 			};
 		}
 	});
 	var ambiguousAutomationTarget = (sessionKey, resolutions) => rejected("ambiguous-owned-target", `DSH session ${sessionKey} owns ${resolutions.length} Chrome automation targets. Pass one exact target id.`, { ownedTargets: resolutionDetails(resolutions) });
-	var resolveAutomationTargets = async (sessionKey, recoverAllocation = true) => {
+	var resolveAutomationTargets = async (sessionKey) => {
 		const targets = (await readAutomationTargets())[sessionKey] ?? [];
-		if (targets.length === 0) return [];
 		const epoch = await currentBrowserEpoch();
 		const normalWindows = await regularNormalWindows();
 		const normalWindowIds = new Set(normalWindows.map((window) => window.id));
-		const tabs = recoverAllocation && targets.some((target) => target.state === "allocating") ? await chrome.tabs.query({}) : [];
-		const resolutions = [];
-		for (const target of targets) {
-			if (target.epoch !== epoch) {
-				resolutions.push(staleResolution(target, "epoch-changed"));
-				continue;
-			}
-			if (target.state === "allocating") {
-				if (!recoverAllocation) {
-					resolutions.push({
-						state: "allocation-needed",
-						target
-					});
-					continue;
-				}
-				const allocating = tabs.filter((candidate) => typeof candidate.id === "number" && normalWindowIds.has(candidate.windowId) && !candidate.incognito && candidate.url === allocationUrl(target));
-				if (allocating.length > 1) throw invalidAutomationTargetState(`DSH session ${sessionKey} has multiple tabs carrying allocation nonce ${target.nonce}`);
-				const candidate = allocating[0];
-				if (!candidate || typeof candidate.id !== "number") {
-					resolutions.push({
-						state: "allocation-needed",
-						target
-					});
-					continue;
-				}
-				await groupTab(candidate, target.label);
-				const tab = await chrome.tabs.get(candidate.id);
-				const owned = {
-					state: "owned",
-					epoch,
-					tabId: candidate.id,
-					label: target.label
-				};
-				await replaceAutomationTarget(sessionKey, target, owned);
-				resolutions.push({
-					state: "owned",
-					target: owned,
-					tab
-				});
-				continue;
-			}
+		return Promise.all(targets.map(async (target) => {
+			if (target.epoch !== epoch) return staleResolution(target, "epoch-changed");
 			const tab = await chrome.tabs.get(target.tabId).catch(() => null);
-			if (!tab || typeof tab.id !== "number") {
-				resolutions.push(staleResolution(target, "tab-missing"));
-				continue;
-			}
-			if (!normalWindowIds.has(tab.windowId) || tab.incognito) {
-				resolutions.push(staleResolution(target, "tab-outside-regular-profile"));
-				continue;
-			}
-			resolutions.push({
+			if (!tab || typeof tab.id !== "number") return staleResolution(target, "tab-missing");
+			if (!normalWindowIds.has(tab.windowId) || tab.incognito) return staleResolution(target, "tab-outside-regular-profile");
+			return {
 				state: "owned",
 				target,
 				tab
-			});
-		}
-		return resolutions;
+			};
+		}));
 	};
-	async function createAutomationTarget(sessionKey, target, normalWindows, groupColor) {
-		const windowId = normalWindows[0]?.id;
-		if (typeof windowId !== "number") throw rejected("chrome-window-required", "Chrome automation target requires a regular window id");
-		const tab = await chrome.tabs.create({
-			url: allocationUrl(target),
-			active: false,
-			windowId
-		});
-		if (typeof tab.id !== "number") throw new BrowserOutcomeUnknown("Chrome created an automation tab without an id", { cause: "tabs.create returned no tab id" });
-		try {
-			await groupTab(tab, target.label, groupColor);
-			const grouped = await chrome.tabs.get(tab.id);
-			await replaceAutomationTarget(sessionKey, target, {
-				state: "owned",
-				epoch: target.epoch,
-				tabId: tab.id,
-				label: target.label
-			});
-			if (target.originUrl && isAllocationUrl(grouped.url ?? "")) {
-				await chrome.tabs.update(tab.id, { url: target.originUrl });
-				return chrome.tabs.get(tab.id);
-			}
-			return grouped;
-		} catch (error) {
-			try {
-				await chrome.tabs.remove(tab.id);
-			} catch (closeError) {
-				if ((await chrome.tabs.query({}).catch((probeError) => {
-					throw new AggregateError([
-						error,
-						closeError,
-						probeError
-					], `Chrome target creation failed and tab ${tab.id} closure could not be verified; allocation ownership was retained`);
-				})).some((candidate) => candidate.id === tab.id)) throw new AggregateError([error, closeError], `Chrome target creation failed and tab ${tab.id} remained open; allocation ownership was retained`);
-			}
-			try {
-				await removeAutomationTarget(sessionKey, target);
-			} catch (clearError) {
-				throw new AggregateError([error, clearError], `Chrome target creation failed after tab ${tab.id} was closed; allocation ownership cleanup must be retried`);
-			}
-			throw error;
-		}
-	}
 	async function getOwnedAutomationTarget(sessionKey) {
 		return withTargetTurn(async () => {
 			await autoReconcileSafeStaleAutomationTargets(sessionKey);
-			const current = await resolveAutomationTargets(sessionKey, false);
+			const current = await resolveAutomationTargets(sessionKey);
 			if (current.length === 0) return null;
 			if (current.length > 1) throw ambiguousAutomationTarget(sessionKey, current);
-			const resolution = (await resolveAutomationTargets(sessionKey))[0];
+			const resolution = current[0];
 			if (resolution.state === "owned") return resolution.tab;
-			if (resolution.state === "stale") throw ownershipLost(sessionKey, resolution.target, resolution.reason);
-			throw rejected("automation-target-allocation-pending", `DSH session ${sessionKey} has an unfinished Chrome automation target allocation. Run /chrome cleanup before retrying.`);
+			throw ownershipLost(sessionKey, resolution.target, resolution.reason);
 		});
 	}
-	async function getOrCreateAutomationTarget(sessionKey, groupTitle) {
+	async function getOrAdoptAutomationTarget(sessionKey, groupTitle) {
 		return withTargetTurn(async () => {
 			await autoReconcileSafeStaleAutomationTargets(sessionKey);
-			const label = cleanGroupTitle(groupTitle);
-			const current = await resolveAutomationTargets(sessionKey, false);
+			const current = await resolveAutomationTargets(sessionKey);
 			if (current.length > 1) throw ambiguousAutomationTarget(sessionKey, current);
-			const resolution = current.length === 0 ? void 0 : (await resolveAutomationTargets(sessionKey))[0];
-			if (resolution?.state === "owned") {
-				if (isAllocationUrl(resolution.tab.url ?? "")) {
-					const foreground = (await chrome.tabs.query({ active: true })).find((candidate) => typeof candidate.id === "number" && candidate.id !== resolution.tab.id && !isAllocationUrl(candidate.url ?? "") && !candidate.url?.startsWith("chrome-extension://"));
-					if (foreground?.url && typeof resolution.tab.id === "number") {
-						await chrome.tabs.update(resolution.tab.id, { url: foreground.url });
-						return chrome.tabs.get(resolution.tab.id);
-					}
-				}
-				const groupId = resolution.tab.groupId;
-				if (typeof groupId === "number" && groupId >= 0 && chrome.tabGroups) {
-					const group = await chrome.tabGroups.get(groupId).catch(() => null);
-					if (group && cleanGroupTitle(group.title || "") !== label) await chrome.tabGroups.update(groupId, { title: label });
-				}
-				return resolution.tab;
-			}
+			const resolution = current[0];
+			if (resolution?.state === "owned") return resolution.tab;
 			if (resolution?.state === "stale") throw ownershipLost(sessionKey, resolution.target, resolution.reason);
-			const normalWindows = await regularNormalWindows();
-			if (normalWindows.length === 0) throw rejected("chrome-window-required", "No regular Chrome window is open in the bound Chrome profile. Open the bound Chrome profile and try again.");
-			const source = (await chrome.tabs.query({ active: true })).find((candidate) => typeof candidate.id === "number" && !isAllocationUrl(candidate.url ?? "") && !candidate.url?.startsWith("chrome-extension://"));
-			const target = resolution?.state === "allocation-needed" ? resolution.target : {
-				state: "allocating",
+			const focused = (await regularNormalWindows()).find((window) => window.focused);
+			if (typeof focused?.id !== "number") throw rejected("chrome-window-required", "No focused regular Chrome window is available for implicit automation");
+			const [tab] = await chrome.tabs.query({
+				active: true,
+				windowId: focused.id
+			});
+			const url = tab?.url ?? "";
+			if (!tab || typeof tab.id !== "number" || url.startsWith("chrome://") || url.startsWith("chrome-extension://") || url.startsWith("devtools://")) throw rejected("automation-target-required", "The focused regular Chrome window has no automatable active tab; pass one exact target or run chrome_tab_new");
+			await appendAutomationTarget(sessionKey, {
+				state: "adopted",
 				epoch: await currentBrowserEpoch(),
-				nonce: globalThis.crypto.randomUUID(),
-				label,
-				...source?.url === void 0 ? {} : { originUrl: source.url }
-			};
-			if (!resolution) await appendAutomationTarget(sessionKey, target);
-			return createAutomationTarget(sessionKey, target, normalWindows);
+				tabId: tab.id,
+				label: cleanGroupTitle(groupTitle)
+			});
+			return tab;
 		});
 	}
 	async function createNewAutomationTarget(sessionKey, groupTitle, groupColor) {
 		return withTargetTurn(async () => {
 			await autoReconcileSafeStaleAutomationTargets(sessionKey);
+			const windows = await regularNormalWindows();
+			const focused = windows.find((window) => window.focused) ?? windows[0];
+			if (typeof focused?.id !== "number") throw rejected("chrome-window-required", "No regular Chrome window is open in the bound Chrome profile");
+			const tab = await chrome.tabs.create({
+				url: "about:blank",
+				active: false,
+				windowId: focused.id
+			});
+			if (typeof tab.id !== "number") throw new BrowserOutcomeUnknown("Chrome created an automation tab without an id", { cause: "tabs.create returned no tab id" });
 			const label = cleanGroupTitle(groupTitle);
-			const resolutions = await resolveAutomationTargets(sessionKey, false);
-			const stale = resolutions.find((resolution) => resolution.state === "stale");
-			if (stale?.state === "stale") throw ownershipLost(sessionKey, stale.target, stale.reason);
-			if (resolutions.some((resolution) => resolution.state === "allocation-needed")) throw rejected("automation-target-allocation-pending", `DSH session ${sessionKey} has an unfinished Chrome automation target allocation. Run /chrome cleanup before creating another tab.`);
-			const normalWindows = await regularNormalWindows();
-			if (normalWindows.length === 0) throw rejected("chrome-window-required", "No regular Chrome window is open in the bound Chrome profile. Open the bound Chrome profile and try again.");
-			const target = {
-				state: "allocating",
-				epoch: await currentBrowserEpoch(),
-				nonce: globalThis.crypto.randomUUID(),
-				label
-			};
-			await appendAutomationTarget(sessionKey, target);
-			return createAutomationTarget(sessionKey, target, normalWindows, groupColor);
+			try {
+				const grouped = await groupTab(tab, label, groupColor);
+				await appendAutomationTarget(sessionKey, {
+					state: "created",
+					epoch: await currentBrowserEpoch(),
+					tabId: tab.id,
+					label
+				});
+				return grouped;
+			} catch (error) {
+				await chrome.tabs.remove(tab.id).catch(() => void 0);
+				throw error;
+			}
 		});
 	}
 	var AUTO_RECONCILE_STALE_REASONS = /* @__PURE__ */ new Set(["epoch-changed", "tab-missing"]);
 	var clearProvedStaleAutomationTargets = async (sessionKey, reasons) => {
-		const resolutions = await resolveAutomationTargets(sessionKey, false);
+		const resolutions = await resolveAutomationTargets(sessionKey);
 		let staleOwnershipsCleared = 0;
 		for (const resolution of resolutions) {
 			if (resolution.state !== "stale") continue;
@@ -20271,13 +20143,13 @@
 			const targets = await readAutomationTargets();
 			const staleTargets = [];
 			for (const sessionKey of Object.keys(targets)) {
-				const resolutions = await resolveAutomationTargets(sessionKey, false);
+				const resolutions = await resolveAutomationTargets(sessionKey);
 				for (const resolution of resolutions) {
 					if (resolution.state !== "stale") continue;
 					staleTargets.push({
 						sessionKey,
 						reason: resolution.reason,
-						recordedTabId: resolution.target.state === "owned" ? resolution.target.tabId : null
+						recordedTabId: resolution.target.tabId
 					});
 				}
 			}
@@ -20289,18 +20161,17 @@
 	}
 	async function getAutomationTargetStatus(sessionKey) {
 		return withTargetTurn(async () => {
-			const resolutions = await resolveAutomationTargets(sessionKey, false);
+			const resolutions = await resolveAutomationTargets(sessionKey);
 			return { targets: await Promise.all(resolutions.map(async (resolution) => {
 				switch (resolution.state) {
 					case "owned": return {
 						state: "owned",
 						tab: await formatTab(resolution.tab)
 					};
-					case "allocation-needed": return { state: "allocating" };
 					case "stale": return {
 						state: "stale",
 						reason: resolution.reason,
-						recordedTabId: resolution.target.state === "owned" ? resolution.target.tabId : null
+						recordedTabId: resolution.target.tabId
 					};
 				}
 			})) };
@@ -20313,43 +20184,19 @@
 	}
 	var planAutomationTargetCleanup = async (onlySessionKey) => {
 		const targets = await readAutomationTargets();
-		if (Object.keys(targets).length === 0) return [];
 		const epoch = await currentBrowserEpoch();
-		const normalWindows = await regularNormalWindows();
-		const normalWindowIds = new Set(normalWindows.map((window) => window.id));
-		const selectedTargets = Object.entries(targets).filter(([sessionKey]) => onlySessionKey === void 0 || sessionKey === onlySessionKey);
-		const allocatingTabs = selectedTargets.some(([, sessionTargets]) => sessionTargets.some((target) => target.epoch === epoch && target.state === "allocating")) ? await chrome.tabs.query({}) : [];
 		const cleanup = [];
-		for (const [sessionKey, sessionTargets] of selectedTargets) for (const target of sessionTargets) {
-			if (target.epoch !== epoch) {
+		for (const [sessionKey, sessionTargets] of Object.entries(targets)) {
+			if (onlySessionKey !== void 0 && sessionKey !== onlySessionKey) continue;
+			for (const target of sessionTargets) {
+				const tab = target.epoch === epoch ? await chrome.tabs.get(target.tabId).catch(() => null) : null;
 				cleanup.push({
 					sessionKey,
 					target,
-					tabId: null,
-					stale: true
+					tabId: target.state === "created" && tab ? target.tabId : null,
+					stale: tab === null
 				});
-				continue;
 			}
-			if (target.state === "allocating") {
-				const candidates = allocatingTabs.filter((candidate) => typeof candidate.id === "number" && normalWindowIds.has(candidate.windowId) && !candidate.incognito && candidate.url === allocationUrl(target));
-				if (candidates.length > 1) throw invalidAutomationTargetState(`DSH session ${sessionKey} has multiple tabs carrying allocation nonce ${target.nonce}`);
-				const candidate = candidates[0];
-				cleanup.push({
-					sessionKey,
-					target,
-					tabId: candidate && typeof candidate.id === "number" ? candidate.id : null,
-					stale: candidate === void 0
-				});
-				continue;
-			}
-			const tab = await chrome.tabs.get(target.tabId).catch(() => null);
-			const provablyOwned = tab !== null && typeof tab.id === "number" && normalWindowIds.has(tab.windowId) && !tab.incognito;
-			cleanup.push({
-				sessionKey,
-				target,
-				tabId: provablyOwned ? target.tabId : null,
-				stale: !provablyOwned
-			});
 		}
 		return cleanup;
 	};
@@ -20385,7 +20232,7 @@
 			const targets = await readAutomationTargets();
 			let changed = false;
 			const retained = Object.fromEntries(Object.entries(targets).flatMap(([sessionKey, sessionTargets]) => {
-				const entries = sessionTargets.filter((target) => target.state !== "owned" || target.epoch !== epoch || target.tabId !== tabId);
+				const entries = sessionTargets.filter((target) => target.epoch !== epoch || target.tabId !== tabId);
 				if (entries.length !== sessionTargets.length) changed = true;
 				return entries.length === 0 ? [] : [[sessionKey, entries]];
 			}));
@@ -20487,12 +20334,12 @@ Current tabs:\n${tabs.filter((candidate) => candidate.id !== void 0).slice(0, 20
 			tab = matches[0];
 		} else {
 			const sessionKey = sessionKeyOf(params);
-			tab = createOwnedTarget ? await getOrCreateAutomationTarget(sessionKey, params.sessionGroupTitle) : await getOwnedAutomationTarget(sessionKey);
+			tab = createOwnedTarget ? await getOrAdoptAutomationTarget(sessionKey, params.sessionGroupTitle) : await getOwnedAutomationTarget(sessionKey);
 			if (!tab) throw rejected("automation-target-required", "No target tab specified and this DSH session has no automation tab yet. Pass selectedTabId/urlFragment/titleFragment, or run chrome_navigate first.");
 		}
 		if (typeof tab?.id !== "number" || typeof tab.windowId !== "number") throw rejected("tab-not-found", "No matching Chrome tab found");
 		const url = tab.url || "";
-		if (!(usesOwnedTarget && isAllocationUrl(url)) && (url.startsWith("chrome://") || url.startsWith("chrome-extension://") || url.startsWith("devtools://"))) throw rejected("protected-tab-url", `Chrome blocks extension automation on protected URL: tab=${tab.id} url=${url}`);
+		if (url.startsWith("chrome://") || url.startsWith("chrome-extension://") || url.startsWith("devtools://")) throw rejected("protected-tab-url", `Chrome blocks extension automation on protected URL: tab=${tab.id} url=${url}`);
 		if (usesOwnedTarget && params.sessionGroupTitle) tab = await joinSessionGroup(tab, params.sessionGroupTitle);
 		return tab;
 	}
@@ -21673,6 +21520,9 @@ Current tabs:\n${tabs.filter((candidate) => candidate.id !== void 0).slice(0, 20
 			length: text.length
 		};
 	}
+	//#endregion
+	//#region src/browser/extension-runtime-assets.ts
+	var SNAPSHOT_BUNDLE_PATH = "snapshot.js";
 	//#endregion
 	//#region src/browser/screenshot-transport.ts
 	var SCREENSHOT_TRANSPORT_BYTE_LIMIT = SCREENSHOT_PAYLOAD_BYTE_LIMIT;

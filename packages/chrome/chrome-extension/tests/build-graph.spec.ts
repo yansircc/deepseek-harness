@@ -27,7 +27,6 @@ describe('Chrome extension build graph', () => {
       'popup.js',
       'service-worker.js',
       'snapshot.js',
-      'target-bootstrap.html',
     ])
   })
 

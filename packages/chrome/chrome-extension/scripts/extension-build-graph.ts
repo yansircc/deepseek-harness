@@ -2,10 +2,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import { join, posix, sep } from 'node:path'
 import { Schema } from 'effect'
 import { ChromeExtensionExpectation } from '../src/protocol/chrome.ts'
-import {
-  SNAPSHOT_BUNDLE_PATH,
-  TARGET_BOOTSTRAP_DOCUMENT_PATH,
-} from '../src/browser/extension-runtime-assets.ts'
+import { SNAPSHOT_BUNDLE_PATH } from '../src/browser/extension-runtime-assets.ts'
 import { extensionPackageIdFromPublicKey } from '../src/shared/extension-package.ts'
 
 export type ExtensionArtifact =
@@ -60,11 +57,6 @@ export const EXTENSION_BUILD_GRAPH = {
       kind: 'static',
       source: 'src/browser/popup.css',
       output: 'popup.css',
-    },
-    targetBootstrapDocument: {
-      kind: 'static',
-      source: 'src/browser/target-bootstrap.html',
-      output: TARGET_BOOTSTRAP_DOCUMENT_PATH,
     },
     evidence: {
       kind: 'generated',
