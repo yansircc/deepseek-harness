@@ -15,7 +15,25 @@ import type { ResolvedConfig } from './config.ts'
 import { decodeProfileConnector, decodeWireResult } from './codec.ts'
 import { LocalCommandBroker } from './broker.ts'
 import { ConnectorOwner } from './connector-owner.ts'
-import type { PublicConnector } from './types.ts'
+import type { ProfileConnector } from './types.ts'
+import {
+  BridgeAuthenticationSession,
+  CONNECTOR_BODY_SHA256_HEADER,
+  CONNECTOR_BRIDGE_EPOCH_HEADER,
+  CONNECTOR_CLIENT_NONCE_HEADER,
+  CONNECTOR_PROOF_HEADER,
+  CONNECTOR_REQUEST_NONCE_HEADER,
+  connectorRequestProofMessage,
+  connectorServerProofMessage,
+  nodeHmacProof,
+  hashBridgeRequestBody,
+} from './protocol/auth.ts'
+import {
+  CONNECTOR_DISPLAY_VERSION_METADATA_HEADER,
+  CONNECTOR_EXTENSION_ID_HEADER,
+  CONNECTOR_ID_HEADER,
+  CONNECTOR_PROTOCOL_FINGERPRINT_HEADER,
+} from './protocol/connector-auth.ts'
 
 const BODY_LIMIT = 20 * 1024 * 1024
 const readBody = async (request: IncomingMessage): Promise<string> => {
@@ -48,6 +66,7 @@ export class LocalChromeProvider implements ChromeProvider {
   readonly id = ChromeProviderId('local')
   private readonly broker: LocalCommandBroker
   private readonly connectors = new ConnectorOwner()
+  private readonly authentication = new BridgeAuthenticationSession()
   private server: Server | undefined
   private closePromise: Promise<void> | undefined
   private state: 'starting' | 'listening' | 'failed' | 'stopped' = 'starting'
@@ -130,13 +149,40 @@ export class LocalChromeProvider implements ChromeProvider {
     return this.closePromise
   }
 
-  private connectorFor(request: IncomingMessage): PublicConnector | undefined {
-    const raw = request.headers['x-dsh-chrome-connector-id']
+  private connectorFor(request: IncomingMessage): ProfileConnector | undefined {
+    const raw = request.headers[CONNECTOR_ID_HEADER]
     if (typeof raw !== 'string') return undefined
-    const profile = this.connectors.authorize(ChromeConnectorId(raw))
-    if (!profile) return undefined
-    const { secret: _secret, ...connector } = profile
-    return connector
+    return this.connectors.authorize(ChromeConnectorId(raw))
+  }
+
+  private authenticateConnectorRequest(
+    request: IncomingMessage,
+    profile: ProfileConnector,
+    path: string,
+    body: string,
+  ): boolean {
+    const bridgeEpoch = String(request.headers[CONNECTOR_BRIDGE_EPOCH_HEADER] ?? '')
+    const requestNonce = String(request.headers[CONNECTOR_REQUEST_NONCE_HEADER] ?? '')
+    const bodyHash = String(request.headers[CONNECTOR_BODY_SHA256_HEADER] ?? '')
+    const proof = String(request.headers[CONNECTOR_PROOF_HEADER] ?? '')
+    const admission = this.authentication.authorize(
+      'connector',
+      { bridgeEpoch, requestNonce, bodyHash, proof },
+      Date.now(),
+    )
+    if (admission._tag !== 'Accepted' || bodyHash !== hashBridgeRequestBody(body)) return false
+    const expected = nodeHmacProof(
+      profile.secret,
+      connectorRequestProofMessage(
+        'connectorRequestProof',
+        profile,
+        { bridgeEpoch, requestNonce },
+        request.method ?? '',
+        path,
+        bodyHash,
+      ),
+    )
+    return proof === expected
   }
 
   private async handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
@@ -144,27 +190,65 @@ export class LocalChromeProvider implements ChromeProvider {
       const path = new URL(request.url ?? '/', `http://${this.config.host}:${this.config.port}`).pathname
       if (request.method === 'POST' && path === '/connector/handshake') {
         const presented = decodeProfileConnector(await readBody(request))
-        if (presented.extensionId !== this.artifact.extensionId || presented.protocolFingerprint !== this.artifact.protocolFingerprint) {
+        const clientNonce = String(request.headers[CONNECTOR_CLIENT_NONCE_HEADER] ?? '')
+        const headerId = String(request.headers[CONNECTOR_ID_HEADER] ?? '')
+        const headerExtensionId = String(request.headers[CONNECTOR_EXTENSION_ID_HEADER] ?? '')
+        const headerDisplayVersion = String(request.headers[CONNECTOR_DISPLAY_VERSION_METADATA_HEADER] ?? '')
+        const headerFingerprint = String(request.headers[CONNECTOR_PROTOCOL_FINGERPRINT_HEADER] ?? '')
+        if (
+          presented.extensionId !== this.artifact.extensionId ||
+          presented.protocolFingerprint !== this.artifact.protocolFingerprint ||
+          headerId !== presented.connectorId ||
+          headerExtensionId !== presented.extensionId ||
+          headerDisplayVersion !== presented.extensionDisplayVersion ||
+          headerFingerprint !== presented.protocolFingerprint ||
+          !/^[a-f0-9]{64}$/.test(clientNonce)
+        ) {
           json(response, 409, { ok: false, error: 'connector artifact is incompatible' })
           return
         }
-        // The connector secret is proved by the response HMAC in the full auth
-        // exchange; adoption is committed only at this proof-complete point.
+        const challenge = this.authentication.issue('connector', Date.now())
+        const proof = nodeHmacProof(
+          presented.secret,
+          connectorServerProofMessage(
+            'connectorServerProof',
+            presented,
+            clientNonce,
+            challenge,
+            this.artifact.protocolFingerprint,
+          ),
+        )
         this.connectors.adoptAfterProof(presented, presented.secret)
-        json(response, 200, { ok: true, protocolFingerprint: this.artifact.protocolFingerprint })
+        json(response, 200, {
+          bridgeDisplayVersion: this.artifact.displayVersion,
+          protocolFingerprint: this.artifact.protocolFingerprint,
+          ...challenge,
+          proof,
+        })
         return
       }
       const connector = this.connectorFor(request)
       if (!connector) { json(response, 401, { ok: false, error: 'connector is not authenticated' }); return }
       if (request.method === 'GET' && path === '/next') {
+        if (!this.authenticateConnectorRequest(request, connector, path, '')) {
+          json(response, 401, { ok: false, error: 'connector proof is invalid' })
+          return
+        }
         this.connectors.touch(connector.connectorId, Date.now())
-        json(response, 200, await this.broker.next(connector, this.config.pollWaitMs))
+        const { secret: _secret, ...publicConnector } = connector
+        json(response, 200, await this.broker.next(publicConnector, this.config.pollWaitMs))
         return
       }
       if (request.method === 'POST' && path === '/result') {
-        const result = decodeWireResult(await readBody(request))
+        const body = await readBody(request)
+        if (!this.authenticateConnectorRequest(request, connector, path, body)) {
+          json(response, 401, { ok: false, error: 'connector proof is invalid' })
+          return
+        }
+        const result = decodeWireResult(body)
         this.connectors.touch(connector.connectorId, Date.now())
-        const disposition = this.broker.complete(connector, result)
+        const { secret: _secret, ...publicConnector } = connector
+        const disposition = this.broker.complete(publicConnector, result)
         json(response, disposition === 'unknown' ? 404 : 200, { ok: disposition !== 'unknown', disposition })
         return
       }
