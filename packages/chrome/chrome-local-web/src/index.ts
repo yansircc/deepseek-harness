@@ -3,6 +3,7 @@ import { readFile, readdir, stat } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Context } from '@deepseek-ai/cordis'
+import type { SettingsDescriptor } from '@deepseek-ai/dsh-settings'
 import { Zip, ZipDeflate } from 'fflate'
 import '@deepseek-ai/dsh-chrome'
 import '@deepseek-ai/dsh-host-webserver'
@@ -17,6 +18,7 @@ export const name = 'chrome-local-web'
 export const inject = ['chrome', 'webServer']
 
 const artifactRoot = fileURLToPath(new URL('../../chrome-extension/dist/browser-extension/', import.meta.url))
+const PLACEHOLDER_ORIGIN = 'http://127.0.0.1:17401'
 
 async function files(root: string, directory = root): Promise<string[]> {
   const output: string[] = []
@@ -28,7 +30,7 @@ async function files(root: string, directory = root): Promise<string[]> {
   return output.sort()
 }
 
-async function extensionZip(): Promise<Uint8Array> {
+async function extensionZip(bridgePort: number): Promise<Uint8Array> {
   if (!(await stat(artifactRoot)).isDirectory()) throw new Error('Chrome extension artifact is unavailable')
   const chunks: Uint8Array[] = []
   let finished = false
@@ -40,7 +42,12 @@ async function extensionZip(): Promise<Uint8Array> {
   for (const file of await files(artifactRoot)) {
     const deflate = new ZipDeflate(file, { level: 6 })
     archive.add(deflate)
-    deflate.push(await readFile(join(artifactRoot, file)), true)
+    let content = await readFile(join(artifactRoot, file))
+    if (/\.(?:js|html|json|css)$/.test(file)) {
+      const text = content.toString('utf8')
+      content = Buffer.from(text.replaceAll(PLACEHOLDER_ORIGIN, `http://127.0.0.1:${String(bridgePort)}`), 'utf8')
+    }
+    deflate.push(content, true)
   }
   archive.end()
   if (!finished) throw new Error('Chrome extension ZIP did not finalize')
@@ -53,6 +60,9 @@ async function extensionZip(): Promise<Uint8Array> {
 
 /** Register status and extension routes for exactly this plugin lifetime. */
 export function apply(ctx: Context): void {
+  const descriptors = (ctx.get('settings')?.describe() ?? []) as SettingsDescriptor[]
+  const providerSettings = descriptors.find(item => item.ns === 'chrome-local')?.value as { port?: number } | undefined
+  const bridgePort = providerSettings?.port ?? 17_318
   ctx.effect(() => ctx.webServer.register({
     kind: 'exact',
     path: CHROME_STATUS_PATH,
@@ -72,7 +82,7 @@ export function apply(ctx: Context): void {
     path: CHROME_EXTENSION_PATH,
     handler: async (_request, response) => {
       try {
-        const bytes = await extensionZip()
+        const bytes = await extensionZip(bridgePort)
         response.writeHead(200, {
           'content-type': 'application/zip',
           'content-disposition': 'attachment; filename="chrome-extension.zip"',

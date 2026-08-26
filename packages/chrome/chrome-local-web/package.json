@@ -20,7 +20,8 @@
     "@deepseek-ai/dsh-chrome-protocol": "workspace:^",
     "@deepseek-ai/dsh-chrome-extension": "workspace:^",
     "@deepseek-ai/dsh-host-webserver": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^"
+    "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@deepseek-ai/dsh-settings": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -28,6 +29,7 @@
     "@deepseek-ai/dsh-chrome-protocol": "workspace:^",
     "@deepseek-ai/dsh-chrome-extension": "workspace:^",
     "@deepseek-ai/dsh-host-webserver": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^"
+    "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@deepseek-ai/dsh-settings": "workspace:^"
   }
 }

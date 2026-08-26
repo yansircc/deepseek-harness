@@ -9,6 +9,7 @@
     { "path": "../chrome" },
     { "path": "../chrome-extension" },
     { "path": "../../host/webserver" },
+    { "path": "../../settings/settings" },
     { "path": "../../runtime-diagnostics/invariants" }
   ]
 }
