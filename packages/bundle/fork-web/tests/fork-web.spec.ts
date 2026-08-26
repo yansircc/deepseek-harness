@@ -35,11 +35,13 @@ describe('dsh-fork-web bundle', () => {
         : [],
     )
     expect(rows.map(row => row.id).sort()).toEqual([
+      'chrome-local-web',
       'schedule',
       'session-tool-stats',
       'time-context',
       'ui-chrome',
       'ui-schedule',
+      'ui-stats',
       'ui-workspace-git',
       'ui-zeroy',
       'workspace-git',

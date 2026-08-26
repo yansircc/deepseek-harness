@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-tool-zeroy",
   "description": "Model-facing zeroY WordPress site management tools (zeroy_inspect, zeroy_checkout, zeroy_push, zeroy_pair, zeroy_unpair)",
-  "version": "0.1.0-rc.8",
+  "version": "0.1.1-rc.2",
   "publishConfig": {
     "access": "public"
   },

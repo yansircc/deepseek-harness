@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-subagent-cursor",
   "description": "First-class Cursor subagent backend: a persistent pooled `agent acp` server, one ACP session per delegation, configurable permission policy and model pools",
-  "version": "0.1.0-rc.8",
+  "version": "0.1.1-rc.2",
   "publishConfig": {
     "access": "public"
   },

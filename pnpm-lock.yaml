@@ -574,6 +574,9 @@ importers:
       '@deepseek-ai/dsh-scope':
         specifier: workspace:*
         version: link:../packages/core/scope
+      '@deepseek-ai/dsh-sdk-client':
+        specifier: workspace:*
+        version: link:../packages/sdk/client
       '@deepseek-ai/dsh-sdk-jsonrpc-server':
         specifier: workspace:*
         version: link:../packages/sdk/server

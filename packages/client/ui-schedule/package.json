@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-client-ui-schedule",
   "description": "Schedule surface: reminder status bar docked above the composer, read from the schedule session projection",
-  "version": "0.1.0-rc.8",
+  "version": "0.1.1-rc.2",
   "publishConfig": {
     "access": "public"
   },

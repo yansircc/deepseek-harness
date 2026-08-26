@@ -561,22 +561,6 @@ async startContinuable(spec: ContinuableStartSpec): Promise<ContinuableStart>
 async followup( parent: Agent, childId: SessionId, content: ContentBlock[], options: SubagentFollowupOptions, ): Promise<MessageId>
 
 /**
- * Deliver selected content to a live continuable child's current turn at the
- * next step boundary. This never cold-resumes an idle or absent Activation;
- * use {@link followup} for a later turn. The exact live direct parent remains
- * the delivery authority, and the caller signal owns admission only until
- * inbox acceptance.
- * @param parent - the exact live direct parent authorizing this delivery.
- * @param childId - the durable child session id.
- * @param content - user-role content to deliver at the next step boundary.
- * @param options - message source fields and pre-acceptance cancellation.
- * @returns the accepted message's inbox id.
- * @throws when the target is not live, authority is rejected, or admission
- *   closes before the message is accepted.
- */
-async steer( parent: Agent, childId: SessionId, content: ContentBlock[], options: SubagentFollowupOptions, ): Promise<MessageId>
-
-/**
  * Interrupt one live continuable child's current turn under a human parent
  * address or an exact live ancestor Agent. Fire-and-return: the cancel
  * signal is issued before this returns, but the target may keep running
@@ -592,6 +576,22 @@ async steer( parent: Agent, childId: SessionId, content: ContentBlock[], options
  *   live target.
  */
 interrupt(targetSessionId: SessionId, authority: SubagentInterruptAuthority): void
+
+/**
+ * Deliver selected content to a live continuable child's current turn at the
+ * next step boundary. This never cold-resumes an idle or absent Activation;
+ * use {@link followup} for a later turn. The exact live direct parent remains
+ * the delivery authority, and the caller signal owns admission only until
+ * inbox acceptance.
+ * @param parent - the exact live direct parent authorizing this delivery.
+ * @param childId - the durable child session id.
+ * @param content - user-role content to deliver at the next step boundary.
+ * @param options - message source fields and pre-acceptance cancellation.
+ * @returns the accepted message's inbox id.
+ * @throws when the target is not live, authority is rejected, or admission
+ *   closes before the message is accepted.
+ */
+async steer( parent: Agent, childId: SessionId, content: ContentBlock[], options: SubagentFollowupOptions, ): Promise<MessageId>
 
 /**
  * Deliver selected content from one live continuable child to its durable

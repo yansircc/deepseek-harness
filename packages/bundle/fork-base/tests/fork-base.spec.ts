@@ -29,6 +29,8 @@ describe('dsh-fork-base bundle', () => {
       patch => patch.insert ?? [],
     )
     expect(rows.map(row => row.id).sort()).toEqual([
+      'chrome',
+      'chrome-local',
       'tool-chrome',
       'tool-list-models',
       'tool-zeroy',
