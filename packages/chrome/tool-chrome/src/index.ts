@@ -23,7 +23,10 @@ export function projectChromeCommand(
   descriptor: (typeof ATOMIC_TOOL_DESCRIPTORS)[number],
   args: Record<string, unknown>,
 ): ChromeCommand {
-  return { domain: descriptor.domain, call: descriptor.projectInput(args) } as ChromeCommand
+  const normalized = Object.fromEntries(
+    Object.entries(args).filter(([, value]) => value !== undefined && value !== ''),
+  )
+  return { domain: descriptor.domain, call: descriptor.projectInput(normalized) } as ChromeCommand
 }
 
 /** Register `chrome_status` and all atomic Chrome tools. */

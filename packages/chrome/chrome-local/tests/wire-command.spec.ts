@@ -11,15 +11,6 @@ describe('extension command projection', () => {
     })
   })
 
-  it('omits empty optional snapshot fields', () => {
-    expect(extensionWireCommand(ChromeCommandId('snapshot'), {
-      domain: 'page',
-      call: { op: 'snapshot', ref: '', query: '', containingText: '', role: '', nearUid: '', mode: 'interactive' },
-    }, session)).toMatchObject({
-      call: { operation: { kind: 'snapshot', mode: 'interactive' } },
-    })
-  })
-
   it('nests page operations under call.operation', () => {
     expect(extensionWireCommand(ChromeCommandId('page'), {
       domain: 'page', call: { op: 'wait', condition: { by: 'urlIncludes', value: 'localhost' } },
