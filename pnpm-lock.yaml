@@ -1376,6 +1376,9 @@ importers:
       '@deepseek-ai/dsh-app-boot':
         specifier: workspace:^
         version: link:../../boot/app-boot
+      '@deepseek-ai/dsh-chrome-local-web':
+        specifier: workspace:^
+        version: link:../../chrome/chrome-local-web
       '@deepseek-ai/dsh-client-connection':
         specifier: workspace:^
         version: link:../../client/connection

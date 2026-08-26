@@ -42,8 +42,8 @@
       name: '@deepseek-ai/dsh-client-ui-zeroy'
 
     # Formal Chrome health and authored-extension routes plus the setup card.
-    - id: chrome-local-web
-      name: '@deepseek-ai/dsh-chrome-local-web'
+    # The route provider requires webServer, so compose it only in the shipped
+    # Web profile rather than in this reusable preset-only patch.
     - id: ui-chrome
       name: '@deepseek-ai/dsh-client-ui-chrome'
 

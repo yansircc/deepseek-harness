@@ -35,7 +35,6 @@ describe('dsh-fork-web bundle', () => {
         : [],
     )
     expect(rows.map(row => row.id).sort()).toEqual([
-      'chrome-local-web',
       'schedule',
       'session-tool-stats',
       'time-context',
