@@ -236,7 +236,13 @@ export class LocalChromeProvider implements ChromeProvider {
         }
         this.connectors.touch(connector.connectorId, Date.now())
         const { secret: _secret, ...publicConnector } = connector
-        json(response, 200, await this.broker.next(publicConnector, this.config.pollWaitMs))
+        const poll = await this.broker.next(publicConnector, this.config.pollWaitMs)
+        json(response, 200, {
+          ...poll,
+          expectedExtensionId: this.artifact.extensionId,
+          expectedExtensionDisplayVersion: this.artifact.displayVersion,
+          expectedProtocolFingerprint: this.artifact.protocolFingerprint,
+        })
         return
       }
       if (request.method === 'POST' && path === '/result') {
