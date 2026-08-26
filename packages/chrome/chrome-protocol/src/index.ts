@@ -8,3 +8,4 @@ export type {
 } from './types.ts'
 export { ChromeCommandId, ChromeConnectorId, ChromeProviderId, ChromeBuildId, ChromeOperationRevision } from './ids.ts'
 export { chromeProtocolRevision, compatibleKernel } from './revisions.ts'
+export * from './connector-runtime.generated.ts'

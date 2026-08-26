@@ -14,10 +14,17 @@
   },
   "files": ["lib/index.js", "lib/invariant.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
+  "scripts": {
+    "generate": "tsx scripts/generate-connector-runtime.ts",
+    "check:fresh": "tsx scripts/generate-connector-runtime.ts --check",
+    "test": "vitest run --root ../../.. packages/chrome/chrome-protocol/tests"
+  },
   "peerDependencies": {
     "@deepseek-ai/dsh-brand": "workspace:^"
   },
   "devDependencies": {
+    "effect": "4.0.0-beta.98",
+    "tsx": "^4.22.4",
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-invariants": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"

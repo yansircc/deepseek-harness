@@ -1707,6 +1707,12 @@ importers:
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../runtime-diagnostics/invariants
+      effect:
+        specifier: 4.0.0-beta.98
+        version: 4.0.0-beta.98
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
 
   packages/chrome/tool-chrome:
     devDependencies:

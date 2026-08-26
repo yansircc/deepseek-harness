@@ -1,0 +1,4 @@
+import { describe,expect,it } from 'vitest'
+import { decodeConnectorHandshake,decodeWireResult,CONNECTOR_ROUTES } from '../src/connector-runtime.generated.ts'
+const hex='ab'.repeat(32)
+describe('generated connector runtime',()=>{it('decodes handshake and tagged results',()=>{expect(decodeConnectorHandshake({ bridgeDisplayVersion:'1',protocolFingerprint:hex,bridgeEpoch:hex,requestNonce:hex,proof:hex })).toMatchObject({ protocolFingerprint:hex });expect(decodeWireResult({ id:'c',ok:false,error:{ _tag:'CommandRejected',code:'x',message:'no' } })).toMatchObject({ ok:false });expect(CONNECTOR_ROUTES.poll.path).toBe('/next')});it('has no Effect runtime dependency',async()=>{const source=await import('node:fs/promises').then(fs=>fs.readFile(new URL('../src/connector-runtime.generated.ts',import.meta.url),'utf8'));expect(source).not.toContain("from 'effect")})})
