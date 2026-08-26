@@ -1,5 +1,5 @@
 /**
- * The Chrome card's controller: binds the `tool-chrome` settings scope and
+ * The Chrome card's controller: binds the `chrome-local` settings scope and
  * exposes the port field. Reads are reactive through the scope snapshot;
  * writes go through the scope's durable set()/unset().
  *
@@ -12,9 +12,9 @@ import { createSnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 
 /** Namespace of the Chrome bridge settings. Spelled here: a client package
  * must not depend on a Host package. */
-export const CHROME_NS = 'tool-chrome'
+export const CHROME_NS = 'chrome-local'
 
-/** The `tool-chrome` section value. */
+/** The `chrome-local` section value. */
 export interface ChromeSettings {
   port?: number
 }
@@ -79,14 +79,14 @@ const parsePort = (text: string): number | undefined => {
   return Number.isInteger(parsed) && parsed > 0 && parsed <= 65535 ? parsed : undefined
 }
 
-/** Bridges the `tool-chrome` scope onto the Chrome card's staged port field. */
+/** Bridges the `chrome-local` scope onto the Chrome card's staged port field. */
 export class ChromeCardController {
   private readonly store: SnapshotStore<ChromeCardState>
   private readonly staged = new Map<string, StagedEdit>()
   private saving = false
   private failed = false
 
-  /** @param scope - the bound settings scope for the `tool-chrome` namespace. */
+  /** @param scope - the bound settings scope for the `chrome-local` namespace. */
   constructor(private readonly scope: SettingsScope<ChromeSettings>) {
     this.store = createSnapshotStore(this.projection())
     scope.subscribe(() => { this.publish() })

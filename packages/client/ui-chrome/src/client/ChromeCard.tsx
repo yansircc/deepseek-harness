@@ -27,10 +27,10 @@ export type ChromeCardProps =
   & PropsLocale<'settings.chrome'>
   & InjectFace<ChromeCardFace>
 
-/** Download endpoint served by the tool-chrome host plugin. */
+/** Download endpoint served by the chrome-local-web adapter. */
 const EXTENSION_DOWNLOAD_URL = '/api/chrome/extension.zip'
 
-/** Bridge status endpoint served by the tool-chrome host plugin. */
+/** Bridge status endpoint served by the chrome-local-web adapter. */
 const STATUS_URL = '/api/chrome/status'
 
 /** How often the card re-checks the bridge status. */

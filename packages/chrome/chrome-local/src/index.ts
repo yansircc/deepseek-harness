@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import type { Context } from '@deepseek-ai/cordis'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import { Config, resolveConfig } from './config.ts'
+import { registerChromeSettings } from './settings.ts'
 import { LocalChromeProvider, type ExtensionArtifactMetadata } from './provider.ts'
 import {
   LEGACY_OWNER_CREDENTIAL_REF,
@@ -40,6 +41,7 @@ async function extensionArtifact(): Promise<ExtensionArtifactMetadata> {
 
 /** Resolve credentials, bind the provider, then register it on `ctx.chrome`. */
 export async function apply(ctx: Context, config: Config): Promise<void> {
+  registerChromeSettings(ctx, config)
   const resolved = resolveConfig(config)
   const credentials = ctx.credentials
   const existing = await resolveOwnerSecret({

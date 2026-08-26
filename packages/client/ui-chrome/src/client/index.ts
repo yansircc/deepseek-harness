@@ -2,7 +2,7 @@
  * Chrome control configuration card, browser half.
  *
  * Registers the Chrome card into the shared `settings.plugin.item` slot, keyed
- * by the `tool-chrome` namespace the Host tool-chrome plugin serves. The card
+ * by the `chrome-local` namespace the local Chrome provider serves. The card
  * binds that namespace through the client settings scope, showing setup status
  * and the port / credential settings.
  */

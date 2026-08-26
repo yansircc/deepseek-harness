@@ -10,6 +10,7 @@
     { "path": "../../credentials/credentials" },
     { "path": "../chrome-protocol" },
     { "path": "../chrome" },
+    { "path": "../../settings/settings" },
     { "path": "../../runtime-diagnostics/invariants" }
   ]
 }
