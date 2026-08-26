@@ -17,7 +17,6 @@ describe('extension command projection', () => {
     }, session)).toEqual({
       id: 'page', session, domain: 'page',
       call: {
-        condition: { by: 'urlIncludes', value: 'localhost' },
         operation: { kind: 'wait', condition: { by: 'urlIncludes', value: 'localhost' } },
       },
     })

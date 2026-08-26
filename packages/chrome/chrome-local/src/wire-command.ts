@@ -16,12 +16,12 @@ export function extensionWireCommand(
   session: WireOwnerContext,
 ): WireCommand {
   if (command.domain === 'page' || command.domain === 'input') {
-    const { op, ...fields } = command.call
+    const { op, ...operationFields } = command.call
     return {
       id,
       session,
       domain: command.domain,
-      call: { ...fields, operation: { ...fields, kind: op } },
+      call: { operation: { ...operationFields, kind: op } },
     } as WireCommand
   }
   return { id, session, domain: command.domain, call: command.call }
