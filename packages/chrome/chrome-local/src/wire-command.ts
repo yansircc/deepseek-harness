@@ -17,11 +17,14 @@ export function extensionWireCommand(
 ): WireCommand {
   if (command.domain === 'page' || command.domain === 'input') {
     const { op, ...operationFields } = command.call
+    const compactFields = Object.fromEntries(
+      Object.entries(operationFields).filter(([, value]) => value !== undefined && value !== ''),
+    )
     return {
       id,
       session,
       domain: command.domain,
-      call: { operation: { ...operationFields, kind: op } },
+      call: { operation: { ...compactFields, kind: op } },
     } as WireCommand
   }
   return { id, session, domain: command.domain, call: command.call }
