@@ -42,11 +42,13 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^"
+    "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@deepseek-ai/dsh-chrome-protocol": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@deepseek-ai/dsh-chrome-protocol": "workspace:^",
     "@effect/tsgo": "0.21.0",
     "@effect/vitest": "4.0.0-beta.98",
     "@types/chrome": "0.1.36",
