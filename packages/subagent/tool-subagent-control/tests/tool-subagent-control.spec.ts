@@ -111,6 +111,36 @@ describe('dsh-tool-subagent-control', () => {
     expect(schemas[0]!.description).not.toContain('job id')
     // Follow-up ordering is model-visible: it cannot redirect the open turn.
     expect(schemas[0]!.description).toContain('next turn')
+    const steerSchemas = ctx.tools.schemas().filter(schema => schema.name === 'steer_agent')
+    expect(steerSchemas).toHaveLength(1)
+    expect(steerSchemas[0]!.description).toContain('next safe step')
+  })
+
+  it('steers a running direct child without changing send_message FIFO', async () => {
+    const release = Promise.withResolvers<undefined>()
+    const { ctx, parent, adapter } = await setupWith(new GatedAdapter([
+      { chunks: textResponse('first'), gate: release.promise },
+      { chunks: textResponse('second') },
+    ]))
+    const started = await ctx.subagents.startContinuable({
+      provider: 'spawn',
+      label: 'long work',
+      request: { prompt: [{ type: 'text', text: 'long work' }], parent },
+      signal: testToolSignal,
+    })
+    await vi.waitFor(() => { expect(adapter.requests).toHaveLength(1) })
+
+    const result = await callTool(ctx, 'steer_agent', {
+      subagent_id: started.childId,
+      message: 'correct course',
+    }, parent)
+    expect(result.isError).toBe(false)
+    expect(text(result)).toBe(`message steered to subagent ${started.childId}`)
+    expect(ctx.agents.get(started.childId)?.inbox.nextStep).toHaveLength(1)
+    expect(ctx.agents.get(started.childId)?.inbox.nextTurn).toHaveLength(0)
+
+    release.resolve(undefined)
+    await waitNoActivation(ctx, started.childId)
   })
 
   it('cold-resumes a settled child and reports the queued next turn', async () => {
@@ -210,9 +240,11 @@ describe('dsh-tool-subagent-control', () => {
     await ctx.plugin(SubagentRuntime)
     const fiber = await ctx.plugin(tool)
     expect(ctx.tools.schemas().some(schema => schema.name === 'send_message')).toBe(true)
+    expect(ctx.tools.schemas().some(schema => schema.name === 'steer_agent')).toBe(true)
     expect(ctx.tools.schemas().some(schema => schema.name === 'interrupt_agent')).toBe(true)
     await fiber.dispose()
     expect(ctx.tools.schemas().some(schema => schema.name === 'send_message')).toBe(false)
+    expect(ctx.tools.schemas().some(schema => schema.name === 'steer_agent')).toBe(false)
     expect(ctx.tools.schemas().some(schema => schema.name === 'interrupt_agent')).toBe(false)
   })
 

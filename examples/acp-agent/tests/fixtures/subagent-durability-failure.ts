@@ -32,6 +32,8 @@ const FAILED_CHECKPOINT_TURN = 3
 export function apply(ctx: Context): void {
   const followupsAccepted = Promise.withResolvers<undefined>()
   const parentTurnClosed = Promise.withResolvers<undefined>()
+  const childReady = Promise.withResolvers<undefined>()
+  const childGate = Promise.withResolvers<undefined>()
   let parentClosed = false
   const publishedFailure = process.env.DSH_SUBAGENT_PUBLISHED_FAILURE === '1'
   const persistence = ctx.sessionPersistence
@@ -80,21 +82,22 @@ export function apply(ctx: Context): void {
     parentTurnClosed.resolve(undefined)
   })
 
-  // Remap the placeholder child id in a follow-up to the live child. The child
-  // id the model "knows" is authored into the transcript, while the running
-  // child is minted with a random id, so without this the follow-ups would
-  // never reach the live inbox.
+  // Remap the placeholder child id in parent-to-child deliveries to the live
+  // child. The id the model "knows" is authored into the transcript, while the
+  // running child is minted with a random id, so without this both follow-ups
+  // and steering would miss the live inbox.
   let realChildId: string | undefined
   const subagents = ctx.subagents as unknown as {
     followup: (authority: unknown, childId: SessionId, content: unknown, options: unknown) => Promise<unknown>
+    steer: (authority: unknown, childId: SessionId, content: unknown, options: unknown) => Promise<unknown>
   }
   const deliver = subagents.followup.bind(subagents)
-  subagents.followup = (authority, childId, content, options) => {
-    const mapped = childId === PLACEHOLDER_CHILD_ID && realChildId !== undefined
-      ? SessionId(realChildId)
-      : childId
-    return deliver(authority, mapped, content, options)
-  }
+  const steer = subagents.steer.bind(subagents)
+  const mapChildId = (childId: SessionId): SessionId => childId === PLACEHOLDER_CHILD_ID && realChildId !== undefined
+    ? SessionId(realChildId)
+    : childId
+  subagents.followup = (authority, childId, content, options) => deliver(authority, mapChildId(childId), content, options)
+  subagents.steer = (authority, childId, content, options) => steer(authority, mapChildId(childId), content, options)
 
   // Both authored follow-ups reach the child inbox before the unknown-id lookup
   // runs, so the queued FIFO order is what the transcript records. The first
@@ -106,13 +109,27 @@ export function apply(ctx: Context): void {
     accepted += 1
     if (accepted >= 3) followupsAccepted.resolve(undefined)
   })
-  ctx.on('agent/pre-step', async ({ agent }, next) => {
-    if (agent.session.header.parentSession === undefined) return next()
+  ctx.on('agent/pre-step', async ({ agent, turn, step }, next) => {
+    if (agent.session.header.parentSession === undefined) {
+      // Hold the authored steering step until the child is inside this hook, so
+      // the live-only service check observes status=running deterministically.
+      if (!publishedFailure && turn === 1 && step === 3) await childReady.promise
+      return next()
+    }
+    childReady.resolve(undefined)
     await followupsAccepted.promise
     // The published-failure variant's child never reaches a step (its follow-up
     // throws), and its parent turn awaits that child, so only the continuable
     // scenario takes the settlement fence.
     if (!publishedFailure && !parentClosed) await parentTurnClosed.promise
+    if (!publishedFailure) await childGate.promise
+    return next()
+  })
+
+  // The child remains status=running inside its pre-step fence. Release it only
+  // after the real steer_agent body accepts the next-step message.
+  ctx.on('tools/post-execute', async (exec, result, next) => {
+    if (!publishedFailure && exec.name === 'steer_agent' && !result.isError) childGate.resolve(undefined)
     return next()
   })
 

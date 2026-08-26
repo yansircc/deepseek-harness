@@ -72,7 +72,7 @@ function project(
   if (entry.kind === 'diagnostic') {
     return { kind: 'diagnostic', id: entry.id, reason: entry.reason, ...at }
   }
-  // One-shot children cannot be continued by send_message, so the model
+  // One-shot children cannot receive send_message or steer_agent, so the model
   // never selects them; discovery still traversed them for descendants.
   if (entry.mode !== 'continuable') return undefined
   return {
@@ -97,11 +97,11 @@ export function apply(ctx: Context): void {
       + 'registry: running means the agent is working right now, idle means it is loaded but between turns '
       + '(it may be waiting on agents it started), and ready means it exists only in storage — resumable, not '
       + 'terminal, and not a result waiting to be collected; a `send_message` starts a new turn on the same '
-      + 'conversation, and a direct child remains a `send_message` candidate in every status. The snapshot is not a delivery '
-      + 'promise — `send_message` performs the authoritative check and may still fail. Children that could '
+      + 'conversation, and a direct child remains a `send_message` candidate in every status. A running direct child is also a `steer_agent` candidate; steering is strict and never wakes or resumes a child. The snapshot is not a delivery '
+      + 'promise — `send_message` and `steer_agent` perform the authoritative check and may still fail. Children that could '
       + 'not be read are reported as diagnostics instead of being silently dropped. Scope `descendants` '
       + 'walks the whole tree below you in stable pre-order, annotating each entry with its durable direct-parent '
-      + 'session id and depth. You may use `send_message` only for depth-1 entries; deeper entries are '
+      + 'session id and depth. You may use `send_message` and `steer_agent` only for depth-1 entries; deeper entries are '
       + 'candidates for `interrupt_agent` only.',
     parameters: {
       scope: {

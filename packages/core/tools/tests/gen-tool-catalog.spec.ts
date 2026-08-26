@@ -41,7 +41,7 @@ describe('gen-tool-catalog collectToolCatalog', () => {
       'read', 'read_image', 'report', 'run_code', 'schedule_create', 'schedule_delete',
       'schedule_list', 'schedule_pause', 'schedule_resume', 'schedule_run_now', 'schedule_update',
       'send_message', 'send_message', 'session_event_read', 'session_event_search',
-      'session_event_trace', 'session_search', 'session_trace', 'skill', 'spawn_teammate',
+      'session_event_trace', 'session_search', 'session_trace', 'skill', 'spawn_teammate', 'steer_agent',
       'str_replace_editor', 'subagent', 'team_task_create',
       'team_task_get', 'team_task_list', 'team_task_update', 'terminal_close', 'terminal_list',
       'terminal_open', 'terminal_read', 'terminal_send', 'terminal_signal', 'todo_write',
@@ -76,6 +76,7 @@ describe('gen-tool-catalog collectToolCatalog', () => {
       interrupt_agent: 'packages/subagent/tool-subagent-control/src/index.ts',
       list_agents: 'packages/subagent/tool-subagent-control/src/list-agents.ts',
       send_message: 'packages/subagent/tool-subagent-control/src/index.ts',
+      steer_agent: 'packages/subagent/tool-subagent-control/src/index.ts',
     })
     const listModels = catalog.find(entry => entry.pkg === '@deepseek-ai/dsh-tool-list-models')
     expect(listModels?.sources.list_models).toBe('packages/llm/tool-list-models/src/index.ts')

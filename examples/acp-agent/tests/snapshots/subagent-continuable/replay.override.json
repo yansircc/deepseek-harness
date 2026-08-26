@@ -1,0 +1,50 @@
+{
+  "patches": [
+    {
+      "at": 2,
+      "entry": {
+        "kind": "chunks",
+        "chunks": [
+          { "type": "block-start", "index": 0, "blockType": "tool-call" },
+          {
+            "type": "tool-call-delta",
+            "index": 0,
+            "id": "call_steer_1",
+            "name": "steer_agent",
+            "argumentsDelta": "{\"subagent_id\": \"33333333-3333-4333-8333-333333333333\", \"message\": \"Now reply with exactly STEERED_OK.\"}"
+          },
+          {
+            "type": "block-end",
+            "index": 0,
+            "block": {
+              "type": "tool-call",
+              "id": "call_steer_1",
+              "name": "steer_agent",
+              "arguments": "{\"subagent_id\": \"33333333-3333-4333-8333-333333333333\", \"message\": \"Now reply with exactly STEERED_OK.\"}"
+            }
+          },
+          { "type": "block-start", "index": 1, "blockType": "tool-call" },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_followup_2",
+            "name": "send_message",
+            "argumentsDelta": "{\"subagent_id\": \"33333333-3333-4333-8333-333333333333\", \"message\": \"Now reply with exactly THIRD_OK.\"}"
+          },
+          {
+            "type": "block-end",
+            "index": 1,
+            "block": {
+              "type": "tool-call",
+              "id": "call_followup_2",
+              "name": "send_message",
+              "arguments": "{\"subagent_id\": \"33333333-3333-4333-8333-333333333333\", \"message\": \"Now reply with exactly THIRD_OK.\"}"
+            }
+          },
+          { "type": "usage", "usage": { "inputTokens": 10, "outputTokens": 5 } },
+          { "type": "finish", "reason": { "kind": "tool-calls" } }
+        ]
+      }
+    }
+  ]
+}

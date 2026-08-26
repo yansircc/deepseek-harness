@@ -483,6 +483,7 @@ const SCENARIOS: Scenario[] = [
     name: 'subagent-continuable',
     hasModelTurn: true,
     recorded: false,
+    overridden: true,
     pinsChildToolSchemas: [1],
     pinsChildSystemPrompts: [1],
     configPath: SUBAGENT_DURABILITY_FAILURE_CONFIG,

@@ -14,7 +14,7 @@ Status: implemented
 
 运行时生命周期也比单个轮次更长。subagent 可能已经结束自身轮次，但它创建的 child 仍在运行。此时 dispose parent 运行时，会移除仍负责后代拆卸的 Agent。反之，如果让所有历史 subagent 始终驻留，内存使用就会失去上界。
 
-parent Agent 还需要在不改变当前轮次的前提下，向同一个在线 child 发送后续工作。将每条继续执行消息作为 follow-up 排队，可以保留唯一的排序规则。
+parent Agent 可以通过 `followup()` 在不改变当前轮次的前提下，向同一个在线 child 发送后续工作；如果需要在当前轮次的下一个步骤纠正运行中的 child，则使用显式的 `steer()`。follow-up 消息仍属于唯一的 FIFO 排序域。
 
 ## 决策
 
@@ -44,9 +44,9 @@ inbox 接受消息前发生任何失败，操作都会在不返回任何 id 的�
 
 `SubagentProvider.start()` 和 `SubagentRun` 只保留在不变的 one-shot 路径上。可继续激活直接持有自身的 `AgentHandle`，绝不创建、包装或保留 `SubagentRun`；因此，`SubagentRun.steer?()` 不存在。
 
-`ctx.subagents.followup(parent, childId, content, { source, signal })` 仍是唯一的从 parent 到 child 的继续执行消息操作。确切的在线 parent Agent 授权投递；冷恢复会在重建前检查该权限，每条路径还会在最终无 await 的 inbox 准入区间再次检查，因此在物化期间被注销或替换的 parent 无法授权投递。`source` 记录谁提供了获准消息，不赋予任何权限。面向模型的 `send_message` 工具只保留稳定的 `subagent_id` 和 `message` 字段，并始终提交一个 follow-up 轮次。start 和 follow-up 都返回已接受的 `MessageId`，两者都不报告管理器如何物化激活。
+`ctx.subagents.followup(parent, childId, content, { source, signal })` 是从 parent 到 child 的 FIFO 继续执行消息操作。`ctx.subagents.steer(parent, childId, content, { source, signal })` 是独立操作，只接受正在运行的直接 child 并执行 next-step 投递。确切的在线 parent Agent 为两种操作授权；冷恢复会在重建前检查 follow-up 权限，每条路径还会在最终无 await 的 inbox 准入区间再次检查，因此在物化期间被注销或替换的 parent 无法授权投递。`source` 记录谁提供了获准消息，不赋予任何权限。面向模型的 `send_message` 工具只保留稳定的 `subagent_id` 和 `message` 字段，并始终提交一个 follow-up 轮次，`steer_agent` 则暴露严格的仅限在线的 next-step 投递。start 和消息操作都会返回已接受的 `MessageId`，不报告管理器如何物化激活。
 
-对于 start 和 follow-up，调用方 signal 只在 inbox 接受消息前持有查找、物化和准入。操作返回 `MessageId` 后，管理器会独立持有该激活；调用方之后的取消不会取消已接受的轮次，也不会 dispose child。
+对于 start、follow-up 和 steering，调用方 signal 只在 inbox 接受消息前持有查找、物化和准入。操作返回 `MessageId` 后，管理器会独立持有该激活；调用方之后的取消不会取消已接受的消息，也不会 dispose child。
 
 ### 持久化会话与在线激活
 
@@ -85,7 +85,7 @@ no Activation
 
 ### 一个 inbox 与 follow-up 投递
 
-Agent inbox 是唯一队列。每条继续执行消息都使用 `Agent.followup()`，并成为一个 FIFO 轮次；继续执行管理器和宿主都不维护另一条消息队列。每个已接受且会唤醒 Agent 的条目都会让当前激活保持在线，直至 `Agent.whenIdle()` 观察到完整的唤醒工作后缀已经结束。
+Agent inbox 是唯一队列。每条 follow-up 都使用 `Agent.followup()` 并成为一个 FIFO 轮次；steering 使用现有的 `next-step` inbox 路径，不创建另一条队列。继续执行管理器和宿主都不维护其他消息队列。每个已接受且会唤醒 Agent 的条目都会让当前激活保持在线，直至 `Agent.whenIdle()` 观察到完整的唤醒工作后缀已经结束。
 
 路由只取决于激活的驻留状态：
 
@@ -95,7 +95,7 @@ Agent inbox 是唯一队列。每条继续执行消息都使用 `Agent.followup(
 | `waiting` | 唤醒同一激活 |
 | 无激活 | 冷恢复新激活 |
 
-继续执行层不定义单独的投递路由结果。成功投递 `ctx.subagents.followup()` 或 `send_message` 时会返回已接受的 `MessageId`，投递失败则会抛出异常。现有的 `agent/inbox/enqueue`、`agent/inbox/dequeue` 和 `agent/inbox/discard` 事件仍用于观测消息生命周期；适配器可以呈现通用的接受确认，但不暴露 `started`、`queued`、`resumed` 或其他 subagent 专属路由词汇。
+继续执行层不定义单独的投递路由结果。成功投递 `ctx.subagents.followup()`、`ctx.subagents.steer()` 及其面向模型的适配器时会返回已接受的 `MessageId`，投递失败则会抛出异常。`followup()` 是 FIFO 的 next-turn 操作；`steer()` 是严格的、仅限在线的 next-step 投递，不会冷恢复或唤醒空闲 child。现有的 `agent/inbox/enqueue`、`agent/inbox/dequeue` 和 `agent/inbox/discard` 事件仍用于观测消息生命周期；适配器可以呈现按操作区分的接受确认，但不暴露物化路由。
 
 ### child 所有权
 
@@ -115,11 +115,11 @@ activation-owner 作用域之所以存在，是因为普通 Cordis owner effect 
 
 后来添加的可选 child 作用域 `report(output)` 工具不会改变 Activation 驻留状态，也不会增加另一条队列。它每轮可调用零次或多次，不允许指定接收方，而是推导在线的直接 parent；投递采用静默注入还是唤醒 parent follow-up，由部署配置选择。[report 工具 Agent Note](2026-07-30-continuable-subagent-report-tool.zh.md)规定其权限、确认、设置贡献和投递约定。
 
-### 延后的 steering（中途引导）
+### 显式 steering（中途引导）
 
-本版本不暴露 subagent steering 操作。parent 的继续执行消息始终开启后续 FIFO 轮次，因此继续执行层不存储当前轮次控制方，也不新增能够感知控制方的 Agent 准入约定。
+`ctx.subagents.steer()` 是严格且仅限在线的操作：它只接受正在运行的直接 child，调用现有 Agent steering 路径；对空闲或不存在的 Activation 会拒绝，不会排队、唤醒或冷恢复。面向模型的 `steer_agent` 适配器与保持不变的 `send_message` follow-up 工具同时暴露这一操作。
 
-后续宿主 UI 可以分别暴露 **Steer** 和 **Follow up** 操作。宿主 steering 必须严格且仅限在线使用：只有当激活接受下一步骤时，它才能调用现有的 Agent steering 路径；其他情况必须拒绝，而且绝不能转为排队或冷恢复。是否通过面向模型的工具暴露 parent steering 仍需单独设计。
+Steering 与 Agent inbox 及准入记账共用基础设施，但目标不同于 follow-up：它进入 `next-step`，在下一个步骤边界被领取；follow-up 仍进入 `next-turn` FIFO。该操作返回已接受的 `MessageId`，不等待目标步骤，也不返回 child 回复。
 
 ### 权限与已记录的发送方身份
 
@@ -131,7 +131,7 @@ activation-owner 作用域之所以存在，是因为普通 Cordis owner effect 
 
 ### 持久性、dispose 与恢复
 
-没有 Task 后，系统不再提供 `job_output`、`job_kill`、Task 状态或逐消息结果 promise。调用方 signal 只能在 inbox 接受消息前中止 start 或 follow-up。消息被接受后，parent 不能通过 `ctx.subagents` 取消已接受的消息或 dispose 激活；唯一的公开停止操作是后来的[当前轮次中断](2026-08-06-continuable-subagent-interrupt.zh.md)，它以 `keepInbox` 取消在线目标的当前轮次，驻留、待处理工作与后代均保持不变。
+没有 Task 后，系统不再提供 `job_output`、`job_kill`、Task 状态或逐消息结果 promise。调用方 signal 只能在 inbox 接受消息前中止 start、follow-up 或 steering。消息被接受后，parent 不能通过 `ctx.subagents` 取消已接受的消息或 dispose 激活；唯一的公开停止操作是后来的[当前轮次中断](2026-08-06-continuable-subagent-interrupt.zh.md)，它以 `keepInbox` 取消在线目标的当前轮次，驻留、待处理工作与后代均保持不变。
 
 宿主和管理器拆卸仍是生命周期停止路径。管理器卸载会全局应用它；宿主只会在自己确切拥有的顶层 Agent 之下应用它。两种形式都会关闭适用的准入作用域，停止选中的可见 Activation，等待该作用域中已获准的物化过程，按 child-first 顺序释放，并保留持久化 Session。
 
@@ -139,13 +139,13 @@ activation-owner 作用域之所以存在，是因为普通 Cordis owner effect 
 
 只有实际写入 child 会话日志的消息，才能在重建时保留提供它的来源；仅被 inbox 接受并不提供重启保证。
 
-会话和描述符的持久化状态可在重启后保留。激活状态、Agent inbox 内容和所有权图都是进程内状态。进程崩溃可能丢失已被接受但仍留在 inbox、尚未写入会话日志的初始提示词或 follow-up。会话和描述符可能保留，因此后续获得授权的消息仍可冷恢复 child，但丢失的消息不会自动回放。恢复已接受但未完成或未写入日志的消息需要持久化 inbox 协议，本提案不隐含该能力。
+会话和描述符的持久化状态可在重启后保留。激活状态、Agent inbox 内容和所有权图都是进程内状态。进程崩溃可能丢失已被接受但仍留在 inbox、尚未写入会话日志的初始提示词、follow-up 或 steering。会话和描述符可能保留，因此后续获得授权的消息仍可冷恢复 child，但丢失的消息不会自动回放。恢复已接受但未完成或未写入日志的消息需要持久化 inbox 协议，本提案不隐含该能力。
 
 ### 范围
 
 本版本覆盖可继续的进程内 child，一次性委派保持不变。远程提供方必须具备单独的激活 handle，以及等价的认证控制与 child-first 完全停稳约定，才能支持同样的行为。
 
-它不新增 host-user 继续执行、subagent steering 操作、持久化邮箱、跨进程 lease、中断 inbox 工作的自动回放、团队权限、工作流权限、公开驻留查询、新的在线激活数量或后代总数限制，以及运行时缓存；后来的[当前轮次中断](2026-08-06-continuable-subagent-interrupt.zh.md)在此生命周期之上补充了唯一的公开停止操作。现有委派深度策略保持不变。可选的 child 到 parent 报告是后续消费该生命周期的功能，不属于基础可继续能力。
+它不新增 host-user 继续执行、持久化邮箱、跨进程 lease、中断 inbox 工作的自动回放、团队权限、工作流权限、公开驻留查询、新的在线激活数量或后代总数限制，以及运行时缓存；后来的[当前轮次中断](2026-08-06-continuable-subagent-interrupt.zh.md)在此生命周期之上补充了唯一的公开停止操作。现有委派深度策略保持不变。可选的 child 到 parent 报告是后续消费该生命周期的功能，不属于基础可继续能力。
 
 ## 曾考虑的替代方案
 
@@ -165,7 +165,7 @@ activation-owner 作用域之所以存在，是因为普通 Cordis owner effect 
 
 **为继续执行消息维护单独队列。** 第二个 FIFO 会让它和 Agent 已接受消息之间顺序不明确。单个 Agent inbox 为每个已接受轮次提供唯一且可观察的顺序。
 
-**现在就暴露 subagent steering。** parent steering 需要当前轮次控制方状态，以及不同于 follow-up 投递的单独准入策略。首个版本将每条继续执行消息都排队，可以避免引入该状态及其准入竞争。
+**将 subagent steering 作为独立操作暴露。** 首个继续执行版本有意省略了 steering，因为 parent steering 需要当前轮次控制方状态，以及不同于 follow-up 投递的单独准入策略。已发布的 `ctx.subagents.steer()` 现在提供严格的、仅限在线的 next-step 投递，不改变 follow-up 路由，也不增加另一条队列。
 
 **在没有 host 消费方的情况下暴露 host-user follow-up。** 公开的权限铸造方法和用户分支可以在没有历史 parent 的情况下实现冷恢复，但没有生产 host 适配器调用该操作。在具体的经认证宿主交互能够收到私有能力之前，继续执行 API 只接受确切的在线 parent。
 
@@ -184,10 +184,10 @@ activation-owner 作用域之所以存在，是因为普通 Cordis owner effect 
 - 冷恢复由继续执行管理器调用 `ctx.agents.resume()`，绝不通过或依赖初始 subagent 提供方；提供方移除后，描述符仍保留初始提供方名称，且 `SubagentProvider.resume?()` 和 `SubagentProviderResumeRequest` 均不存在。
 - 可继续激活直接持有 `AgentHandle`，绝不创建、包装或保留 `SubagentRun`；`SubagentProvider.start()` 和 `SubagentRun` 只用于 one-shot，且没有 `SubagentRun.steer?()`。
 - `followup()` 只接受确切的在线直接 parent，并在任何物化之后的最终无 await 的 inbox 准入边界再次检查该身份；持久化消息来源信息不能授权投递。
-- 继续执行消息始终使用 `Agent.followup()` 并共享其 inbox FIFO，包括 child 已有开放轮次的情况。
-- `ctx.subagents.followup()` 及其 `send_message` 适配器只返回已接受的 `MessageId`；继续执行层不接受投递 target，也不定义 subagent 专属路由结果。
-- 调用方 signal 只能在 inbox 接受消息前停止 start 和 follow-up，限定到宿主的拆卸与管理器全局拆卸则保留 child-first 清理；[当前轮次中断](2026-08-06-continuable-subagent-interrupt.zh.md)是唯一的公开停止操作，且不进入拆卸流程。
-- 本版本不暴露 subagent steering 操作或当前轮次控制方状态。
+- Follow-up 消息始终使用 `Agent.followup()` 并共享其 inbox FIFO，包括 child 已有开放轮次的情况；steering 消息使用 `Agent.steer()`，并在下一个边界从 `next-step` 领取。
+- `ctx.subagents.followup()`、`ctx.subagents.steer()` 及其适配器只返回已接受的 `MessageId`；继续执行层不接受投递 target，也不定义 subagent 专属物化路由结果。
+- 调用方 signal 只能在 inbox 接受消息前停止 start、follow-up 和 steering，限定到宿主的拆卸与管理器全局拆卸则保留 child-first 清理；[当前轮次中断](2026-08-06-continuable-subagent-interrupt.zh.md)是唯一的公开停止操作，且不进入拆卸流程。
+- `ctx.subagents.steer()` 和 `steer_agent` 仅为正在运行的直接 child 暴露严格的当前轮次 steering；它们使用现有 `next-step` inbox，不会冷恢复或唤醒空闲 child，也不改变 `followup()` 的 FIFO 路由。
 - 带有在线所持 child 的空闲 Agent 会产生 `waiting` 激活，其 `AgentHandle` 继续保留。
 - 向 `waiting` 投递 `next-turn` 会唤醒同一个激活；完成 dispose 后投递消息会冷恢复新激活。
 - 每个由继续执行管理器管理的 parent 激活只会在直接持有的所有 child 激活完成 `AgentHandle` dispose 后进行 dispose；顶层 Agent 不加入等待图。
@@ -197,9 +197,9 @@ activation-owner 作用域之所以存在，是因为普通 Cordis owner effect 
 - 会话日志只会重建实际写入的消息，并保留每条消息的提供来源；已被 inbox 接受但未写入日志的消息没有重启保证。
 - 可继续 subagent 路径不创建或依赖 Task、`JobId`、Task 完成通知、Task 取消或中间的带结果执行包装层。
 - 单元覆盖固定 `startContinuable()` 在 inbox 接受消息时的返回边界、每条接受前和生命周期发布失败路径的完整回滚、全局和限定到 parent 作用域的 drain 都会等待夹在 Agent 发布与 Activation 注册之间的物化过程完全停稳、同级森林隔离、中间 Agent 离开注册表后的确切祖先关系、不依赖提供方的冷恢复、冷恢复物化后的最终确切 parent 再授权、接受前后两个阶段的调用方 signal 与拆卸所有权，以及已接受但未写入日志的消息不会自动回放。
-- 单元覆盖固定仅由驻留状态决定的路由表、单 inbox 顺序、通过 inbox 事件关联 `MessageId`、在开放轮次期间 follow-up、等待唤醒、冷恢复、所有权注册与释放、child-first dispose、发送与 dispose 的竞争、没有 listener 和 listener 失败时的 best-effort 最终 flush，以及不存在公开 subagent 取消和 steering。
+- 单元覆盖固定仅由驻留状态决定的 follow-up 路由表、单 inbox 顺序、通过 inbox 事件关联 `MessageId`、在开放轮次期间 follow-up、严格的在线 child steering、等待唤醒、冷恢复、所有权注册与释放、child-first dispose、发送与 dispose 的竞争、没有 listener 和 listener 失败时的 best-effort 最终 flush，以及独立的 interrupt 与 steering 约定。
 - report 包的单元覆盖会分别固定仅 child 可见性、setup 撤销、权限、投递模式、稳定消息身份和生命周期竞争。
-- 一项无密钥整套应用快照覆盖 parent 委派和 follow-up 排队、不存在 subagent steering 和隐式 report 投递、保留 waiting 中的 `AgentHandle` 以及 child-first dispose。另一项 report 快照覆盖可选的显式返回通道。
+- 一项无密钥整套应用快照覆盖 parent 委派、follow-up 排队、向运行中 child 投递并被接受的 next-step steering、保留 waiting 中的 `AgentHandle` 以及 child-first dispose。另一项 report 快照覆盖可选的显式返回通道。
 
 ### 已接受的代价
 
@@ -211,6 +211,6 @@ activation-owner 作用域之所以存在，是因为普通 Cordis owner effect 
 
 未安装可选 report 包时，完成 child 轮次既不会把内容发送给历史 parent，也不会唤醒它。安装后，只有显式调用 `report` 才会发送选中内容；静默投递不唤醒 parent，next-step 投递则会唤醒它并加入最近的 step 边界。无论如何，child 的详细输出都会保留在其持久化会话中。
 
-将每条继续执行消息排队，意味着 parent 无法立即纠正正在进行的 child 轮次；纠正操作会在下一个轮次执行。后续 UI steering 操作可以缩短该延迟，而不改变 follow-up 排序。
+Follow-up 投递仍然会进入后续轮次，因此需要纠正正在进行的 child 时，parent 必须使用显式的 `steer()`；它在下一个步骤投递，缩短纠正延迟而不改变 follow-up 排序。
 
 best-effort 最终 flush 失败时会记录日志，同时运行时所有权图继续 drain；持久化 child 状态可能缺失或陈旧。重试与修复需要单独的恢复设计。

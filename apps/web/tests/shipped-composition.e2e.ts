@@ -99,6 +99,7 @@ const EXPECTED_TOOLS = [
   'schedule_run_now',
   'schedule_update',
   'send_message',
+  'steer_agent',
   'skill',
   'subagent',
   'subagent_fork',

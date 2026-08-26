@@ -579,8 +579,13 @@ describe('SubagentRuntime.followup residency routing', () => {
       expect(child.status).toBe('idle')
       expect(ctx.agents.get(started.childId)).toBe(child)
     }, { timeout: 5_000 })
-    // Waiting retains the handle: the same Agent is still live.
+    // Waiting retains the handle: the same Agent is still live, but strict
+    // steering refuses an idle Activation instead of waking it.
     expect(ctx.agents.get(started.childId)).toBe(child)
+    await expect(ctx.subagents.steer(parent, started.childId, message('must be running'), {
+      source: { kind: 'coordinator', form: 'relay', senderSessionId: parent.id },
+      signal: testSignal,
+    })).rejects.toMatchObject({ code: 'NOT_RUNNING' })
 
     await followup(ctx, parent, started.childId, message('while waiting'))
     // Woken back to running on the SAME Activation.
@@ -2223,7 +2228,40 @@ describe('continuable lifecycle observation', () => {
 })
 
 describe('continuable public API', () => {
-  it('exposes no host authority, residency query, cancellation, steering, or report operation', async () => {
+  it('steers only a live direct child while follow-up remains FIFO', async () => {
+    const release = Promise.withResolvers<undefined>()
+    const adapter = new GatedAdapter([
+      { chunks: textResponse('working'), gate: release.promise },
+      { chunks: textResponse('steered') },
+      { chunks: textResponse('followed up') },
+    ])
+    const { ctx, parent } = await setupWith(adapter)
+    parkParent(ctx, parent)
+    const started = await ctx.subagents.startContinuable(startSpec(parent))
+    await vi.waitFor(() => { expect(adapter.requests).toHaveLength(1) })
+    const child = ctx.agents.get(started.childId)!
+
+    await ctx.subagents.steer(parent, started.childId, message('correct course'), {
+      source: { kind: 'coordinator', form: 'relay', senderSessionId: parent.id },
+      signal: testSignal,
+    })
+    expect(child.inbox.nextStep).toHaveLength(1)
+    expect(child.inbox.nextTurn).toHaveLength(0)
+
+    await followup(ctx, parent, started.childId, message('later turn'))
+    expect(child.inbox.nextStep).toHaveLength(1)
+    expect(child.inbox.nextTurn).toHaveLength(1)
+
+    release.resolve(undefined)
+    await waitNoActivation(ctx, started.childId)
+    expect(adapter.requests).toHaveLength(3)
+    await expect(ctx.subagents.steer(parent, started.childId, message('too late'), {
+      source: { kind: 'coordinator', form: 'relay', senderSessionId: parent.id },
+      signal: testSignal,
+    })).rejects.toMatchObject({ code: 'NOT_RESUMABLE' })
+  })
+
+  it('exposes the core steering operation without widening one-shot runs', async () => {
     const { ctx } = await setup([])
     const subagents: Record<string, unknown> = ctx.subagents as unknown as Record<string, unknown>
     for (const absent of [
@@ -2232,13 +2270,11 @@ describe('continuable public API', () => {
       'kill',
       'report',
       'resume',
-      'steer',
-      'steerContinuable',
       'userAuthority',
     ]) {
       expect(subagents[absent]).toBeUndefined()
     }
-    // No steering tool and no report tool are registered by this seam.
+    // The continuation service does not install model-facing tools itself.
     const names = ctx.tools.schemas().map(schema => schema.name)
     expect(names).not.toContain('report')
     expect(names).not.toContain('steer_subagent')
@@ -2489,6 +2525,10 @@ describe('SubagentRuntime.interrupt', () => {
 
     expect(cancelSpy).toHaveBeenCalledTimes(1)
     expect(cancelSpy).toHaveBeenCalledWith({ kind: 'user' }, { keepInbox: true })
+    await expect(ctx.subagents.steer(parent, started.childId, message('must wait'), {
+      source: { kind: 'coordinator', form: 'relay', senderSessionId: parent.id },
+      signal: testSignal,
+    })).rejects.toMatchObject({ code: 'NOT_RUNNING' })
     // Cancellation is cooperative: the held model call observes it on release.
     releaseFirst.resolve(undefined)
     await child.whenIdle()

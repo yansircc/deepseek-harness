@@ -16,7 +16,8 @@
  * Public operations express caller intent: `start` returns one published owned
  * one-shot run, `startContinuable` establishes a durable continuable child, and
  * `followup` delivers later content without exposing whether the child is
- * resident. Continuable children never become a {@link SubagentRun}: the
+ * resident, while `steer` delivers next-step content only to a live running
+ * child. Continuable children never become a {@link SubagentRun}: the
  * continuation manager holds their `AgentHandle` directly and orders every turn
  * through the child's own inbox, so providers contribute only the detached
  * creation spec and see no handle, turn, or teardown. Child and descendant
@@ -281,6 +282,29 @@ export class SubagentRuntime extends Service {
    */
   interrupt(targetSessionId: SessionId, authority: SubagentInterruptAuthority): void {
     this.continuations?.interrupt(targetSessionId, authority)
+  }
+
+  /**
+   * Deliver selected content to a live continuable child's current turn at the
+   * next step boundary. This never cold-resumes an idle or absent Activation;
+   * use {@link followup} for a later turn. The exact live direct parent remains
+   * the delivery authority, and the caller signal owns admission only until
+   * inbox acceptance.
+   * @param parent - the exact live direct parent authorizing this delivery.
+   * @param childId - the durable child session id.
+   * @param content - user-role content to deliver at the next step boundary.
+   * @param options - message source fields and pre-acceptance cancellation.
+   * @returns the accepted message's inbox id.
+   * @throws when the target is not live, authority is rejected, or admission
+   *   closes before the message is accepted.
+   */
+  async steer(
+    parent: Agent,
+    childId: SessionId,
+    content: ContentBlock[],
+    options: SubagentFollowupOptions,
+  ): Promise<MessageId> {
+    return this.requireContinuations().steer(parent, childId, content, options)
   }
 
   /**

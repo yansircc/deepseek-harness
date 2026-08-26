@@ -241,6 +241,8 @@ interface Activation {
    * not exist, so its teardown owes the parent no settlement account.
    */
   announced: boolean
+  /** Whether the current turn is converging after a manager interrupt. */
+  currentTurnInterrupted: boolean
   /** Renewed whenever a settlement watcher must re-observe quiescence. */
   poke: PromiseWithResolvers<void>
 }
@@ -531,6 +533,45 @@ export class SubagentContinuationManager {
   }
 
   /**
+   * Deliver one message to a live continuable child's next step. Unlike
+   * `followup()`, this operation never cold-resumes or wakes an idle child.
+   * @param parent - the exact live direct parent authorizing delivery.
+   * @param childId - durable child session id.
+   * @param content - user-role content for the next step.
+   * @param options - message source fields and pre-acceptance cancellation.
+   * @returns the accepted message id.
+   */
+  async steer(
+    parent: Agent,
+    childId: SessionId,
+    content: ContentBlock[],
+    options: SubagentFollowupOptions,
+  ): Promise<MessageId> {
+    this.assertAdmitting(parent)
+    return this.locks.run(childId, async () => {
+      options.signal.throwIfAborted()
+      this.assertAdmitting(parent)
+      const activation = this.activations.get(childId)
+      if (activation === undefined) {
+        throw new SubagentError(`subagent "${childId}" is not live`, 'NOT_RESUMABLE')
+      }
+      if (activation.disposal !== undefined) {
+        throw new SubagentError(`subagent "${childId}" activation is being disposed`, 'ACTIVATION_CLOSING')
+      }
+      this.authorizeLineage(parent, childId, activation.handle.agent.session.header.parentSession)
+      if (activation.handle.agent.status !== 'running' || activation.currentTurnInterrupted) {
+        throw new SubagentError(`subagent "${childId}" is not accepting next-step steering`, 'NOT_RUNNING')
+      }
+      const message = createUserMessage({ content, source: options.source })
+      const accepted = this.admitWaking(activation, message.id, () => {
+        activation.handle.agent.steer(message)
+      })
+      activation.announced = true
+      return accepted
+    })
+  }
+
+  /**
    * Interrupt one live continuable child's current turn. Admission is
    * synchronous and the effect is asynchronous: this authorizes the caller,
    * requests `Agent.cancel(cause, { keepInbox: true })` on the target, and
@@ -587,6 +628,7 @@ export class SubagentContinuationManager {
     // Disposal already stopped the target with a whole-Activation teardown;
     // a second cancel would be a redundant signal on a closing handle.
     if (activation.disposal !== undefined) return
+    if (activation.handle.agent.status === 'running') activation.currentTurnInterrupted = true
     activation.handle.agent.cancel(
       authority.kind === 'user' ? { kind: 'user' } : { kind: 'parent' },
       { keepInbox: true },
@@ -1098,6 +1140,7 @@ export class SubagentContinuationManager {
       disposal: undefined,
       accepted: new Set(),
       announced: false,
+      currentTurnInterrupted: false,
       poke: Promise.withResolvers<void>(),
     }
     // After transfer, any failure must dispose the created handle, remove the
@@ -1119,6 +1162,9 @@ export class SubagentContinuationManager {
       })
       handle.agent.ctx.on('agent/inbox/discarded', ({ message }) => {
         if (activation.accepted.delete(message.id)) this.wake(activation)
+      })
+      handle.agent.ctx.on('agent/status', ({ status }) => {
+        if (status === 'idle') activation.currentTurnInterrupted = false
       })
       // Agent creation committed setup at its publication boundary;
       // revocations from here on are immediate live revocation.

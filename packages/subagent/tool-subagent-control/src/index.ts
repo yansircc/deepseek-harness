@@ -1,6 +1,6 @@
 /**
- * The globally named `send_message` and `interrupt_agent` tools: thin
- * model-facing adapters over `ctx.subagents.followup()` and
+ * The globally named `send_message`, `steer_agent`, and `interrupt_agent` tools:
+ * thin model-facing adapters over `ctx.subagents.followup()`, `ctx.subagents.steer()`, and
  * `ctx.subagents.interrupt()`. They perform no lifecycle routing of their own —
  * residency, cold resume, and interrupt authorization belong to the subagent
  * service — and they live apart from the provider-bound
@@ -19,7 +19,7 @@ export const name = 'tool-subagent-control'
 export const inject = ['tools', 'subagents']
 
 /**
- * Register the `send_message` and `interrupt_agent` tools.
+ * Register the `send_message`, `steer_agent`, and `interrupt_agent` tools.
  * @param ctx - context carrying the tool registry and subagent service.
  */
 export function apply(ctx: Context): void {
@@ -67,6 +67,54 @@ export function apply(ctx: Context): void {
         parent,
         SessionId(args.subagent_id),
         message,
+        {
+          source: { kind: 'coordinator', form: 'relay', senderSessionId: parent.id },
+          signal: exec.signal,
+        },
+      )
+      return { messageId }
+    },
+  }))
+
+  ctx.tools.register(defineTool({
+    name: 'steer_agent',
+    description:
+      'Deliver a message to a live background subagent at its next safe step. The target must be running '
+      + 'and must be your direct child; this does not cold-resume or wake an idle subagent. Use send_message '
+      + 'to deliver work as a later turn. This call returns no answer from the subagent — only confirmation '
+      + 'that the message was delivered. A failure means the message was NOT delivered.',
+    parameters: {
+      subagent_id: {
+        type: 'string',
+        required: true,
+        description: 'The running direct-child subagent id.',
+      },
+      message: {
+        type: 'string',
+        required: true,
+        description: 'The message to deliver at the subagent\'s next safe step.',
+      },
+    },
+    output: {
+      schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          messageId: { type: 'string', required: true },
+        },
+      },
+      render: (args, _value) => [{
+        type: 'text',
+        text: `message steered to subagent ${args.subagent_id}`,
+      }],
+    },
+    async execute(args, exec) {
+      const parent = exec.agent
+      if (!parent) throw new Error('steer_agent requires a calling agent (exec.agent was undefined)')
+      const messageId = await ctx.subagents.steer(
+        parent,
+        SessionId(args.subagent_id),
+        [{ type: 'text', text: args.message }],
         {
           source: { kind: 'coordinator', form: 'relay', senderSessionId: parent.id },
           signal: exec.signal,
