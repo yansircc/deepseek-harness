@@ -207,7 +207,7 @@ export async function executeInTab<Args extends Array<unknown>, Result>(
   args: Args,
 ): Promise<Awaited<Result>> {
   const { tab } = params
-  if (params.foreground) await bringToFront(tab)
+  await prepareObservation(params)
 
   const serializedArgs = JSON.stringify(args)
     .replaceAll('\u2028', '\\u2028')
@@ -245,7 +245,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 // pages that ship `script-src 'self'` without `'unsafe-eval'` (which blocks `eval`/`new Function`).
 export async function evaluateInTab(params: EvaluateParams) {
   const { tab } = params
-  if (params.foreground) await bringToFront(tab)
+  await prepareObservation(params)
   const expression = String(params.expression ?? '')
   const projectorSource = `(${projectEvaluationValue.toString()})`
   const contractSource = JSON.stringify(EVALUATION_VALUE_CONTRACT)
@@ -310,13 +310,26 @@ export async function withPostActionVerification<Params extends SnapshotCapableC
   return { action, verification: observed }
 }
 
-// Snapshot/inspect run from a packaged MAIN-world script injected via
-// chrome.scripting.executeScript({ files }). That file is free of eval/new Function, so it works
-// on strict-CSP pages, and it installs (globalThis as typeof globalThis & DshChromeInjectedGlobals).__dshChromeSnapshotPage / __dshChromeInspectTarget.
-// It shares window.__DSH_CHROME_STATE__ (same el- uid scheme) with the CDP-injected input helpers.
+type ObservationContext = { readonly tab: ResolvedTab; readonly foreground?: boolean }
+
+/** Install the shared observation runtime and optionally foreground its tab.
+ * @param context - Target tab and foreground preference.
+ * @returns Nothing after the runtime is installed.
+ */
+async function prepareObservation(context: ObservationContext): Promise<void> {
+  if (context.foreground) await bringToFront(context.tab)
+  await executeScript({
+    target: { tabId: context.tab.id, frameIds: [0] },
+    world: 'MAIN',
+    files: [SNAPSHOT_BUNDLE_PATH],
+  })
+}
+
+// Snapshot/read/inspect use one packaged MAIN-world observation runtime. It is free of eval/new
+// Function, works on strict-CSP pages, and shares the el- uid registry with CDP input helpers.
 export async function snapshotInTab(params: SnapshotParams) {
   const { tab } = params
-  if (params.foreground) await bringToFront(tab)
+  await prepareObservation(params)
   const args = [
     params.maxElements || 80,
     params.containingText ?? null,
@@ -327,11 +340,6 @@ export async function snapshotInTab(params: SnapshotParams) {
     params.maxTextChars ?? null,
     params.ref?.replace(/^@/, '') ?? null,
   ]
-  await executeScript({
-    target: { tabId: tab.id, frameIds: [0] },
-    world: 'MAIN',
-    files: [SNAPSHOT_BUNDLE_PATH],
-  })
   const results = await executeScript({
     target: { tabId: tab.id, frameIds: [0] },
     world: 'MAIN',
@@ -519,11 +527,6 @@ export async function snapshotInTab(params: SnapshotParams) {
 export async function readInTab(params: ReadParams): Promise<ReadPageResult> {
   const { tab } = params
   if (params.foreground) await bringToFront(tab)
-  await executeScript({
-    target: { tabId: tab.id, frameIds: [0] },
-    world: 'MAIN',
-    files: [SNAPSHOT_BUNDLE_PATH],
-  })
   const results = await executeScript({
     target: { tabId: tab.id, frameIds: [0] },
     world: 'MAIN',
@@ -573,11 +576,6 @@ export async function inspectInTab(params: InspectParams) {
   const { tab } = params
   if (params.foreground) await bringToFront(tab)
   const args = [params.uid ?? null, params.selector ?? null, params.scrollIntoView === true]
-  await executeScript({
-    target: { tabId: tab.id, frameIds: [0] },
-    world: 'MAIN',
-    files: [SNAPSHOT_BUNDLE_PATH],
-  })
   const results = await executeScript({
     target: { tabId: tab.id, frameIds: [0] },
     world: 'MAIN',

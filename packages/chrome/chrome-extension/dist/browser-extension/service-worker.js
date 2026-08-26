@@ -21640,7 +21640,7 @@ Current tabs:\n${tabs.filter((candidate) => candidate.id !== void 0).slice(0, 20
 	};
 	async function executeInTab(params, func, args) {
 		const { tab } = params;
-		if (params.foreground) await bringToFront(tab);
+		await prepareObservation(params);
 		const serializedArgs = JSON.stringify(args).replaceAll("\u2028", "\\u2028").replaceAll("\u2029", "\\u2029");
 		const expression = `(async()=>{${PAGE_HELPERS.map((helper) => `const ${helper.name}=(${helper.toString()});`).join("\n")}
 const action=(${func.toString()});
@@ -21658,7 +21658,7 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 	}
 	async function evaluateInTab(params) {
 		const { tab } = params;
-		if (params.foreground) await bringToFront(tab);
+		await prepareObservation(params);
 		const expression = String(params.expression ?? "");
 		const projectorSource = `(${projectEvaluationValue.toString()})`;
 		const contractSource = JSON.stringify(EVALUATION_VALUE_CONTRACT);
@@ -21698,9 +21698,24 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 			}))
 		};
 	}
+	/** Install the shared observation runtime and optionally foreground its tab.
+	* @param context - Target tab and foreground preference.
+	* @returns Nothing after the runtime is installed.
+	*/
+	async function prepareObservation(context) {
+		if (context.foreground) await bringToFront(context.tab);
+		await executeScript({
+			target: {
+				tabId: context.tab.id,
+				frameIds: [0]
+			},
+			world: "MAIN",
+			files: [SNAPSHOT_BUNDLE_PATH]
+		});
+	}
 	async function snapshotInTab(params) {
 		const { tab } = params;
-		if (params.foreground) await bringToFront(tab);
+		await prepareObservation(params);
 		const args = [
 			params.maxElements || 80,
 			params.containingText ?? null,
@@ -21711,14 +21726,6 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 			params.maxTextChars ?? null,
 			params.ref?.replace(/^@/, "") ?? null
 		];
-		await executeScript({
-			target: {
-				tabId: tab.id,
-				frameIds: [0]
-			},
-			world: "MAIN",
-			files: [SNAPSHOT_BUNDLE_PATH]
-		});
 		const first = (await executeScript({
 			target: {
 				tabId: tab.id,
@@ -21860,14 +21867,6 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 	async function readInTab(params) {
 		const { tab } = params;
 		if (params.foreground) await bringToFront(tab);
-		await executeScript({
-			target: {
-				tabId: tab.id,
-				frameIds: [0]
-			},
-			world: "MAIN",
-			files: [SNAPSHOT_BUNDLE_PATH]
-		});
 		const envelope = (await executeScript({
 			target: {
 				tabId: tab.id,
@@ -21915,14 +21914,6 @@ catch(error){return {ok:false,error:error instanceof Error?(error.stack||error.m
 			params.selector ?? null,
 			params.scrollIntoView === true
 		];
-		await executeScript({
-			target: {
-				tabId: tab.id,
-				frameIds: [0]
-			},
-			world: "MAIN",
-			files: [SNAPSHOT_BUNDLE_PATH]
-		});
 		const first = (await executeScript({
 			target: {
 				tabId: tab.id,
