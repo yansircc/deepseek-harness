@@ -1,11 +1,10 @@
 /** Runtime decoding for every local connector HTTP body. */
 import {
-  ChromeCommandId,
   ChromeConnectorId,
-  type ChromeJsonValue,
 } from '@deepseek-ai/dsh-chrome-protocol'
 import { ProtocolFailure } from './bridge/errors.ts'
-import type { ProfileConnector, WireResult } from './types.ts'
+import type { ProfileConnector } from './types.ts'
+import { decodeWireResult as decodeGeneratedWireResult, type WireResult } from '@deepseek-ai/dsh-chrome-protocol'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -26,14 +25,6 @@ const string = (record: Record<string, unknown>, field: string): string => {
   return value
 }
 
-const jsonValue = (value: unknown, depth = 0): ChromeJsonValue => {
-  if (depth > 12) throw new ProtocolFailure('JSON value is too deeply nested')
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value
-  if (typeof value === 'number' && Number.isFinite(value)) return value
-  if (Array.isArray(value)) return value.map(item => jsonValue(item, depth + 1))
-  if (isRecord(value)) return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, jsonValue(item, depth + 1)]))
-  throw new ProtocolFailure('value is not JSON-compatible')
-}
 
 /** Decode and brand one connector handshake body.
  * @param text - Raw JSON body.
@@ -56,34 +47,8 @@ export const decodeProfileConnector = (text: string): ProfileConnector => {
   }
 }
 
-/** Decode one result body and reject missing, excess, or invalid fields.
+/** Decode one result body through the generated protocol runtime.
  * @param text - Raw JSON body.
  * @returns Validated wire result.
  */
-export const decodeWireResult = (text: string): WireResult => {
-  const value = parse('wire result', text)
-  if (!isRecord(value) || typeof value.ok !== 'boolean') throw new ProtocolFailure('wire result is malformed')
-  const allowed = value.ok ? new Set(['id', 'ok', 'value']) : new Set(['id', 'ok', 'error'])
-  if (Object.keys(value).some(key => !allowed.has(key))) throw new ProtocolFailure('wire result has unknown fields')
-  const id = ChromeCommandId(string(value, 'id'))
-  if (value.ok) return { id, ok: true, value: jsonValue(value.value) }
-  if (!isRecord(value.error)) throw new ProtocolFailure('wire result error is malformed')
-  const tag = string(value.error, '_tag')
-  const message = string(value.error, 'message')
-  if (tag === 'CommandRejected') {
-    return {
-      id,
-      ok: false,
-      error: {
-        _tag: tag,
-        code: string(value.error, 'code'),
-        message,
-        ...(value.error.details === undefined ? {} : { details: jsonValue(value.error.details) }),
-      },
-    }
-  }
-  if (tag === 'CommandOutcomeUnknown') {
-    return { id, ok: false, error: { _tag: tag, message, cause: string(value.error, 'cause') } }
-  }
-  throw new ProtocolFailure('wire result error tag is unsupported')
-}
+export const decodeWireResult = (text: string): WireResult => decodeGeneratedWireResult(parse('wire result', text))

@@ -26,6 +26,6 @@ describe('chrome-local wire decoding', () => {
     expect(() => decodeWireResult(JSON.stringify({ id: 'c', ok: true, value: null, secret: 'x' }))).toThrow(/unknown fields/)
     expect(() => decodeWireResult(JSON.stringify({
       id: 'c', ok: false, error: { _tag: 'Other', message: 'x' },
-    }))).toThrow(/unsupported/)
+    }))).toThrow(/result tag/)
   })
 })

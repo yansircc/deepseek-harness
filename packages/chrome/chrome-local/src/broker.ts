@@ -9,7 +9,8 @@ import {
   type ChromeJsonValue,
 } from '@deepseek-ai/dsh-chrome-protocol'
 import { ChromeError } from '@deepseek-ai/dsh-chrome'
-import type { LateResultRecord, PublicConnector, WireCommand, WireResult } from './types.ts'
+import type { LateResultRecord, PublicConnector } from './types.ts'
+import type { WireCommand, WireResult } from '@deepseek-ai/dsh-chrome-protocol'
 import { extensionWireCommand } from './wire-command.ts'
 
 interface Entry {

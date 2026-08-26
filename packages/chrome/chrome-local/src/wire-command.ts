@@ -1,6 +1,7 @@
 /** Project provider-neutral Chrome commands onto the authored extension wire vocabulary. */
 import type { ChromeCommand } from '@deepseek-ai/dsh-chrome-protocol'
-import type { WireCommand, WireOwnerContext } from './types.ts'
+import type { WireOwnerContext } from './types.ts'
+import type { WireCommand } from '@deepseek-ai/dsh-chrome-protocol'
 import type { ChromeCommandId } from '@deepseek-ai/dsh-chrome-protocol'
 
 /** Build one extension-compatible command envelope.
