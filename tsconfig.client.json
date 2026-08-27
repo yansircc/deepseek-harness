@@ -87,6 +87,7 @@
     { "path": "./packages/client/ui-permission-presets" },
     { "path": "./packages/client/ui-plan" },
     { "path": "./packages/client/ui-settings-plugins" },
+    { "path": "./packages/llm/llm-grok" },
     { "path": "./packages/client/ui-schedule" },
     { "path": "./packages/client/ui-zeroy" },
     { "path": "./packages/client/ui-chrome" },

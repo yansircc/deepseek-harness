@@ -95,6 +95,13 @@
     - id: llm-pi-ai
       name: '@deepseek-ai/dsh-llm-pi-ai'
 
+    - id: llm-grok
+      name: '@deepseek-ai/dsh-llm-grok'
+      config:
+        retryPolicy:
+          mode: normal
+          maxRetries: 8
+
     - id: session-persistence-jsonl
       name: '@deepseek-ai/dsh-session-persistence-jsonl'
       config:

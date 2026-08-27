@@ -1,0 +1,31 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/tsconfig.tsbuildinfo"
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../../../vendor/cordis" },
+    { "path": "../../../vendor/schemastery" },
+    { "path": "../../util/launch-environment" },
+    { "path": "../../llm/llm" },
+    { "path": "../../llm/llm-pi-ai" },
+    { "path": "../../attachment/attachment" },
+    { "path": "../../credentials/credentials" },
+    { "path": "../../settings/settings" },
+    { "path": "../../runtime-diagnostics/invariants" },
+    { "path": "../../util/timeout" },
+    { "path": "../../client/connection/tsconfig.host.json" },
+    { "path": "../../client/runtime" },
+    { "path": "../../client/locale" },
+    { "path": "../../client/ui-slots" },
+    { "path": "../../client/ui-layout" },
+    { "path": "../../client/ui-settings" },
+    { "path": "../../client/ui-settings-plugins" },
+    { "path": "../../fs/fs" },
+    { "path": "../../core/tools" }
+  ]
+}
