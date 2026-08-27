@@ -1017,6 +1017,70 @@ Depends on: [`ModelModality`](../packages/llm/llm/src/index.ts) · [`RetryPolicy
 
 Source: [`packages/llm/llm-deepseek/src/index.ts:106`](../packages/llm/llm-deepseek/src/index.ts)
 
+<a id="deepseek-aidsh-llm-grok"></a>
+
+## `@deepseek-ai/dsh-llm-grok`
+
+Requires: `llm`
+
+```ts config-catalog
+/**
+ * Plugin config, validated by the same-named schemastery schema and doubling
+ * as the `llm-grok` settings-section shape. There is no `apiKeyEnv`: this
+ * provider authenticates with an xAI subscription, not a console API key.
+ */
+export interface Config {
+  /** Maximum provider idle time while one stream read is outstanding (default five minutes). */
+  streamIdleTimeoutMs?: number
+  /** Displayed conversation-picker catalog; omission uses the frozen default. */
+  models?: GrokCatalogModel[]
+  /** When true, register the `grok_image_gen` tool. Default off. */
+  enableImageGen?: boolean
+  /** Provider-owned model-request retry policy; omission uses normal defaults. */
+  retryPolicy?: RetryPolicyConfig
+}
+
+/** One model in the plugin's frozen catalog. */
+export interface GrokCatalogModel {
+  /** Wire model id accepted by the chat proxy. */
+  id: string
+  /** Selector label; omission uses {@link id}. */
+  name?: string
+  /** Optional selector detail. */
+  description?: string
+  /** Known combined request and response context capacity. */
+  contextWindow?: number
+  /** Per-request output cap for this model. */
+  maxTokens?: number
+  /** Whether the model supports native thinking. */
+  thinking?: boolean
+  /** Official advertised reasoning menu; omission uses the frozen per-id list. */
+  reasoningEfforts?: readonly GrokReasoningEffort[]
+  /** Official default `reasoning.effort` (`reasoning_effort` on models-v2). */
+  defaultReasoningEffort?: string
+  /** Whether the model accepts image input. */
+  vision?: boolean
+  /** Whether the model supports tool calls. */
+  tools?: boolean
+}
+
+/** One official models-v2 reasoning menu row (`id` → wire `value`). */
+export interface GrokReasoningEffort {
+  /** Menu option id accepted by `/effort` and `--effort`. */
+  id: string
+  /** Value written to Responses `reasoning.effort`. */
+  value: string
+  /** Official menu label (`Extra High Effort`, …). */
+  label?: string
+  /** Official menu description. */
+  description?: string
+}
+```
+
+Depends on: [`RetryPolicyConfig`](../packages/llm/llm/src/index.ts)
+
+Source: [`packages/llm/llm-grok/src/index.ts:225`](../packages/llm/llm-grok/src/index.ts)
+
 <a id="deepseek-aidsh-llm-pi-ai"></a>
 
 ## `@deepseek-ai/dsh-llm-pi-ai`
