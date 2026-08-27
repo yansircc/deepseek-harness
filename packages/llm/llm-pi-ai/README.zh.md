@@ -85,7 +85,6 @@ profile 的 `models` 列表是*替换*该路由已安装 catalog，而不是扩�
 
 `modelOverrides` 无需这份代价就能就地重塑单个已安装 catalog 模型：每个键是一个 catalog 模型 id，每个值可写 `models` 条目接受的同一批字段，只是 id 落在键上，而 catalog 的其余部分原样继续服务——「改一个模型、其余三十七个原样保留」只是一次三行编辑。一条覆盖会成为该 catalog 条目的配置，因此容量、档位与 compat 沿与 `models` 条目相同的路径解析，携带相同的诊断与相同的请求默认值语义。覆盖只在正服务自身 catalog 的 catalog 路由上才有意义：与 `models` 列表并存的一份（该列表本就替换了 catalog）、落在手工声明路由上的一份（其模型已在 `models` 中完整写出），或点名了 catalog 未描述模型的一份，都会被拒绝而非跳过，因为一个静默保持原样的模型，就是一个否则要有人费力追查的笔误。
 
-已安装 catalog 之外，`src/catalog.ts` 还带有一张小小的 `CATALOG_ADDITIONS` 表，收录已安装 pi-ai 尚未上架的模型，像已上架条目一样并入路由的 catalog（`zai-coding-cn` 路由上的 `glm-5.3-flash` 即其一）。原因是提供方的最新发布按自己的节奏进入 pi-ai 的注册表，而 harness 要在发布当天就服务它，而不是干等。每条目都是依据该路由已上架兄弟条目塑造的完整 catalog 模型；一旦已安装 catalog 上架了同一 id，就必须删除该条目——`catalogModels` 会拒绝碰撞，因此过期的桥接会在加载时大声失败，而不是静默遮蔽上游条目。条目只能点名已安装 catalog 上架过的路由；pi-ai 从未听说过的路由仍须在 `models` 中完整声明。
 
 ### 按模型的推理（reasoning）档位
 

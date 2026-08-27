@@ -409,24 +409,6 @@ describe('catalog routes with per-model configuration', () => {
       .toEqual(getBuiltinModels('deepseek').map(model => model.id).sort())
   })
 
-  it('serves glm-5.3-flash on zai-coding-cn before the installed catalog ships it', async () => {
-    const ctx = await harness({ providers: { 'zai-coding-cn': { apiKeyEnv: KEY_ENV } } })
-
-    // The bridge entry lands in the route's catalog like a shipped model: no
-    // profile declares it, and the seam still lists and resolves it.
-    const flash = (await ctx.llm.listModels('zai-coding-cn'))
-      .find(model => model.id === 'glm-5.3-flash')
-    expect(flash).toMatchObject({ provider: 'zai-coding-cn', name: 'GLM-5.3-Flash' })
-    expect(flash?.inputModalities).toEqual(['text', 'image'])
-
-    const info = await ctx.llm.resolveModelInfo('zai-coding-cn', 'glm-5.3-flash')
-    expect(info.context).toEqual({ contextWindow: 1_000_000 })
-    // Thinking cannot be disabled, so `off` is not selectable: the advertised
-    // efforts are exactly the levels the endpoint accepts.
-    expect(info.reasoning?.efforts.map(effort => effort.id))
-      .toEqual([ReasoningEffortId('low'), ReasoningEffortId('high'), ReasoningEffortId('max')])
-  })
-
   it('overrides one catalog model field and defaults the rest from the catalog', async () => {
     const server = await mockServer([])
     const [catalogModel] = getBuiltinModels('deepseek')
