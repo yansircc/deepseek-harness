@@ -1,5 +1,7 @@
 # Chrome
 
+[English](chrome.md) | 中文
+
 Chrome capability 通过 `ctx.chrome` 提供限定 owner 的浏览器自动化。Service Definition 接受 initiating Agent 与 AbortSignal；local Provider 拥有认证 connector transport、browser-session target lease、command settlement 与 extension health。`tool-chrome` 拥有面向模型的 schema 与结果呈现。
 
 隐式 Page 和 Input 操作采用当前 focused regular window 的 active ordinary tab 作为 session lease。只有 `chrome_tab_new` 创建 DSH-owned tab。Cleanup 释放 adopted lease 而不关闭用户 tab，并可关闭 created tab。一个 session 存在多个 target 时必须提供显式 selector。

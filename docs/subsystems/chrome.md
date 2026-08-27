@@ -1,5 +1,7 @@
 # Chrome
 
+English | [中文](chrome.zh.md)
+
 The Chrome capability exposes owner-scoped browser automation through `ctx.chrome`. The Service Definition accepts an initiating Agent and AbortSignal; the local Provider owns authenticated connector transport, browser-session target leases, command settlement, and extension health. `tool-chrome` owns model-facing schemas and result presentation.
 
 Implicit Page and Input operations adopt the active ordinary tab in the focused regular window as a session lease. Only `chrome_tab_new` creates a DSH-owned tab. Cleanup releases adopted leases without closing user tabs and may close created tabs. Multiple session targets require an explicit selector.

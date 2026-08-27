@@ -502,6 +502,37 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'chrome',
+    summary: 'Owner-scoped registry for one Chrome automation provider.',
+    description: 'Owner-scoped registry for one Chrome automation provider.',
+    methods: [
+      {
+        signature: 'async registerProvider(provider: ChromeProvider): Promise<() => Promise<void>>',
+        description: 'Register exactly one started provider and publish it only after startup succeeds.',
+        parameters: [{ name: 'provider', description: 'Provider to start and publish.' }],
+        returns: 'Async disposer that reaches provider quiescence.',
+      },
+      {
+        signature: 'async execute(owner: Agent, command: ChromeCommand, signal: AbortSignal): Promise<ChromeJsonValue>',
+        description: 'Execute one command for an exact initiating Agent.',
+        parameters: [{ name: 'owner', description: 'Exact initiating Agent.' }, { name: 'command', description: 'Provider-neutral Chrome command.' }, { name: 'signal', description: 'Required caller cancellation signal.' }],
+        returns: 'Provider JSON result.',
+      },
+      {
+        signature: 'async status(signal?: AbortSignal): Promise<ChromeHealth>',
+        description: 'Return a fresh provider health snapshot.',
+        parameters: [{ name: 'signal', description: 'Optional status cancellation signal.' }],
+        returns: 'Current provider health.',
+      },
+      {
+        signature: 'hasOwnerActivity(owner: Agent): boolean',
+        description: 'Whether an exact owner has admitted work.',
+        parameters: [{ name: 'owner', description: 'Exact Agent to inspect.' }],
+        returns: 'Whether work is admitted for that owner.',
+      },
+    ],
+  },
+  {
     key: 'clientModules',
     summary: 'The web plugin table service: incremental `dsh.client` scan + wire composition + bundle route + index injection rows.',
     description: 'The web plugin table service: incremental `dsh.client` scan + wire composition + bundle route + index injection rows. Construction runs the activation scan synchronously — a malformed declaration or missing bundle among the already-loaded entries aggregates into one loud throw (FAILED fiber; the boot activation audit reports it).',
@@ -1829,6 +1860,13 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         throws: ['{SubagentError} `UNAUTHORIZED` when the authority does not own the live target.'],
       },
       {
+        signature: 'async steer( parent: Agent, childId: SessionId, content: ContentBlock[], options: SubagentFollowupOptions, ): Promise<MessageId>',
+        description: 'Deliver selected content to a live continuable child\'s current turn at the next step boundary. This never cold-resumes an idle or absent Activation; use followup for a later turn. The exact live direct parent remains the delivery authority, and the caller signal owns admission only until inbox acceptance.',
+        parameters: [{ name: 'parent', description: 'the exact live direct parent authorizing this delivery.' }, { name: 'childId', description: 'the durable child session id.' }, { name: 'content', description: 'user-role content to deliver at the next step boundary.' }, { name: 'options', description: 'message source fields and pre-acceptance cancellation.' }],
+        returns: 'the accepted message\'s inbox id.',
+        throws: ['when the target is not live, authority is rejected, or admission closes before the message is accepted.'],
+      },
+      {
         signature: 'async reportFrom( child: Agent, content: ContentBlock[], options: SubagentReportOptions, ): Promise<MessageId>',
         description: 'Deliver selected content from one live continuable child to its durable direct parent. The child is the authority credential; callers cannot name a recipient. Reporting does not conclude the child\'s turn or Activation.',
         parameters: [{ name: 'child', description: 'exact live reporting child.' }, { name: 'content', description: 'selected model-facing content.' }, { name: 'options', description: 'parent scheduling and pre-acceptance cancellation.' }],
@@ -3074,6 +3112,90 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface CancelOptions {\n    keepInbox?: boolean | undefined;\n}',
   },
   {
+    name: 'ChromeCommand',
+    declaration: 'export type ChromeCommand = {\n    readonly domain: \'tab\';\n    readonly call: ChromeTabCall;\n} | {\n    readonly domain: \'page\';\n    readonly call: ChromePageCall;\n} | {\n    readonly domain: \'input\';\n    readonly call: ChromeInputCall;\n} | {\n    readonly domain: \'system\';\n    readonly call: ChromeSystemCall;\n};',
+  },
+  {
+    name: 'ChromeCommandPhase',
+    declaration: 'export type ChromeCommandPhase = \'accepted\' | \'queued\' | \'claimed\' | \'executing\' | \'result-persisted\' | \'acknowledged\' | \'cancel-requested\' | \'cancelled\' | \'outcome-unknown\';',
+  },
+  {
+    name: 'ChromeConnectorHealth',
+    declaration: 'export type ChromeConnectorHealth = \'absent\' | \'handshaking\' | \'polling\' | \'stale\';',
+  },
+  {
+    name: 'ChromeConnectorStatus',
+    declaration: 'export interface ChromeConnectorStatus {\n    readonly id: ChromeConnectorId;\n    readonly label: string;\n    readonly connected: boolean;\n    readonly lastSeenAt?: number;\n    readonly queuedCommands: number;\n    readonly pendingCommands: number;\n}',
+  },
+  {
+    name: 'ChromeElementTarget',
+    declaration: 'export type ChromeElementTarget = {\n    readonly by: \'uid\';\n    readonly value: string;\n} | {\n    readonly by: \'selector\';\n    readonly value: string;\n};',
+  },
+  {
+    name: 'ChromeExecutionContext',
+    declaration: 'export interface ChromeExecutionContext {\n    readonly owner: Agent;\n    readonly signal: AbortSignal;\n}',
+  },
+  {
+    name: 'ChromeGroupColor',
+    declaration: 'export type ChromeGroupColor = \'grey\' | \'blue\' | \'red\' | \'yellow\' | \'green\' | \'pink\' | \'purple\' | \'cyan\' | \'orange\';',
+  },
+  {
+    name: 'ChromeHealth',
+    declaration: 'export interface ChromeHealth extends ChromeProtocolRevision {\n    readonly kernel: ChromeKernelHealth;\n    readonly connector: ChromeConnectorHealth;\n    readonly runtime: ChromeRuntimeHealth;\n    readonly connectorStatus?: ChromeConnectorStatus;\n    readonly currentCommand?: {\n        readonly id: ChromeCommandId;\n        readonly phase: ChromeCommandPhase;\n        readonly operation: string;\n    };\n    readonly lastFailure?: {\n        readonly code: string;\n        readonly message: string;\n    };\n}',
+  },
+  {
+    name: 'ChromeInputCall',
+    declaration: 'export type ChromeInputCall = {\n    readonly op: \'click\';\n    readonly at: ChromePointerTarget;\n    readonly modifiers?: ChromeModifiers;\n} | {\n    readonly op: \'type\';\n    readonly text: string;\n    readonly into?: ChromeElementTarget;\n    readonly pressEnter?: boolean;\n} | {\n    readonly op: \'fill\';\n    readonly text: string;\n    readonly into?: ChromeElementTarget;\n    readonly submit?: boolean;\n} | {\n    readonly op: \'key\';\n    readonly key: string;\n    readonly at?: ChromeElementTarget;\n    readonly modifiers?: ChromeModifiers;\n} | {\n    readonly op: \'hover\';\n    readonly at: ChromePointerTarget;\n} | {\n    readonly op: \'drag\';\n    readonly from: ChromePointerTarget;\n    readonly to: ChromePointerTarget;\n    readonly steps?: number;\n} | {\n    readonly op: \'tap\';\n    readonly at: ChromePointerTarget;\n} | {\n    readonly op: \'scroll\';\n    readonly deltaY?: number;\n    readonly deltaX?: number;\n    readonly within?: ChromeElementTarget;\n    readonly steps?: number;\n} | {\n    readonly op: \'upload\';\n    readonly paths: readonly string[];\n    readonly into?: ChromeElementTarget;\n};',
+  },
+  {
+    name: 'ChromeJsonValue',
+    declaration: 'export type ChromeJsonValue = null | boolean | number | string | readonly ChromeJsonValue[] | {\n    readonly [key: string]: ChromeJsonValue;\n};',
+  },
+  {
+    name: 'ChromeKernelHealth',
+    declaration: 'export type ChromeKernelHealth = \'starting\' | \'listening\' | \'failed\' | \'stopped\';',
+  },
+  {
+    name: 'ChromeModifiers',
+    declaration: 'export type ChromeModifiers = {\n    readonly shift?: boolean;\n    readonly control?: boolean;\n    readonly alt?: boolean;\n    readonly meta?: boolean;\n};',
+  },
+  {
+    name: 'ChromePageCall',
+    declaration: 'export type ChromePageCall = ({\n    readonly op: \'snapshot\';\n} & ChromeSnapshotOptions) | {\n    readonly op: \'read\';\n    readonly ref?: string;\n    readonly view?: \'content\' | \'outline\';\n    readonly query?: string;\n    readonly maxChars?: number;\n} | {\n    readonly op: \'inspect\';\n    readonly element: ChromeElementTarget;\n    readonly scrollIntoView?: boolean;\n} | {\n    readonly op: \'navigate\';\n    readonly url: string;\n    readonly waitUntilLoad?: boolean;\n    readonly timeoutMs?: number;\n    readonly initScript?: string;\n    readonly snapshot?: ChromeSnapshotOptions;\n} | {\n    readonly op: \'evaluate\';\n    readonly expression: string;\n    readonly awaitPromise?: boolean;\n} | {\n    readonly op: \'wait\';\n    readonly condition: {\n        readonly by: \'selector\' | \'urlIncludes\' | \'textContains\' | \'expression\';\n        readonly value: string;\n    };\n    readonly timeoutMs?: number;\n    readonly intervalMs?: number;\n} | {\n    readonly op: \'console\';\n    readonly clear?: boolean;\n} | {\n    readonly op: \'network-list\';\n    readonly includePreserved?: boolean;\n    readonly clear?: boolean;\n} | {\n    readonly op: \'network-get\';\n    readonly requestId: string;\n} | {\n    readonly op: \'screenshot\';\n    readonly capture: {\n        readonly kind: \'viewport\' | \'full-page-tiles\';\n    };\n    readonly format: \'png\' | \'jpeg\';\n    readonly quality?: number;\n};',
+  },
+  {
+    name: 'ChromePointerTarget',
+    declaration: 'export type ChromePointerTarget = ChromeElementTarget | {\n    readonly by: \'coordinate\';\n    readonly x: number;\n    readonly y: number;\n};',
+  },
+  {
+    name: 'ChromeProtocolRevision',
+    declaration: 'export interface ChromeProtocolRevision {\n    readonly kernelProtocolVersion: string;\n    readonly kernelBuildId: ChromeBuildId;\n    readonly operationRevision: ChromeOperationRevision;\n}',
+  },
+  {
+    name: 'ChromeProvider',
+    declaration: 'export interface ChromeProvider {\n    readonly id: ChromeProviderId;\n    start(signal: AbortSignal): Promise<void>;\n    execute(context: ChromeExecutionContext, command: ChromeCommand): Promise<ChromeJsonValue>;\n    status(signal?: AbortSignal): Promise<ChromeHealth>;\n    close(reason: string): Promise<void>;\n}',
+  },
+  {
+    name: 'ChromeRuntimeHealth',
+    declaration: 'export type ChromeRuntimeHealth = \'idle\' | \'executing\' | \'faulted\';',
+  },
+  {
+    name: 'ChromeSnapshotOptions',
+    declaration: 'export type ChromeSnapshotOptions = {\n    readonly ref?: string;\n    readonly mode?: \'auto\' | \'interactive\' | \'forms\' | \'pageMap\' | \'text\' | \'changes\' | \'full\';\n    readonly query?: string;\n    readonly maxElements?: number;\n    readonly maxTextChars?: number;\n    readonly containingText?: string;\n    readonly role?: string;\n    readonly nearUid?: string;\n};',
+  },
+  {
+    name: 'ChromeSystemCall',
+    declaration: 'export type ChromeSystemCall = {\n    readonly op: \'version\';\n} | {\n    readonly op: \'automation-status\';\n} | {\n    readonly op: \'clear-stale\';\n};',
+  },
+  {
+    name: 'ChromeTabCall',
+    declaration: 'export type ChromeTabCall = {\n    readonly op: \'list\';\n} | {\n    readonly op: \'new\';\n    readonly url?: string;\n    readonly groupColor?: ChromeGroupColor;\n} | {\n    readonly op: \'activate\';\n    readonly target?: ChromeTabTarget;\n} | {\n    readonly op: \'close\';\n    readonly target?: ChromeTabTarget;\n} | {\n    readonly op: \'group\';\n    readonly target?: ChromeTabTarget;\n    readonly groupColor?: ChromeGroupColor;\n} | {\n    readonly op: \'ungroup\';\n    readonly target?: ChromeTabTarget;\n};',
+  },
+  {
+    name: 'ChromeTabTarget',
+    declaration: 'export type ChromeTabTarget = {\n    readonly by: \'id\';\n    readonly value: number;\n} | {\n    readonly by: \'url\';\n    readonly value: string;\n} | {\n    readonly by: \'title\';\n    readonly value: string;\n};',
+  },
+  {
     name: 'ClientResponse',
     declaration: 'export interface ClientResponse {\n    type: \'client-response\';\n    rpcId: RpcId;\n    result: RpcResult<unknown>;\n}',
   },
@@ -3616,6 +3738,18 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'JobStatus',
     declaration: 'export type JobStatus = \'running\' | \'stopping\' | \'completed\' | \'killed\' | \'failed\';',
+  },
+  {
+    name: 'JsonSchemaNode',
+    declaration: 'export interface JsonSchemaNode {\n    type?: JsonSchemaType;\n    oneOf?: JsonSchemaNode[];\n    properties?: Record<string, JsonSchemaNode>;\n    required?: string[];\n    additionalProperties?: boolean;\n    items?: JsonSchemaNode;\n    enum?: JsonSchemaScalar[];\n    const?: JsonSchemaScalar;\n    description?: string;\n    title?: string;\n    default?: JsonValue;\n    examples?: JsonValue;\n}',
+  },
+  {
+    name: 'JsonSchemaScalar',
+    declaration: 'export type JsonSchemaScalar = string | number | boolean | null;',
+  },
+  {
+    name: 'JsonSchemaType',
+    declaration: 'export type JsonSchemaType = \'object\' | \'array\' | \'string\' | \'number\' | \'integer\' | \'boolean\' | \'null\';',
   },
   {
     name: 'KnobState',
@@ -4575,7 +4709,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SubagentRuntime',
-    declaration: 'export class SubagentRuntime extends Service {\n    constructor(ctx: Context);\n    async startContinuable(spec: ContinuableStartSpec): Promise<ContinuableStart>;\n    async followup(parent: Agent, childId: SessionId, content: ContentBlock[], options: SubagentFollowupOptions): Promise<MessageId>;\n    interrupt(targetSessionId: SessionId, authority: SubagentInterruptAuthority): void;\n    async reportFrom(child: Agent, content: ContentBlock[], options: SubagentReportOptions): Promise<MessageId>;\n    registerContinuableSetup(contribution: ContinuableSetupContribution): () => void;\n    async drainContinuableDescendants(parents: readonly Agent[]): Promise<void>;\n    async drainContinuableChildren(parent: Agent, childIds: readonly SessionId[]): Promise<void>;\n    listChildren(parentSessionId: SessionId, signal?: AbortSignal): Promise<SubagentListEntry[]>;\n    listDescendants(rootSessionId: SessionId, signal?: AbortSignal): Promise<SubagentDescendantListEntry[]>;\n    registerProvider(provider: SubagentProvider): () => void;\n    getProvider(name: string): SubagentProvider | undefined;\n    list(): string[];\n    async start(name: string, request: SubagentStartRequest): Promise<SubagentRun>;\n}',
+    declaration: 'export class SubagentRuntime extends Service {\n    constructor(ctx: Context);\n    async startContinuable(spec: ContinuableStartSpec): Promise<ContinuableStart>;\n    async followup(parent: Agent, childId: SessionId, content: ContentBlock[], options: SubagentFollowupOptions): Promise<MessageId>;\n    interrupt(targetSessionId: SessionId, authority: SubagentInterruptAuthority): void;\n    async steer(parent: Agent, childId: SessionId, content: ContentBlock[], options: SubagentFollowupOptions): Promise<MessageId>;\n    async reportFrom(child: Agent, content: ContentBlock[], options: SubagentReportOptions): Promise<MessageId>;\n    registerContinuableSetup(contribution: ContinuableSetupContribution): () => void;\n    async drainContinuableDescendants(parents: readonly Agent[]): Promise<void>;\n    async drainContinuableChildren(parent: Agent, childIds: readonly SessionId[]): Promise<void>;\n    listChildren(parentSessionId: SessionId, signal?: AbortSignal): Promise<SubagentListEntry[]>;\n    listDescendants(rootSessionId: SessionId, signal?: AbortSignal): Promise<SubagentDescendantListEntry[]>;\n    registerProvider(provider: SubagentProvider): () => void;\n    getProvider(name: string): SubagentProvider | undefined;\n    list(): string[];\n    async start(name: string, request: SubagentStartRequest): Promise<SubagentRun>;\n}',
   },
   {
     name: 'SubagentStartRequest',

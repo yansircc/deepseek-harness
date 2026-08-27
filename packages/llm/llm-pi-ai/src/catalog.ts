@@ -36,6 +36,59 @@ import type {
  */
 const NO_COST: ModelCost = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
 
+/**
+ * Models the installed pi-ai catalog has not caught up with, by provider
+ * route. A provider's newest release lands in pi-ai's registry on its own
+ * cadence; a route still serves it here from the day it launches. Each entry
+ * is a full catalog model exactly as pi-ai would ship it, and the route's
+ * shipped siblings are the template for its fields.
+ *
+ * An entry may only name a route the installed catalog ships — the point of
+ * the bridge is a sibling pi-ai has not heard of, not a route of our own —
+ * and it must be deleted the moment the installed catalog carries its id:
+ * {@link catalogModels} refuses a collision, so a stale bridge fails loud at
+ * load instead of silently shadowing the upstream entry.
+ */
+const CATALOG_ADDITIONS: Readonly<Record<string, readonly Model<Api>[]>> = {
+  // GLM-5.3-Flash on the bigmodel.cn coding plan (launched 2026-08-26): a
+  // 320B-parameter native-multimodal model with 1M context and thinking that
+  // cannot be disabled. Mirrors the route's reasoning-mandatory effort models:
+  // `off` pinned to null keeps the mandatory-thinking level out of selectors,
+  // and the endpoint reads `max_tokens`, which the installed pi-ai version's
+  // zai baseURL detection defaults to `max_completion_tokens` instead of.
+  'zai-coding-cn': [
+    {
+      id: 'glm-5.3-flash',
+      name: 'GLM-5.3-Flash',
+      api: 'openai-completions',
+      provider: 'zai-coding-cn',
+      baseUrl: 'https://open.bigmodel.cn/api/coding/paas/v4',
+      reasoning: true,
+      thinkingLevelMap: {
+        off: null,
+        minimal: null,
+        low: 'low',
+        medium: null,
+        high: 'high',
+        xhigh: null,
+        max: 'max',
+      },
+      input: ['text', 'image'],
+      cost: NO_COST,
+      contextWindow: 1_000_000,
+      maxTokens: 131_072,
+      compat: {
+        supportsStore: false,
+        supportsDeveloperRole: false,
+        supportsReasoningEffort: true,
+        maxTokensField: 'max_tokens',
+        thinkingFormat: 'zai',
+        zaiToolStream: true,
+      },
+    },
+  ],
+}
+
 /** One request modality a pi-ai model may accept. */
 export type PiAiModality = Model<Api>['input'][number]
 
@@ -177,14 +230,29 @@ export function catalogProviderIds(): readonly string[] {
 }
 
 /**
- * The installed catalog models for one route, indexed by model id.
+ * The installed catalog models for one route, plus the route's
+ * {@link CATALOG_ADDITIONS}, indexed by model id.
  * @param provider - provider route key.
- * @returns catalog models by id; empty for a route pi-ai does not ship.
+ * @returns the shipped and bridged models by id; only additions for a route
+ *   pi-ai does not ship, which {@link CATALOG_ADDITIONS} forbids naming.
+ * @throws Error when a bridge entry collides with a model the installed
+ *   catalog now ships — the signal to delete the stale entry.
  */
 export function catalogModels(provider: string): Map<string, Model<Api>> {
-  if (!catalogProviders().has(provider)) return new Map()
-  const models = getBuiltinModels(provider as BuiltinProvider) as Model<Api>[]
-  return new Map(models.map(model => [model.id, model]))
+  const models = new Map<string, Model<Api>>()
+  if (catalogProviders().has(provider)) {
+    for (const model of getBuiltinModels(provider as BuiltinProvider) as Model<Api>[]) {
+      models.set(model.id, model)
+    }
+  }
+  for (const addition of CATALOG_ADDITIONS[provider] ?? []) {
+    if (models.has(addition.id)) {
+      throw new Error(`llm-pi-ai: catalog addition "${provider}/${addition.id}" collides with an id the`
+        + ' installed pi-ai catalog now ships; delete the stale entry from CATALOG_ADDITIONS in src/catalog.ts')
+    }
+    models.set(addition.id, addition)
+  }
+  return models
 }
 
 /**
