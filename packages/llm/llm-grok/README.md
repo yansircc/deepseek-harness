@@ -51,3 +51,33 @@ The Models page, if it lists Grok at all, is hint-only. Because this package doe
 The bundle retries eligible model-request failures up to eight times by default. xAI capacity/high-demand failures are classified as `RATE_LIMIT`; temporary availability degradation is classified as `SERVER`.
 
 There is no `apiKeyEnv` and no user-editable base URL. `models` is the displayed conversation catalog, a subset of the account list.
+
+## Model Experience
+
+### Grok subscription request
+
+#### What the model sees
+
+The selected Grok model receives the DSH system prompt, durable conversation history, DSH function tools such as `bash`, and the configured reasoning effort through the Grok Responses proxy. Server-side web and X search tools are added by the adapter; their provider-native result items remain replayable without creating empty DSH reasoning rows.
+
+#### Token effect
+
+Grok tokenization determines exact input and output usage. Reasoning and server-side search items may add input or output tokens even when they do not produce visible text. Recorded tool calls and results become part of later requests.
+
+#### KV Cache effect
+
+The adapter preserves request order and provider replay items. Changing the model, reasoning effort, conversation prefix, or tool definitions can change the reusable prefix at the first differing item.
+
+### Provider response
+
+#### What the model sees
+
+The next request includes the recorded DSH tool results and the provider's replayable response items.
+
+#### Token effect
+
+Tool results, reasoning, and visible response text contribute to later request usage according to Grok tokenization.
+
+#### KV Cache effect
+
+Preserved response items can support provider cache reuse; changing any earlier item can invalidate reuse from that point.
