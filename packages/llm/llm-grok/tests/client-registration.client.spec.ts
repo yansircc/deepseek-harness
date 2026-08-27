@@ -44,7 +44,9 @@ class FakeSlots extends Service {
   inject(_name: string, register: () => () => void): void { this.ctx.effect(register) }
 
   register(options: Record<string, unknown> & { inject?: () => unknown }, _component: unknown): () => void {
-    const entry = { options, inject: options.inject }
+    const entry: SlotEntry = options.inject === undefined
+      ? { options }
+      : { options, inject: options.inject }
     this.registered.push(entry)
     return () => { this.registered.splice(this.registered.indexOf(entry), 1) }
   }
@@ -57,7 +59,7 @@ class FakeSlots extends Service {
 async function bench() {
   const ctx = new Context()
   await ctx.plugin(FakeSlots).await()
-  const slots = ctx.get('slots') as FakeSlots
+  const slots = ctx.get('slots') as unknown as FakeSlots
   ctx.provide('locale', {
     register: () => () => undefined,
     bind: () => (key: string) => key,
@@ -79,7 +81,7 @@ describe('Grok client plugin registration', () => {
   it('reads usage through the grok usage/read RPC without exposing tokens', async () => {
     const ctx = new Context()
     await ctx.plugin(FakeSlots).await()
-    const slots = ctx.get('slots') as FakeSlots
+    const slots = ctx.get('slots') as unknown as FakeSlots
     ctx.provide('locale', {
       register: () => () => undefined,
       bind: () => (key: string) => key,
